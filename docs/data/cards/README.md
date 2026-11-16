@@ -114,6 +114,23 @@ generated card when the card database loads (see [`merge_effects`](../../src/car
 - `attacks` / `abilities`: objects keyed by **name**. Their keys are merged into the matching
   attack or ability. A name that doesn't exist is an error.
 - Any other key replaces the generated value. Use this for corrections, such as adding `tera`.
+  `rules` is replaced **as a whole**, so list every rule: `["ex", "tera"]`, not just `["tera"]`.
+
+### Recording Tera
+
+TCGdex doesn't say which Pokémon ex are Tera, so it's recorded here after checking the printed
+card (Tera cards show a **Tera** label and a bench-protection rule under the name):
+
+| Card is… | Effects file |
+|---|---|
+| Tera | `{ "rules": ["ex", "tera"] }` |
+| Not Tera | `{ "rules": ["ex"] }`, which marks it as checked |
+| Mega ex | nothing; never Tera, and never flagged |
+
+`pokebot-import` reminds you about any non-Mega Pokémon ex whose effects file doesn't set `rules` yet.
+As of 2026-11-16 all 14 non-Mega Pokémon ex in the four decks are recorded. The Tera ones are
+TWM-130 Dragapult ex, TWM-106 Greninja ex, TWM-25 Teal Mask Ogerpon ex, PRE-27 Wellspring Mask
+Ogerpon ex and ASC-121 Koraidon ex.
 - An effects file with no matching generated card is an error, which catches typos in file names.
 
 The `effects` contents aren't interpreted yet. The effect format gets designed in Milestone 3;

@@ -32,6 +32,20 @@ namespace {
                      "  --offline  use only cached files\n";
     }
 
+    // True if the card's effects file already states its rules (e.g. ["ex", "tera"]),
+    // meaning someone has checked the card. A broken file is reported later by CardDB::load.
+    bool effects_file_sets_rules(const std::filesystem::path& effects_dir, const std::string& id) {
+        std::ifstream in(effects_dir / (id + ".json"), std::ios::binary);
+        if (!in) {
+            return false;
+        }
+        try {
+            return nlohmann::json::parse(in).contains("rules");
+        } catch (const nlohmann::json::exception&) {
+            return false;
+        }
+    }
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -101,6 +115,9 @@ int main(int argc, char** argv) {
                         << nlohmann::json(conversion.card).dump(2) << '\n';
                     for (const auto& note : conversion.notes) {
                         review[id + " " + api_name].push_back(note);
+                    }
+                    if (conversion.tera_unknown && !effects_file_sets_rules(effects_dir, id)) {
+                        review[id + " " + api_name].push_back("Pokemon ex: check whether it's Tera, then add effects/" + id + ".json with its rules");
                     }
                 } catch (const std::exception& e) {
                     ++failures;

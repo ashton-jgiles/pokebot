@@ -13,7 +13,9 @@ Conversion convert_card(const nlohmann::json& tcgdex, const std::string& our_id)
 ```
 
 - `our_id` is the decklist-style id, e.g. `"TWM-130"`.
-- Returns a `Conversion`: the `CardDef` plus `notes`, which are things a person should check by hand.
+- Returns a `Conversion`: the `CardDef`, `notes` (things a person should check by hand), and
+  `tera_unknown`, which is true for a non-Mega Pokémon ex because TCGdex doesn't say whether it's Tera.
+  Mega ex have their own rule box, so they're never Tera.
 - Throws `CardDataError` (message prefixed with the id) for any value it doesn't understand.
 
 ## Field mapping
@@ -51,7 +53,7 @@ TCGdex doesn't record rule boxes, so some things need a person to check:
 
 | Note | When |
 |---|---|
-| "Pokemon ex: check whether it's a Tera Pokemon" | Every Pokémon ex. Fix by adding `"rules": ["ex", "tera"]` to its effects file |
+| *(via `tera_unknown`)* | Every Pokémon ex **except Mega** ex. `Conversion::tera_unknown` is set, and `pokebot-import` shows a reminder only if the card has no effects file with `"rules"` yet |
 | "Special Energy: fill in what it provides" | Every Special Energy |
 | "TCGdex lists this as basic Energy, but it has rules text" | A Special Energy that TCGdex labels `Normal` |
 | "has more than one Weakness; only the first is kept" | Rare older cards |

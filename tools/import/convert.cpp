@@ -111,9 +111,8 @@ namespace pokebot::import {
             c.rules.ex = t.value("suffix", "") == "ex";
             c.rules.mega = c.rules.ex && c.name.starts_with("Mega ");
             c.rules.radiant = c.name.starts_with("Radiant ");
-            if (c.rules.ex) {
-                out.notes.push_back("Pokemon ex: check whether it's a Tera Pokemon (TCGdex doesn't say)");
-            }
+            // Mega Evolution Pokemon ex have their own rule box, so they're never Tera.
+            out.tera_unknown = c.rules.ex && !c.rules.mega;
         }
 
         void convert_trainer(const json& t, Conversion& out) {

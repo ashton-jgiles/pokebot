@@ -40,13 +40,11 @@ Random → Greedy → Planner → Flat MC → IS-MCTS → IS-MCTS + endgame solv
 | Card definition format (`CardDef`, JSON) | ✅ | [`src/cards/card`](src/cards/card.md) |
 | Card database + effects-file merging | ✅ | [`src/cards/card_db`](src/cards/card_db.md) |
 | Card importer (TCGdex download, cache, convert) | ✅ | [`tools/import`](tools/import/main.md) |
-| All 41 cards imported and loading | ✅ | `pokebot-import` on both decks |
+| All 80 cards (4 decks) imported and loading | ✅ | `pokebot-import` on all decks |
+| Tera review of every Pokémon ex | ✅ | [`data/cards/effects/`](data/cards/README.md#recording-tera) |
 | **Deck validator** (rule 14) | ❌ To do | — |
-| **Tera review** of the 5 Pokémon ex | ❌ To do | `data/cards/effects/` |
 
-**Remaining work:**
-
-1. **Deck validator.** Check a `Decklist` against the card database:
+**Remaining work: the deck validator.** Check a `Decklist` against the card database:
    - exactly 60 cards;
    - at most 4 copies of any card **name**, using the card database's real names, not the
      decklist's. Basic Energy is exempt;
@@ -55,11 +53,8 @@ Random → Greedy → Planner → Flat MC → IS-MCTS → IS-MCTS + endgame solv
    - at most 1 Radiant Pokémon;
    - every card in the decklist exists in the card database.
 
-   It should report *all* problems at once, not just the first, and have tests including
-   deliberately illegal decks.
-2. **Tera review.** For Dragapult ex, N's Zoroark ex, Meowth ex, Fezandipiti ex and Pecharunt ex,
-   check the physical card. Each Tera one gets `data/cards/effects/<id>.json` with
-   `{"rules": ["ex", "tera"]}`.
+It should report *all* problems at once, not just the first, and have tests including
+deliberately illegal decks.
 
 ## M2 — Basic engine ⬜
 
@@ -82,8 +77,11 @@ proposal. The table at the top lists them in order.
 
 ## Known gaps and notes
 
-- **TCGdex has no rule-box data.** Tera can't be detected automatically; the importer flags every
-  Pokémon ex for review (see [`convert`](tools/import/convert.md)).
+- **TCGdex has no rule-box data.** Tera can't be detected automatically. Each non-Mega Pokémon ex
+  is checked by hand and recorded in its effects file; the importer reminds you about any that
+  aren't recorded yet (see [Recording Tera](data/cards/README.md#recording-tera)).
+- **Ancient / Future labels aren't tracked yet** (Raging Bolt ex is Ancient, Iron Leaves ex is
+  Future). Some cards care about them, so they'll need a field once those cards' effects are written.
 - **No test for `CurlProcessClient`**, by design: it needs the network. Everything that uses it is
   tested through a fake client.
 - **`CardDB::load` fails if `data/cards/generated/` doesn't exist.** Run `pokebot-import` first

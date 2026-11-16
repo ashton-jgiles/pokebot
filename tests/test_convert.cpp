@@ -43,7 +43,17 @@ TEST_CASE("converts a Pokemon ex with modifier damage and a free attack", "[conv
     CHECK(c.attacks[1].damage_mod == DamageMod::Times);
     CHECK(c.rules.ex);
     CHECK(c.prize_value() == 2);
-    CHECK(result.notes.size() == 1); // the Tera reminder
+    CHECK(result.tera_unknown);
+    CHECK(result.notes.empty());
+}
+
+TEST_CASE("Mega Pokemon ex are worth 3 Prizes and never need a Tera check", "[convert]") {
+    const json t = json::parse(R"({"id": "x", "name": "Mega Testmon ex", "category": "Pokemon",
+        "stage": "Basic", "hp": 300, "types": ["Colorless"], "suffix": "ex"})");
+    const auto result = convert_card(t, "TST-5");
+    CHECK(result.card.rules.mega);
+    CHECK(result.card.prize_value() == 3);
+    CHECK_FALSE(result.tera_unknown);
 }
 
 TEST_CASE("Times damage survives a save and load", "[convert]") {
