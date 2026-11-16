@@ -35,7 +35,7 @@ TEST_CASE("effects files add rules and attack effects", "[card_db]") {
     const auto card = merge_effects(sample_pokemon(), overrides).get<CardDef>();
     CHECK(card.rules.tera);
     CHECK(card.attacks[0].effects.size() == 1);
-    CHECK(card.attacks[0].text.starts_with("Put 2"));  // generated fields are kept
+    CHECK(card.attacks[0].text.starts_with("Put 2")); // generated fields are kept
 }
 
 TEST_CASE("effects files can't name attacks that don't exist", "[card_db]") {

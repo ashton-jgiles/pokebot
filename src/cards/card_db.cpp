@@ -55,7 +55,9 @@ namespace pokebot {
     CardDB CardDB::load(const std::filesystem::path& generated_dir, const std::filesystem::path& effects_dir) {
         CardDB db;
         for (const auto& file : std::filesystem::directory_iterator(generated_dir)) {
-            if (file.path().extension() != ".json") continue;
+            if (file.path().extension() != ".json") {
+                continue;
+            }
             try {
                 json card = read_json(file.path());
                 const auto effects_file = effects_dir / file.path().filename();
@@ -89,7 +91,9 @@ namespace pokebot {
     }
 
     const CardDef& CardDB::at(std::string_view id) const {
-        if (const auto* card = find(id)) return *card;
+        if (const auto* card = find(id)) {
+            return *card;
+        }
         throw CardDataError("unknown card '" + std::string(id) + "'");
     }
 
@@ -97,15 +101,21 @@ namespace pokebot {
         std::vector<std::string> missing;
         for (const auto& [id, c] : cards_) {
             const std::string label = id + " " + c.name;
-            if (!c.text.empty() && c.effects.empty()) missing.push_back(label);
+            if (!c.text.empty() && c.effects.empty()) {
+                missing.push_back(label);
+            }
             for (const auto& a : c.abilities) {
-                if (!a.text.empty() && a.effects.empty()) missing.push_back(label + ": ability " + a.name);
+                if (!a.text.empty() && a.effects.empty()) {
+                    missing.push_back(label + ": ability " + a.name);
+                }
             }
             for (const auto& a : c.attacks) {
-                if (!a.text.empty() && a.effects.empty()) missing.push_back(label + ": attack " + a.name);
+                if (!a.text.empty() && a.effects.empty()) {
+                    missing.push_back(label + ": attack " + a.name);
+                }
             }
         }
         return missing;
     }
-    
+
 } // namespace pokebot

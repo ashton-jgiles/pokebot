@@ -12,7 +12,6 @@ namespace pokebot {
         constexpr std::array<std::string_view, 4> kStages{"none", "basic", "stage1", "stage2"};
         constexpr std::array<std::string_view, 5> kTrainerKinds{"none", "item", "supporter", "stadium", "tool"};
         constexpr std::array<std::string_view, 3> kEnergyKinds{"none", "basic", "special"};
-        // Must stay in the same order as the DamageMod enum in card.hpp.
         constexpr std::array<std::string_view, 4> kDamageMods{"none", "plus", "minus", "times"};
 
         template <class E, std::size_t N>
@@ -23,26 +22,34 @@ namespace pokebot {
         template <class E, std::size_t N>
         E parse_enum(const std::array<std::string_view, N>& names, std::string_view s, const char* what) {
             for (std::size_t i = 0; i < N; ++i) {
-                if (names[i] == s) return static_cast<E>(i);
+                if (names[i] == s) {
+                    return static_cast<E>(i);
+                }
             }
             throw CardDataError(std::string("unknown ") + what + " '" + std::string(s) + "'");
         }
 
         template <class T>
         T required(const json& j, const char* key) {
-            if (!j.contains(key)) throw CardDataError(std::string("missing field '") + key + "'");
+            if (!j.contains(key)) {
+                throw CardDataError(std::string("missing field '") + key + "'");
+            }
             return j.at(key).get<T>();
         }
 
         json energy_list(const std::vector<EnergyType>& types) {
             json out = json::array();
-            for (const auto t : types) out.push_back(to_string(t));
+            for (const auto t : types) {
+                out.push_back(to_string(t));
+            }
             return out;
         }
 
         std::vector<EnergyType> parse_energy_list(const json& j) {
             std::vector<EnergyType> out;
-            for (const auto& t : j) out.push_back(energy_type_from_string(t.get<std::string>()));
+            for (const auto& t : j) {
+                out.push_back(energy_type_from_string(t.get<std::string>()));
+            }
             return out;
         }
 
@@ -50,16 +57,20 @@ namespace pokebot {
             return j.contains("effects") ? j.at("effects") : json::array();
         }
 
-    }  // namespace
+    } // namespace
 
-    std::string_view to_string(EnergyType type) { return name_of(kEnergyTypes, type); }
+    std::string_view to_string(EnergyType type) {
+        return name_of(kEnergyTypes, type);
+    }
 
     EnergyType energy_type_from_string(std::string_view name) {
         return parse_enum<EnergyType>(kEnergyTypes, name, "energy type");
     }
 
     int CardDef::prize_value() const {
-        if (rules.ex && rules.mega) return 3;
+        if (rules.ex && rules.mega) {
+            return 3;
+        }
         return rules.ex ? 2 : 1;
     }
 
@@ -69,26 +80,26 @@ namespace pokebot {
         json rules = json::array();
         if (c.rules.ex) {
             rules.push_back("ex");
-        } 
+        }
         if (c.rules.mega) {
             rules.push_back("mega");
-        } 
+        }
         if (c.rules.tera) {
             rules.push_back("tera");
-        } 
+        }
         if (c.rules.ace_spec) {
             rules.push_back("ace_spec");
-        } 
+        }
         if (c.rules.radiant) {
             rules.push_back("radiant");
-        } 
+        }
         j["rules"] = rules;
 
         if (c.kind == CardKind::Pokemon) {
             j["stage"] = name_of(kStages, c.stage);
             if (!c.evolves_from.empty()) {
                 j["evolves_from"] = c.evolves_from;
-            } 
+            }
             j["hp"] = c.hp;
             j["types"] = energy_list(c.types);
             j["weakness"] = c.weakness ? json{{"type", to_string(c.weakness->type)}, {"multiplier", c.weakness->multiplier}} : json(nullptr);
@@ -104,18 +115,18 @@ namespace pokebot {
             json attacks = json::array();
             for (const auto& a : c.attacks) {
                 attacks.push_back({{"name", a.name},
-                {"cost", energy_list(a.cost)},
-                {"damage", a.damage},
-                {"damage_mod", name_of(kDamageMods, a.damage_mod)},
-                {"text", a.text},
-                {"effects", a.effects}});
+                                   {"cost", energy_list(a.cost)},
+                                   {"damage", a.damage},
+                                   {"damage_mod", name_of(kDamageMods, a.damage_mod)},
+                                   {"text", a.text},
+                                   {"effects", a.effects}});
             }
             j["attacks"] = attacks;
 
         } else {
             if (c.kind == CardKind::Trainer) {
                 j["trainer_kind"] = name_of(kTrainerKinds, c.trainer_kind);
-            } 
+            }
             if (c.kind == CardKind::Energy) {
                 j["energy_kind"] = name_of(kEnergyKinds, c.energy_kind);
                 j["provides"] = energy_list(c.provides);
@@ -137,22 +148,17 @@ namespace pokebot {
                 const auto rule = r.get<std::string>();
                 if (rule == "ex") {
                     c.rules.ex = true;
-                } 
-                else if (rule == "mega") {
+                } else if (rule == "mega") {
                     c.rules.mega = true;
-                }  
-                else if (rule == "tera") {
+                } else if (rule == "tera") {
                     c.rules.tera = true;
-                } 
-                else if (rule == "ace_spec") {
+                } else if (rule == "ace_spec") {
                     c.rules.ace_spec = true;
-                } 
-                else if (rule == "radiant") {
+                } else if (rule == "radiant") {
                     c.rules.radiant = true;
-                } 
-                else {
+                } else {
                     throw CardDataError("unknown rule '" + rule + "'");
-                } 
+                }
             }
 
             if (c.kind == CardKind::Pokemon) {
@@ -195,4 +201,4 @@ namespace pokebot {
             throw CardDataError(std::string("bad card data: ") + e.what());
         }
     }
-}  // namespace pokebot
+} // namespace pokebot

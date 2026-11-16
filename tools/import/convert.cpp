@@ -9,7 +9,7 @@ namespace pokebot::import {
 
         using nlohmann::json;
 
-        constexpr std::string_view kTimes = "\xC3\x97";  // "×" in UTF-8
+        constexpr std::string_view kTimes = "\xC3\x97"; // "×" in UTF-8
 
         std::string lowercase(std::string s) {
             for (auto& ch : s) {
@@ -75,14 +75,14 @@ namespace pokebot::import {
                 if (ws.size() > 1) {
                     out.notes.push_back("has more than one Weakness; only the first is kept");
                 }
-                std::string value = ws[0].at("value").get<std::string>();  // "×2"
+                std::string value = ws[0].at("value").get<std::string>(); // "×2"
                 if (value.starts_with(kTimes)) {
                     value.erase(0, kTimes.size());
                 }
                 c.weakness = Weakness{energy_type(ws[0].at("type")), parse_number(value, "weakness")};
             }
             if (const auto& rs = t.value("resistances", json::array()); !rs.empty()) {
-                std::string value = rs[0].at("value").get<std::string>();  // "-30"
+                std::string value = rs[0].at("value").get<std::string>(); // "-30"
                 if (value.starts_with('-')) {
                     value.erase(0, 1);
                 }
@@ -140,7 +140,7 @@ namespace pokebot::import {
             if (kind == "Normal") {
                 c.energy_kind = EnergyKind::Basic;
                 // TCGdex gives basic Energy no "types" field; the type is in the name.
-                std::string name = c.name;  // "Darkness Energy"
+                std::string name = c.name; // "Darkness Energy"
                 if (!name.ends_with(" Energy")) {
                     throw CardDataError("unexpected basic Energy name '" + name + "'");
                 }

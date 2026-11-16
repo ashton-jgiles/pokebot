@@ -30,7 +30,7 @@ namespace pokebot::import {
             return true;
         }
     } // namespace
-    
+
     std::string CurlProcessClient::get(const std::string& url) {
         if (!is_safe_url(url)) {
             throw HttpError("refusing unsafe URL: " + url);

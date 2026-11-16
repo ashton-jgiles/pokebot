@@ -12,18 +12,52 @@
 namespace pokebot {
 
     enum class EnergyType : std::uint8_t {
-        Grass, Fire, Water, Lightning, Psychic, Fighting, Darkness, Metal, Fairy, Dragon, Colorless
+        Grass,
+        Fire,
+        Water,
+        Lightning,
+        Psychic,
+        Fighting,
+        Darkness,
+        Metal,
+        Fairy,
+        Dragon,
+        Colorless
     };
-    
-    enum class CardKind : std::uint8_t { Pokemon, Trainer, Energy };
-    enum class Stage : std::uint8_t { None, Basic, Stage1, Stage2 };
-    enum class TrainerKind : std::uint8_t { None, Item, Supporter, Stadium, Tool };
-    enum class EnergyKind : std::uint8_t { None, Basic, Special };  
-    enum class DamageMod : std::uint8_t { None, Plus, Minus, Times };
+
+    enum class CardKind : std::uint8_t {
+        Pokemon,
+        Trainer,
+        Energy
+    };
+    enum class Stage : std::uint8_t {
+        None,
+        Basic,
+        Stage1,
+        Stage2
+    };
+    enum class TrainerKind : std::uint8_t {
+        None,
+        Item,
+        Supporter,
+        Stadium,
+        Tool
+    };
+    enum class EnergyKind : std::uint8_t {
+        None,
+        Basic,
+        Special
+    };
+    enum class DamageMod : std::uint8_t {
+        None,
+        Plus,
+        Minus,
+        Times
+    };
 
     class CardDataError : public std::runtime_error {
-        public:
-            using std::runtime_error::runtime_error;
+    public:
+        using std::runtime_error::runtime_error;
     };
 
     struct Weakness {
@@ -92,4 +126,5 @@ namespace pokebot {
 
     void to_json(nlohmann::json& j, const CardDef& card);
     void from_json(const nlohmann::json& j, CardDef& card);
+
 } // namespace pokebot

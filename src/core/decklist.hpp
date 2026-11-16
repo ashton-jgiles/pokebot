@@ -8,29 +8,29 @@
 
 namespace pokebot {
 
-struct DeckEntry {
-  int count = 0;
-  std::string name;
-  std::string set_code;
-  int number = 0;
-};
+    struct DeckEntry {
+        int count = 0;
+        std::string name;
+        std::string set_code;
+        int number = 0;
+    };
 
-struct Decklist {
-  std::vector<DeckEntry> entries;
-  int total_cards() const;
-};
+    struct Decklist {
+        std::vector<DeckEntry> entries;
+        int total_cards() const;
+    };
 
-class DecklistError : public std::runtime_error {
- public:
-  DecklistError(int line, const std::string& message)
-      : std::runtime_error("line " + std::to_string(line) + ": " + message), line_(line) {}
-  int line() const { return line_; }
+    class DecklistError : public std::runtime_error {
+    public:
+        DecklistError(int line, const std::string& message)
+            : std::runtime_error("line " + std::to_string(line) + ": " + message), line_(line) {}
+        int line() const { return line_; }
 
- private:
-  int line_;
-};
+    private:
+        int line_;
+    };
 
-Decklist parse_decklist(std::istream& in);
-Decklist load_decklist(const std::filesystem::path& path);
+    Decklist parse_decklist(std::istream& in);
+    Decklist load_decklist(const std::filesystem::path& path);
 
-}  // namespace pokebot
+} // namespace pokebot

@@ -17,15 +17,16 @@ namespace pokebot {
     nlohmann::json merge_effects(nlohmann::json generated, const nlohmann::json& overrides);
 
     class CardDB {
-        public:
-            static CardDB load(const std::filesystem::path& generated_dir, const std::filesystem::path& effects_dir);
-            void add(CardDef card);
-            const CardDef* find(std::string_view id) const;
-            const CardDef& at(std::string_view id) const;
-            std::size_t size() const { return cards_.size(); }
-            std::vector<std::string> missing_effects() const;
-        private:
-            std::map<std::string, CardDef, std::less<>> cards_;
+    public:
+        static CardDB load(const std::filesystem::path& generated_dir, const std::filesystem::path& effects_dir);
+        void add(CardDef card);
+        const CardDef* find(std::string_view id) const;
+        const CardDef& at(std::string_view id) const;
+        std::size_t size() const { return cards_.size(); }
+        std::vector<std::string> missing_effects() const;
+
+    private:
+        std::map<std::string, CardDef, std::less<>> cards_;
     };
 
 } // namespace pokebot

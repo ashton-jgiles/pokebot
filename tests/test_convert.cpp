@@ -43,7 +43,7 @@ TEST_CASE("converts a Pokemon ex with modifier damage and a free attack", "[conv
     CHECK(c.attacks[1].damage_mod == DamageMod::Times);
     CHECK(c.rules.ex);
     CHECK(c.prize_value() == 2);
-    CHECK(result.notes.size() == 1);  // the Tera reminder
+    CHECK(result.notes.size() == 1); // the Tera reminder
 }
 
 TEST_CASE("Times damage survives a save and load", "[convert]") {

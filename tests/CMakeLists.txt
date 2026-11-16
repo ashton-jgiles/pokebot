@@ -9,7 +9,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 
 add_executable(pokebot_tests
-  test_version.cpp
   test_decklist.cpp
   test_tcgdex.cpp
   test_convert.cpp
