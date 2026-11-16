@@ -3,9 +3,14 @@
 add_library(pokebot_lib
   core/version.cpp
   core/decklist.cpp
+  cards/card.cpp
+  cards/card_db.cpp
 )
 target_include_directories(pokebot_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(pokebot_lib PRIVATE pokebot_warnings)
+# card.hpp includes nlohmann/json, so anything using pokebot_lib needs it too.
+target_link_libraries(pokebot_lib
+  PUBLIC nlohmann_json::nlohmann_json
+  PRIVATE pokebot_warnings)
 target_compile_definitions(pokebot_lib PRIVATE
   POKEBOT_VERSION_STRING="${PROJECT_VERSION}")
 
