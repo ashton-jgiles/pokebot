@@ -57,7 +57,9 @@ attack text says how the final damage is worked out.
 
 ### `CardRules`
 
-Rule-box and deck-building flags, all `false` by default: `ex`, `mega`, `tera`, `ace_spec`, `radiant`.
+Rule-box and deck-building flags, all `false` by default: `ex`, `mega`, `tera`, `ace_spec`.
+
+Radiant Pokémon aren't supported: they've rotated out of the Standard format.
 
 ### `CardDef`
 

@@ -110,7 +110,6 @@ namespace pokebot::import {
 
             c.rules.ex = t.value("suffix", "") == "ex";
             c.rules.mega = c.rules.ex && c.name.starts_with("Mega ");
-            c.rules.radiant = c.name.starts_with("Radiant ");
             // Mega Evolution Pokemon ex have their own rule box, so they're never Tera.
             out.tera_unknown = c.rules.ex && !c.rules.mega;
         }

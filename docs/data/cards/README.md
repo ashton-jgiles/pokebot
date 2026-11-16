@@ -84,7 +84,7 @@ by `to_json` in [`card.cpp`](../../src/cards/card.md) and read back by `from_jso
 | Field | Values |
 |---|---|
 | `kind` | `pokemon`, `trainer`, `energy` |
-| `rules` | any of `ex`, `mega`, `tera`, `ace_spec`, `radiant` |
+| `rules` | any of `ex`, `mega`, `tera`, `ace_spec` |
 | `stage` | `basic`, `stage1`, `stage2` |
 | energy types | `grass`, `fire`, `water`, `lightning`, `psychic`, `fighting`, `darkness`, `metal`, `fairy`, `dragon`, `colorless` |
 | `damage_mod` | `none`, `plus`, `minus`, `times` |

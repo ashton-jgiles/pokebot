@@ -46,9 +46,7 @@ namespace pokebot {
 
         std::map<std::string, int> copies_by_name;
         std::vector<std::string> ace_specs;
-        std::vector<std::string> radiants;
         int ace_spec_count = 0;
-        int radiant_count = 0;
         int unknown_cards = 0;
         bool has_basic_pokemon = false;
 
@@ -71,10 +69,6 @@ namespace pokebot {
                 ace_spec_count += entry.count;
                 ace_specs.push_back(with_count(card->name, entry.count));
             }
-            if (card->rules.radiant) {
-                radiant_count += entry.count;
-                radiants.push_back(with_count(card->name, entry.count));
-            }
         }
 
         for (const auto& [name, copies] : copies_by_name) {
@@ -89,9 +83,6 @@ namespace pokebot {
 
         if (ace_spec_count > 1) {
             result.problems.push_back(std::to_string(ace_spec_count) + " ACE SPEC cards (" + join(ace_specs) + "); at most 1 is allowed");
-        }
-        if (radiant_count > 1) {
-            result.problems.push_back(std::to_string(radiant_count) + " Radiant Pokemon (" + join(radiants) + "); at most 1 is allowed");
         }
 
         return result;
