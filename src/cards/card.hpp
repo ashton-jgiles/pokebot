@@ -12,7 +12,7 @@
 namespace pokebot {
 
     enum class EnergyType : std::uint8_t {
-        Grass, Fire, Water, Lighting, Psychic, Fighting, Darkness, Metal, Fairy, Dragon, Colorless
+        Grass, Fire, Water, Lightning, Psychic, Fighting, Darkness, Metal, Fairy, Dragon, Colorless
     };
     
     enum class CardKind : std::uint8_t { Pokemon, Trainer, Energy };

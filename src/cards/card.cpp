@@ -12,7 +12,8 @@ namespace pokebot {
         constexpr std::array<std::string_view, 4> kStages{"none", "basic", "stage1", "stage2"};
         constexpr std::array<std::string_view, 5> kTrainerKinds{"none", "item", "supporter", "stadium", "tool"};
         constexpr std::array<std::string_view, 3> kEnergyKinds{"none", "basic", "special"};
-        constexpr std::array<std::string_view, 4> kDamageMods{"none", "plus", "times", "minus"};
+        // Must stay in the same order as the DamageMod enum in card.hpp.
+        constexpr std::array<std::string_view, 4> kDamageMods{"none", "plus", "minus", "times"};
 
         template <class E, std::size_t N>
         std::string_view name_of(const std::array<std::string_view, N>& names, E value) {
