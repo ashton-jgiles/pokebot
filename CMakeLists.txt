@@ -10,8 +10,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# MinGW: link the C++ runtime statically. Otherwise the executables load whichever
-# libstdc++-6.dll comes first on PATH (e.g. Git Bash's), which can crash at startup.
 if(MINGW)
   add_link_options(-static)
 endif()
@@ -34,7 +32,16 @@ else()
   endif()
 endif()
 
+include(FetchContent)
+FetchContent_Declare(
+  nlohmann_json
+  URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+FetchContent_MakeAvailable(nlohmann_json)
+
 add_subdirectory(src)
+add_subdirectory(tools/import)
 
 if(POKEBOT_BUILD_TESTS)
   enable_testing()

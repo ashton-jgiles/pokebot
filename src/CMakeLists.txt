@@ -2,6 +2,7 @@
 # Engine, cards, agents and harness sources get added here as milestones land.
 add_library(pokebot_lib
   core/version.cpp
+  core/decklist.cpp
 )
 target_include_directories(pokebot_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(pokebot_lib PRIVATE pokebot_warnings)
