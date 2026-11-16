@@ -75,6 +75,7 @@ namespace pokebot {
     };
 
     enum class DecisionKind : std::uint8_t {
+        ChooseTurnOrder,
         SetupActive,
         SetupBench,
         MulliganDraws,
@@ -105,7 +106,7 @@ namespace pokebot {
         std::uint8_t first_player = 0;
         std::uint16_t turn = 0;
         TurnFlags flags;
-        FixedVector<Decision, 4> pending;
+        FixedVector<Decision, 8> pending;
         Rng rng;
         GameResult result = GameResult::Ongoing;
 

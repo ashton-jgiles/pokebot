@@ -16,6 +16,7 @@ namespace pokebot {
 
     enum class ActionKind : std::uint8_t {
         // setup
+        ChooseTurnOrder,
         SetupPlaceActive,
         SetupPlaceBench,
         SetupDone,
