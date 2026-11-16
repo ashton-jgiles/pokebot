@@ -14,6 +14,7 @@ add_executable(pokebot_tests
   test_convert.cpp
   test_card_db.cpp
   test_deck_validator.cpp
+  test_engine_state.cpp
 )
 target_link_libraries(pokebot_tests PRIVATE
   pokebot_lib pokebot_import_lib pokebot_warnings Catch2::Catch2WithMain)
