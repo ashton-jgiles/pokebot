@@ -1,8 +1,6 @@
 #include <iostream>
 
-#include "core/version.hpp"
-
 int main() {
-  std::cout << "pokebot " << pokebot::version() << '\n';
-  return 0;
+    std::cout << "pokebot: the command-line client isn't implemented yet\n";
+    return 0;
 }

@@ -1,5 +1,40 @@
+# pokebot style: 4-space indents, everything inside a namespace indented,
+# and braces on every if / else / for / while, even single statements.
 BasedOnStyle: Google
-ColumnLimit: 100
-IndentWidth: 2
+IndentWidth: 4
+ContinuationIndentWidth: 4
+
+# No column limit: line breaks stay where the author put them.
+ColumnLimit: 0
+
+# Indent namespace contents; public:/private: line up with the class keyword.
+NamespaceIndentation: All
+IndentAccessModifiers: false
+AccessModifierOffset: -4
+EmptyLineBeforeAccessModifier: LogicalBlock
+FixNamespaceComments: true
+ShortNamespaceLines: 0
+
+# Braces everywhere, never a one-line if or loop.
+InsertBraces: true
+BreakBeforeBraces: Attach
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortLambdasOnASingleLine: Inline
+AllowShortEnumsOnASingleLine: false
+
+DerivePointerAlignment: false
 PointerAlignment: Left
+SpacesBeforeTrailingComments: 1
+
+# Includes: standard library, then other <...> libraries, then project headers.
 IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^<[a-z_]+>$'
+    Priority: 1
+  - Regex: '^<.*>$'
+    Priority: 2
+  - Regex: '^".*"$'
+    Priority: 3

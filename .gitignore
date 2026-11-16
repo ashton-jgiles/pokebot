@@ -2,6 +2,10 @@
 build/
 out/
 
+# Card data downloaded by pokebot-import (card text belongs to The Pokémon Company)
+data/cards/raw/
+data/cards/generated/
+
 # Editors
 .vscode/
 .idea/
