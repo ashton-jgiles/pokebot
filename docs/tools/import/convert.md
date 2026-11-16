@@ -38,8 +38,9 @@ Conversion convert_card(const nlohmann::json& tcgdex, const std::string& our_id)
 | name starts with `Radiant ` | `rules.radiant` | |
 | `trainerType` | `trainer_kind` | `Item`, `Supporter`, `Stadium`, `Tool` |
 | `rarity: "ACE SPEC Rare"` | `rules.ace_spec` | Trainers and Special Energy |
-| `energyType: "Normal"` | `energy_kind = Basic` | type from the name: `"Darkness Energy"` → Darkness |
+| `energyType: "Normal"`, no `effect` text | `energy_kind = Basic` | type from the name: `"Darkness Energy"` → Darkness |
 | `energyType: "Special"` | `energy_kind = Special` | |
+| `energyType: "Normal"` **with** `effect` text | `energy_kind = Special` | TCGdex mislabels some Special Energy (e.g. Ignition Energy, WHT 86); rules text wins |
 | `effect` (Trainer / Special Energy) | `text` | |
 
 TCGdex fields not listed (prices, images, illustrator, set details) are ignored.
@@ -52,6 +53,7 @@ TCGdex doesn't record rule boxes, so some things need a person to check:
 |---|---|
 | "Pokemon ex: check whether it's a Tera Pokemon" | Every Pokémon ex. Fix by adding `"rules": ["ex", "tera"]` to its effects file |
 | "Special Energy: fill in what it provides" | Every Special Energy |
+| "TCGdex lists this as basic Energy, but it has rules text" | A Special Energy that TCGdex labels `Normal` |
 | "has more than one Weakness; only the first is kept" | Rare older cards |
 
 The importer prints these under **Needs review**.

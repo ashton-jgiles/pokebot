@@ -73,6 +73,17 @@ TEST_CASE("takes basic Energy's type from its name", "[convert]") {
     CHECK(c.provides == std::vector{EnergyType::Darkness});
 }
 
+TEST_CASE("treats Energy with rules text as Special even if TCGdex says Normal", "[convert]") {
+    // TCGdex lists Ignition Energy (WHT 86) as "Normal".
+    const json t = json::parse(R"({"id": "x", "name": "Ignition Energy", "category": "Energy",
+        "energyType": "Normal", "effect": "If this card is attached to 1 of your Pokemon, ..."})");
+    const auto result = convert_card(t, "WHT-86");
+    CHECK(result.card.energy_kind == pokebot::EnergyKind::Special);
+    CHECK(result.card.provides.empty());
+    CHECK(result.card.text.starts_with("If this card"));
+    CHECK(result.notes.size() == 2); // mislabeled + fill in what it provides
+}
+
 TEST_CASE("rejects data it doesn't understand", "[convert]") {
     const json vmax = json::parse(R"({"id": "x", "name": "Big", "category": "Pokemon",
         "stage": "VMAX", "hp": 320, "types": ["Fire"]})");

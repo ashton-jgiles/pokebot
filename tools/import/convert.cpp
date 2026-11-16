@@ -137,7 +137,16 @@ namespace pokebot::import {
         void convert_energy(const json& t, Conversion& out) {
             CardDef& c = out.card;
             const auto kind = t.at("energyType").get<std::string>();
-            if (kind == "Normal") {
+            const std::string effect = t.value("effect", "");
+
+            // Basic Energy has no rules text. TCGdex sometimes labels a Special Energy
+            // "Normal" (e.g. Ignition Energy), so rules text wins over the label.
+            const bool mislabeled_special = kind == "Normal" && !effect.empty();
+            if (mislabeled_special) {
+                out.notes.push_back("TCGdex lists this as basic Energy, but it has rules text; treated as Special Energy");
+            }
+
+            if (kind == "Normal" && !mislabeled_special) {
                 c.energy_kind = EnergyKind::Basic;
                 // TCGdex gives basic Energy no "types" field; the type is in the name.
                 std::string name = c.name; // "Darkness Energy"
@@ -146,9 +155,9 @@ namespace pokebot::import {
                 }
                 name.resize(name.size() - 7);
                 c.provides = {energy_type_from_string(lowercase(name))};
-            } else if (kind == "Special") {
+            } else if (kind == "Special" || mislabeled_special) {
                 c.energy_kind = EnergyKind::Special;
-                c.text = t.value("effect", "");
+                c.text = effect;
                 c.rules.ace_spec = t.value("rarity", "") == "ACE SPEC Rare";
                 out.notes.push_back("Special Energy: fill in what it provides in its effects file");
             } else {

@@ -7,8 +7,10 @@ in [the decklist parser docs](../../src/core/decklist.md#input-format).
 |---|---|---|
 | [`dragapult.txt`](../../../data/decks/dragapult.txt) | Dragapult ex | 24 |
 | [`ns-zoroark.txt`](../../../data/decks/ns-zoroark.txt) | N's Zoroark ex | 29 |
+| [`basic-box.txt`](../../../data/decks/basic-box.txt) | Basic Box (Mega Kangaskhan ex, Ogerpon ex, Raging Bolt ex …) | 29 |
+| [`mega-greninja.txt`](../../../data/decks/mega-greninja.txt) | Mega Greninja ex | 30 |
 
-The two decks share 12 cards, for **41 distinct cards** in total.
+All four decks together use **80 distinct cards**.
 
 ## Adding a deck
 

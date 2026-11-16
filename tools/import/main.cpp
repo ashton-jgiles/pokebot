@@ -14,6 +14,16 @@
 #include "http_client.hpp"
 #include "tcgdex.hpp"
 
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
+
 namespace {
 
     void print_usage() {
@@ -27,6 +37,11 @@ namespace {
 int main(int argc, char** argv) {
     using namespace pokebot;
     using namespace pokebot::import;
+
+#ifdef _WIN32
+    // Card names contain UTF-8 ("Poké Pad"); tell the Windows console to display it as UTF-8.
+    SetConsoleOutputCP(CP_UTF8);
+#endif
 
     TcgdexOptions options;
     const std::filesystem::path generated_dir = "data/cards/generated";
