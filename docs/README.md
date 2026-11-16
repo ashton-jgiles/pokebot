@@ -27,6 +27,7 @@ uses `CardDB` and `CardDef`.
 | `src/core` | [decklist.md](src/core/decklist.md) | Decklist parser |
 | `src/cards` | [card.md](src/cards/card.md) | `CardDef`, enums, card JSON |
 | | [card_db.md](src/cards/card_db.md) | Card database, effects-file merging |
+| | [deck_validator.md](src/cards/deck_validator.md) | Deck-building rules |
 | `src/client` | [main.md](src/client/main.md) | Command-line client (placeholder) |
 | `tools/import` | [main.md](tools/import/main.md) | The `pokebot-import` command |
 | | [tcgdex.md](tools/import/tcgdex.md) | TCGdex lookup, cache, retries |

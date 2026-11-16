@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "cards/card_db.hpp"
+#include "cards/deck_validator.hpp"
 #include "convert.hpp"
 #include "core/decklist.hpp"
 #include "http_client.hpp"
@@ -145,7 +146,24 @@ int main(int argc, char** argv) {
         const auto missing = db.missing_effects();
         std::cout << db.size() << " cards load cleanly; " << missing.size()
                   << " attacks/abilities/cards still need hand-written effects\n";
-        return failures == 0 ? 0 : 1;
+
+        // Check every deck against the deck-building rules.
+        std::cout << "\nDeck legality:\n";
+        int illegal_decks = 0;
+        for (const auto& path : decklists) {
+            const DeckValidation validation = validate_deck(load_decklist(path), db);
+            if (validation.legal()) {
+                std::cout << "  legal    " << path.string() << '\n';
+            } else {
+                ++illegal_decks;
+                std::cout << "  ILLEGAL  " << path.string() << '\n';
+                for (const auto& problem : validation.problems) {
+                    std::cout << "           - " << problem << '\n';
+                }
+            }
+        }
+
+        return (failures == 0 && illegal_decks == 0) ? 0 : 1;
     } catch (const std::exception& e) {
         std::cerr << "error: " << e.what() << '\n';
         return 1;

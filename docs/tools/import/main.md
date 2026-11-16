@@ -36,9 +36,11 @@ are processed once):
 3. Convert it with [`convert_card`](convert.md) and write `data/cards/generated/<id>.json`.
 4. Collect any review notes.
 
-Then it prints the review notes, a summary, and finally loads everything through
+Then it prints the review notes, a summary, loads everything through
 [`CardDB::load`](../../src/cards/card_db.md), exactly as the engine will. That last step checks
 that every generated file and every effects file is valid, and counts what still needs effects.
+Finally it checks each decklist with the [deck validator](../../src/cards/deck_validator.md) and
+prints `legal`, or `ILLEGAL` followed by every problem.
 
 ## Output
 
@@ -48,11 +50,16 @@ data/decks/dragapult.txt
   ok    TWM 130  Dragapult ex
   ...
 Needs review:
-  TWM-130 Dragapult ex: Pokemon ex: check whether it's a Tera Pokemon (TCGdex doesn't say)
+  XYZ-12 Newmon ex: Pokemon ex: check whether it's Tera, then add effects/XYZ-12.json with its rules
   ...
 
-41 distinct cards, 0 network requests, 0 failures, 0 name mismatches
-41 cards load cleanly; 42 attacks/abilities/cards still need hand-written effects
+80 distinct cards, 0 network requests, 0 failures, 0 name mismatches
+80 cards load cleanly; 88 attacks/abilities/cards still need hand-written effects
+
+Deck legality:
+  legal    data/decks/basic-box.txt
+  legal    data/decks/dragapult.txt
+  ...
 ```
 
 A card that fails is shown as `FAIL` with the reason, and the import continues with the next card.
@@ -61,8 +68,8 @@ A card that fails is shown as `FAIL` with the reason, and the import continues w
 
 | Code | Meaning |
 |---|---|
-| 0 | Every card imported |
-| 1 | At least one card failed, or loading the card database failed |
+| 0 | Every card imported and every deck is legal |
+| 1 | A card failed, a deck is illegal, or loading the card database failed |
 | 2 | Bad command-line arguments (usage is printed) |
 
 ## Files it reads and writes

@@ -29,7 +29,8 @@ List every test:
 |---|---|---|---|
 | [`test_decklist.cpp`](../../tests/test_decklist.cpp) | `[decklist]` | 5 | Parsing names with spaces/apostrophes/`{D}`, Windows line endings, total mismatch, error line numbers, both project decklists load with 60 cards |
 | [`test_tcgdex.cpp`](../../tests/test_tcgdex.cpp) | `[tcgdex]` | 5 | Padded card ids, unknown sets and numbers, cache then offline reuse, retries after empty/failed responses, giving up, offline with no cache |
-| [`test_convert.cpp`](../../tests/test_convert.cpp) | `[convert]` | 6 | Pokémon ex with `×` damage and a free attack, damage modifiers surviving save and reload, ACE SPEC detection, Basic Energy type from its name, Special Energy mislabeled as Normal, rejecting unknown data |
+| [`test_convert.cpp`](../../tests/test_convert.cpp) | `[convert]` | 7 | Pokémon ex with `×` damage and a free attack, damage modifiers surviving save and reload, Mega ex worth 3 Prizes with no Tera check, ACE SPEC detection, Basic Energy type from its name, Special Energy mislabeled as Normal, rejecting unknown data |
+| [`test_deck_validator.cpp`](../../tests/test_deck_validator.cpp) | `[deck_validator]` | 10 | One test per deck-building rule, all printings of a name counting together, Basic Energy exemption, unknown cards, several problems at once, and every real deck in `data/decks/` (skipped without generated data) |
 | [`test_card_db.cpp`](../../tests/test_card_db.cpp) | `[card_db]` | 5 | JSON round trip, effects files adding rules and attack effects, typo'd attack names rejected, `missing_effects` list, bad card data rejected |
 
 ## Helpers worth knowing

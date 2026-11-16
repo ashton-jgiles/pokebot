@@ -6,8 +6,8 @@ The milestone plan from the project proposal, with the current status of each.
 | # | Milestone | Status |
 |---|---|---|
 | M0 | Project setup | ✅ Done |
-| M1 | Card data, decklist parser, deck validator | 🟡 In progress |
-| M2 | Basic engine | ⬜ Not started |
+| M1 | Card data, decklist parser, deck validator | ✅ Done |
+| M2 | Basic engine | ⬜ Next |
 | M3 | Effects system and all cards in both decks | ⬜ Not started |
 | M4 | Observation layer, command-line client, replays | ⬜ Not started |
 | M5 | Greedy agent, match harness, profiling | ⬜ Not started |
@@ -30,7 +30,7 @@ Random → Greedy → Planner → Flat MC → IS-MCTS → IS-MCTS + endgame solv
 - MinGW builds link the C++ runtime statically, so executables don't pick up a wrong `libstdc++` DLL from PATH.
 - `.clang-format` encodes the project style. Both decklists chosen.
 
-## M1 — Card data and decks 🟡
+## M1 — Card data and decks ✅
 
 **Done when:** both decks load and validate, and an illegal deck is rejected.
 
@@ -42,19 +42,9 @@ Random → Greedy → Planner → Flat MC → IS-MCTS → IS-MCTS + endgame solv
 | Card importer (TCGdex download, cache, convert) | ✅ | [`tools/import`](tools/import/main.md) |
 | All 80 cards (4 decks) imported and loading | ✅ | `pokebot-import` on all decks |
 | Tera review of every Pokémon ex | ✅ | [`data/cards/effects/`](data/cards/README.md#recording-tera) |
-| **Deck validator** (rule 14) | ❌ To do | — |
+| Deck validator, run by `pokebot-import` on every deck | ✅ | [`src/cards/deck_validator`](src/cards/deck_validator.md) |
 
-**Remaining work: the deck validator.** Check a `Decklist` against the card database:
-   - exactly 60 cards;
-   - at most 4 copies of any card **name**, using the card database's real names, not the
-     decklist's. Basic Energy is exempt;
-   - at least one Basic Pokémon;
-   - at most 1 ACE SPEC card in total;
-   - at most 1 Radiant Pokémon;
-   - every card in the decklist exists in the card database.
-
-It should report *all* problems at once, not just the first, and have tests including
-deliberately illegal decks.
+All four decks validate as legal, and deliberately illegal decks are rejected with every problem listed.
 
 ## M2 — Basic engine ⬜
 

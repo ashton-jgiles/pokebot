@@ -4,6 +4,7 @@ add_library(pokebot_lib
   core/decklist.cpp
   cards/card.cpp
   cards/card_db.cpp
+  cards/deck_validator.cpp
 )
 target_include_directories(pokebot_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 # card.hpp includes nlohmann/json, so anything using pokebot_lib needs it too.
