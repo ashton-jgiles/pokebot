@@ -1,11 +1,15 @@
 #include <exception>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <map>
 #include <set>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "cards/card_db.hpp"
+#include "convert.hpp"
 #include "core/decklist.hpp"
 #include "http_client.hpp"
 #include "tcgdex.hpp"
@@ -25,6 +29,9 @@ int main(int argc, char** argv) {
   using namespace pokebot::import;
 
   TcgdexOptions options;
+  const std::filesystem::path generated_dir = "data/cards/generated";
+  const std::filesystem::path effects_dir = "data/cards/effects";
+  std::map<std::string, std::vector<std::string>> review;  // card label -> notes
   std::vector<std::filesystem::path> decklists;
   for (int i = 1; i < argc; ++i) {
     const std::string arg = argv[i];
@@ -68,9 +75,28 @@ int main(int argc, char** argv) {
             ++name_mismatches;
             std::cout << "        warning: decklist says \"" << entry.name << "\"\n";
           }
+
+          // Convert to our format and save it.
+          const std::string id = card_id(entry);
+          const auto conversion = convert_card(card, id);
+          std::filesystem::create_directories(generated_dir);
+          std::ofstream(generated_dir / (id + ".json"), std::ios::binary)
+              << nlohmann::json(conversion.card).dump(2) << '\n';
+          for (const auto& note : conversion.notes) {
+            review[id + " " + api_name].push_back(note);
+          }
         } catch (const std::exception& e) {
           ++failures;
           std::cout << "  FAIL  " << label << "  " << e.what() << '\n';
+        }
+      }
+    }
+
+    if (!review.empty()) {
+      std::cout << "\nNeeds review:\n";
+      for (const auto& [card_label, notes] : review) {
+        for (const auto& note : notes) {
+          std::cout << "  " << card_label << ": " << note << '\n';
         }
       }
     }
@@ -79,6 +105,12 @@ int main(int argc, char** argv) {
               << seen.size() << " distinct cards, " << tcgdex.network_requests()
               << " network requests, " << failures << " failures, " << name_mismatches
               << " name mismatches\n";
+
+    // Load everything back exactly as the engine will, merging effects files.
+    const CardDB db = CardDB::load(generated_dir, effects_dir);
+    const auto missing = db.missing_effects();
+    std::cout << db.size() << " cards load cleanly; " << missing.size()
+              << " attacks/abilities/cards still need hand-written effects\n";
     return failures == 0 ? 0 : 1;
   } catch (const std::exception& e) {
     std::cerr << "error: " << e.what() << '\n';
