@@ -1,3 +1,4 @@
 {
-  "rules": ["ex", "tera"]
+  "rules": ["ex", "tera"],
+  "attacks": { "Shinobi Blade": { "effects": [{ "op": "may", "effects": [{ "op": "search_deck", "count": 1 }] }] } }
 }
