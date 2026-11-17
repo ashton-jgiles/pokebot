@@ -29,6 +29,42 @@ namespace pokebot {
             game.pending.clear();
         }
 
+        bool is_first_turn(const GameState& game) {
+            return game.turn <= 2;
+        }
+
+        PokemonInPlay new_pokemon(CardIndex card, std::uint16_t turn) {
+            PokemonInPlay pokemon;
+            pokemon.stack.push_back(card);
+            pokemon.turn_played = turn;
+            return pokemon;
+        }
+
+        PokemonInPlay& pokemon_at(PlayerState& player, Slot slot) {
+            if (slot == kActiveSlot) {
+                return *player.active;
+            }
+            return player.bench[static_cast<std::size_t>(slot) - 1];
+        }
+
+        const PokemonInPlay& pokemon_at(const PlayerState& player, Slot slot) {
+            if (slot == kActiveSlot) {
+                return *player.active;
+            }
+            return player.bench[static_cast<std::size_t>(slot) - 1];
+        }
+
+        FixedVector<Slot, kBenchSize + 1> in_play_slots(const PlayerState& player) {
+            FixedVector<Slot, kBenchSize + 1> slots;
+            if (player.active) {
+                slots.push_back(kActiveSlot);
+            }
+            for (std::size_t i = 0; i < player.bench.size(); ++i) {
+                slots.push_back(bench_slot(i));
+            }
+            return slots;
+        }
+
     } // namespace detail
 
     namespace {
@@ -51,6 +87,8 @@ namespace pokebot {
             detail::add_setup_actions(game, game.decision(), actions);
         } else if (kind == DecisionKind::MainPhase) {
             detail::add_main_phase_actions(game, actions);
+        } else if (kind == DecisionKind::RetreatDiscard) {
+            detail::add_retreat_discard_actions(game, actions);
         } else {
             throw std::logic_error("this decision isn't implemented yet (steps 2.4-2.5)");
         }
@@ -72,6 +110,8 @@ namespace pokebot {
             detail::apply_setup_action(game, action);
         } else if (kind == DecisionKind::MainPhase) {
             detail::apply_main_phase_action(game, action);
+        } else if (kind == DecisionKind::RetreatDiscard) {
+            detail::apply_retreat_discard(game, action);
         } else {
             throw std::logic_error("this decision isn't implemented yet (steps 2.4-2.5)");
         }

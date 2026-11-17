@@ -45,13 +45,6 @@ namespace pokebot {
             }
         }
 
-        PokemonInPlay put_into_play(CardIndex card) {
-            PokemonInPlay pokemon;
-            pokemon.stack.push_back(card);
-            pokemon.turn_played = 0;
-            return pokemon;
-        }
-
         void finish_setup(GameState& game) {
             for (int p = 0; p < kPlayers; ++p) {
                 PlayerState& player = game.player(p);
@@ -157,11 +150,11 @@ namespace pokebot {
                 case ActionKind::SetupPlaceActive:
                     game.pending.pop_back();
                     player.hand.remove(action.card);
-                    player.active = put_into_play(action.card);
+                    player.active = new_pokemon(action.card, 0);
                     break;
                 case ActionKind::SetupPlaceBench:
                     player.hand.remove(action.card);
-                    player.bench.push_back(put_into_play(action.card));
+                    player.bench.push_back(new_pokemon(action.card, 0));
                     break;
                 case ActionKind::SetupDone:
                     game.pending.pop_back();

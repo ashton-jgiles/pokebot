@@ -31,15 +31,18 @@ namespace {
 
 } // namespace
 
-TEST_CASE("on turn 1 the only choice so far is to end the turn", "[engine][turns]") {
+TEST_CASE("ending the turn is always one of the choices", "[engine][turns]") {
     const CardDB db = sample_db();
     const CardTable table(db, kDeck, kDeck);
     GameState game = pokebot::new_game(table, 1);
     test::play_setup(game);
 
-    const auto actions = pokebot::legal_actions(game);
-    REQUIRE(actions.size() == 1);
-    CHECK(actions[0] == kEndTurn);
+    for (int turn = 0; turn < 6; ++turn) {
+        const auto actions = pokebot::legal_actions(game);
+        REQUIRE_FALSE(actions.empty());
+        CHECK(actions.back() == kEndTurn);
+        pokebot::apply(game, kEndTurn);
+    }
 }
 
 TEST_CASE("ending the turn passes it to the opponent, who draws a card", "[engine][turns]") {

@@ -9,7 +9,7 @@
 
 namespace test {
 
-    inline pokebot::CardDef basic_pokemon(const std::string& id, const std::string& name, int hp = 60) {
+    inline pokebot::CardDef basic_pokemon(const std::string& id, const std::string& name, int hp = 60, int retreat = 1) {
         pokebot::CardDef c;
         c.id = id;
         c.name = name;
@@ -17,6 +17,14 @@ namespace test {
         c.stage = pokebot::Stage::Basic;
         c.hp = hp;
         c.types = {pokebot::EnergyType::Colorless};
+        c.retreat = retreat;
+        return c;
+    }
+
+    inline pokebot::CardDef evolution(const std::string& id, const std::string& name, pokebot::Stage stage, const std::string& evolves_from, int hp = 90, int retreat = 1) {
+        pokebot::CardDef c = basic_pokemon(id, name, hp, retreat);
+        c.stage = stage;
+        c.evolves_from = evolves_from;
         return c;
     }
 

@@ -88,6 +88,7 @@ namespace pokebot {
         DecisionKind kind = DecisionKind::MainPhase;
         std::uint8_t player = 0;
         std::uint8_t amount = 0;
+        std::uint8_t target = 0;
 
         bool operator==(const Decision&) const = default;
     };
