@@ -23,6 +23,9 @@ namespace pokebot {
                     }
                 }
                 check_decisions();
+                if (game_.player(0).stadium != kNoCard && game_.player(1).stadium != kNoCard) {
+                    fail("two Stadiums are in play");
+                }
                 return std::move(problems_);
             }
 
@@ -96,6 +99,16 @@ namespace pokebot {
                 note_zone(player.prizes, p, who + "Prize cards");
                 note_zone(player.discard, p, who + "discard pile");
                 note_zone(player.lost_zone, p, who + "Lost Zone");
+                note_zone(player.resolving, p, who + "cards being played");
+                if (player.stadium != kNoCard) {
+                    note(player.stadium, p, who + "stadium");
+                    if (game_.def(player.stadium).trainer_kind != TrainerKind::Stadium) {
+                        fail(who + "Stadium in play isnt a stadium card");
+                    }
+                }
+                if (!game_.is_over() && !player.resolving.empty() && game_.effects.empty()) {
+                    fail(who + "card is still being played but no effect is running");
+                }
                 if (player.active) {
                     check_pokemon(*player.active, p, who + "Active Pokemon");
                 }

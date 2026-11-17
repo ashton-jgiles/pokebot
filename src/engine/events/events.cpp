@@ -32,6 +32,8 @@ namespace pokebot {
                 return "turn ending";
             case EventKind::Checkup:
                 return "Pokemon Checkup";
+            case EventKind::TrainerPlayed:
+                return "trainer played";
         }
         return "unknown event";
     }

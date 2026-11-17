@@ -65,6 +65,8 @@ namespace pokebot::detail {
 
     // effects/interpreter.cpp
     bool is_effect_decision(DecisionKind kind);
+    bool condition_holds(const GameState& game, int player, const Condition& condition, CardIndex playing);
+    bool requirements_met(const GameState& game, int player, CardIndex card);
     void start_effect(GameState& game, const EffectContext& who, ProgramRef program, AfterEffect then);
     void add_effect_choice_actions(const GameState& game, std::vector<Action>& out);
     void apply_effect_choice(GameState& game, const Action& action);

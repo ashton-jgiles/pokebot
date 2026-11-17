@@ -109,6 +109,32 @@ namespace pokebot::rules {
         return game.turn != 1 && game.player(player).active.has_value();
     }
 
+    bool can_play_item(const GameState&, int) {
+        return true;
+    }
+
+    bool can_player_supporter(const GameState& game, int) {
+        return !game.flags.supporter_played && game.turn != 1;
+    }
+
+    bool can_play_stadium(const GameState& game, int, CardIndex stadium) {
+        const CardIndex in_play = stadium_in_play(game);
+        return !game.flags.stadium_played && (in_play == kNoCard || game.def(in_play).name != game.def(stadium).name);
+    }
+
+    bool can_attach_tool(const GameState& game, const PokemonInPlay& pokemon) {
+        return pokemon.tool == kNoCard;
+    }
+
+    CardIndex stadium_in_play(const GameState& game) {
+        for (int p = 0; p < kPlayers; ++p) {
+            if (game.player(p).stadium != kNoCard) {
+                return game.player(p).stadium;
+            }
+        }
+        return kNoCard;
+    }
+    
     int attacks_per_turn(const GameState&, const PokemonInPlay&) {
         return 1;
     }

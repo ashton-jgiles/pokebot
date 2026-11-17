@@ -134,6 +134,10 @@ namespace pokebot {
             }
             j["text"] = c.text;
             j["effects"] = c.effects;
+
+            if (!c.requirements.empty()) {
+                j["requires"] = c.requirements;
+            }
         }
     }
 
@@ -195,6 +199,7 @@ namespace pokebot {
                 }
                 c.text = j.value("text", "");
                 c.effects = effects_or_empty(j);
+                c.requirements = j.value("requires", json::array());
             }
         } catch (const json::exception& e) {
             throw CardDataError(std::string("bad card data: ") + e.what());

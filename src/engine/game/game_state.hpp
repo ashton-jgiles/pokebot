@@ -61,6 +61,8 @@ namespace pokebot {
         FixedVector<CardIndex, kDeckSize> lost_zone;
         std::optional<PokemonInPlay> active;
         FixedVector<PokemonInPlay, kBenchSize> bench;
+        FixedVector<CardIndex, 2> resolving;
+        CardIndex stadium = kNoCard;
         std::uint8_t mulligans = 0;
 
         bool operator==(const PlayerState&) const = default;
@@ -123,6 +125,7 @@ namespace pokebot {
 
     enum class ProgramKind : std::uint8_t {
         Attack,
+        Trainer,
     };
 
     struct ProgramRef {
@@ -136,6 +139,7 @@ namespace pokebot {
     enum class AfterEffect : std::uint8_t {
         Nothing,
         FinishAttack,
+        DiscardTrainer,
     };
 
     struct EffectRun {

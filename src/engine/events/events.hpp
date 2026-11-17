@@ -18,6 +18,7 @@ namespace pokebot {
         AttackDone,      // after the attack and its effects, before Knock Outs are handled
         TurnEnding,
         Checkup,
+        TrainerPlayed,
     };
 
     struct Event {

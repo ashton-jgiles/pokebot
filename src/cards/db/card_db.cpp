@@ -88,6 +88,14 @@ namespace pokebot {
                 throw CardDataError(card.id + " attack '" + attack.name + "': " + e.what());
             }
         }
+        try {
+            if (card.trainer_kind == TrainerKind::Item || card.trainer_kind == TrainerKind::Supporter) {
+                card.program = compile_trainer(card.effects);
+            }
+            card.conditions = compile_conditions(card.requirements);
+        } catch (const CardDataError& e) {
+            throw CardDataError(card.id + ": " + e.what());
+        }
         const std::string id = card.id;
         cards_.insert_or_assign(id, std::move(card));
     }

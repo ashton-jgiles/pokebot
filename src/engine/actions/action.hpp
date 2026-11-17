@@ -27,6 +27,8 @@ namespace pokebot {
         Evolve,
         AttachEnergy,
         Retreat,
+        PlayTrainer,
+        AttachTool,
         Attack,
         EndTurn,
 

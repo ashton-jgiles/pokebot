@@ -122,6 +122,10 @@ namespace pokebot {
                 const Attack& attack = attacks[action.amount];
                 return "attack with " + attack.name + " (" + std::to_string(attack.damage) + ")";
             }
+            case ActionKind::PlayTrainer:
+                return "play " + card();
+            case ActionKind::AttachTool:
+                return "attach " + card() + " to " + slot_name(game, player, action.target);
             case ActionKind::EndTurn:
                 return "end the turn";
             case ActionKind::DiscardEnergy:
@@ -168,6 +172,9 @@ namespace pokebot {
             }
             out << '\n';
             out << "  Hand:   " << card_list(game, player.hand) << '\n';
+        }
+        if (const CardIndex stadium = rules::stadium_in_play(game); stadium != kNoCard) {
+            out << "Stadium: " << game.def(stadium).name << '\n';
         }
         return out.str();
     }

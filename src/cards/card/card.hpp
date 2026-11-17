@@ -67,6 +67,9 @@ namespace pokebot {
         std::vector<EnergyType> provides;
         std::string text;
         nlohmann::json effects = nlohmann::json::array();
+        nlohmann::json requirements = nlohmann::json::array();
+        Program program;
+        std::vector<Condition> conditions;
 
         int prize_value() const;
     };

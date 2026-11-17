@@ -30,6 +30,11 @@ namespace pokebot::rules {
     bool can_attach_energy(const GameState& game, int player);
     bool can_retreat(const GameState& game, int player);
     bool can_attack(const GameState& game, int player);
+    bool can_play_item(const GameState& game, int player);
+    bool can_play_supporter(const GameState& game, int player);
+    bool can_play_stadium(const GameState& game, int player, CardIndex stadium);
+    bool can_attach_tool(const GameState& game, const PokemonInPlay& pokemon);
+    CardIndex stadium_in_play(const GameState& game);
     int attacks_per_turn(const GameState& game, const PokemonInPlay& pokemon);
     bool can_evolve(const GameState& game, const PokemonInPlay& pokemon);
     bool evolves_into(const GameState& game, const PokemonInPlay& pokemon, CardIndex evolution);
