@@ -29,6 +29,11 @@ bend; this file is where they live.
 | `can_attach_energy(game, player)` | Not yet this turn | Emboar, Iono's Bellibolt ex |
 | `can_retreat(game, player)` | Not yet this turn, with a Benched Pokémon to switch in | Clutch |
 | `can_attack(game, player)` | Not on turn 1, and only with an Active | Item/attack locks |
+| `can_play_item(game, player)` | Yes | Budew, Tyranitar (Item locks) |
+| `can_play_supporter(game, player)` | Not yet this turn, and not on turn 1 | |
+| `can_play_stadium(game, player, card)` | Not yet this turn, and not the same name as the one in play | Copperajah |
+| `can_attach_tool(game, pokemon)` | It has no Tool | Rotom ex's Multi Adapter |
+| `stadium_in_play(game)` | Whichever player's Stadium is in play, or `kNoCard` | |
 | `attacks_per_turn(game, pokemon)` | 1 | Dipplin, Goldeen, Seaking (Festival Lead with Festival Grounds) |
 | `can_evolve(game, pokemon)` | Not on either player's first turn, not on the turn it was played, stack not full | Forest of Vitality |
 | `evolves_into(game, pokemon, card)` | The card's "evolves from" names the top card | Rare Candy, Eevee ex |

@@ -20,12 +20,13 @@ lists the events Standard cards use.
 | `KnockedOut` | Each Knock Out, **before** its cards leave play | The Pokémon | — |
 | `TurnEnding` | Once the main phase is over, before Pokémon Checkup | — | — |
 | `Checkup` | Pokémon Checkup | — | — |
+| `TrainerPlayed` | Playing a Trainer from hand, before its effect | The Pokémon a Tool went on | The Trainer |
 
 `player` is whose Pokémon or card the event happened to. Pokémon are named by their
 [`id()`](../game/game_state.md#pokemoninplay), so an event still points at the right Pokémon after it moves.
 
 Still to come, with the cards that need them: cards discarded from the deck (Ferrothorn), an
-Ability or Tera Pokémon leaving play (Area Zero), and Trainers played (step 3.3).
+Ability or Tera Pokémon leaving play (Area Zero).
 
 ## What happens on an event
 

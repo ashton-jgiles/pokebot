@@ -26,6 +26,8 @@ for.
 | A game in progress has a decision pending, for player 0 or 1 | `the game isn't over but no decision is pending` |
 | A finished game has no pending decisions or effects | `the game is over but a decision or effect is still pending` |
 | An effect's decision has an effect running | `an effect's decision is pending but no effect is running` |
+| A card being played has an effect running | `… card is still being played but no effect is running` |
+| A Stadium in play is a Stadium card, and at most one is in play | `… Stadium in play isn't a stadium card`, `two Stadiums are in play` |
 | A main-phase decision is the current player's, during the main phase | |
 | After setup, each player has an Active, unless they're choosing a new one | `player 0 has no Active Pokemon and isn't choosing one` |
 

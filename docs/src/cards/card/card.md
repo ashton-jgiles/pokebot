@@ -60,6 +60,10 @@ attack text says how the final damage is worked out.
 | `effects` | Engine-readable effects (JSON), from the effects file |
 | `program` | `effects` compiled into [steps](../effects/program.md), filled in by `CardDB::add` |
 
+`CardDef` has the same pair for Items and Supporters (`effects` → `program`), plus `requirements`
+(the card's `"requires"` JSON) and `conditions` (compiled from it): what must hold for the card to be
+played. `requires` itself is a C++20 keyword, hence the different name.
+
 ### `CardRules`
 
 Rule-box and deck-building flags, all `false` by default: `ex`, `mega`, `tera`, `ace_spec`.

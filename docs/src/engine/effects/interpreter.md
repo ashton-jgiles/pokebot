@@ -12,8 +12,8 @@ player's choice, it pushes a decision and stops; the answer resumes it.
 | Field | Meaning |
 |---|---|
 | `who` | The `EffectContext`: whose effect it is and which Pokémon is "this Pokémon" |
-| `program` | A `ProgramRef` to the compiled program: card, kind (attack for now), index |
-| `then` | What to do when it finishes (`FinishAttack` for an attack) |
+| `program` | A `ProgramRef` to the compiled program: card, kind (`Attack` or `Trainer`), index |
+| `then` | What to do when it finishes: `FinishAttack` for an attack, `DiscardTrainer` for an Item or Supporter |
 | `pc` | The next step |
 | `chosen`, `chosen_pokemon` | Choices made so far |
 
@@ -28,6 +28,8 @@ like the original.** Search can explore a half-finished Ultra Ball like any othe
 | `is_effect_decision(kind)` | `ChooseCards`, `ChoosePokemon` or `ChooseYesNo` |
 | `add_effect_choice_actions(game, out)` | The legal answers to the current effect decision |
 | `apply_effect_choice(game, action)` | Records the answer and carries on |
+| `condition_holds(game, player, condition, playing)` | Whether a [condition](../../cards/effects/program.md#conditions) holds for `player`. `playing` is the card being played, which `hand_besides` doesn't count |
+| `requirements_met(game, player, card)` | Whether every condition in a card's `"requires"` holds |
 
 When a run's last step is done, it's removed and its `then` runs.
 
@@ -36,11 +38,19 @@ When a run's last step is done, it's removed and its `then` runs.
 | Decision | Actions | Notes |
 |---|---|---|
 | `ChooseCards` | `ChooseCard` (one per different matching card), `ChooseDone` | `decision.amount` is the most still allowed and `decision.target` the fewest. Both are capped by how many cards match; with none, the step is skipped. Reaching the most ends the choice on its own; `ChooseDone` is offered once the fewest are chosen |
-| `ChoosePokemon` | `ChoosePokemon` with a Bench slot | Skipped if the Bench is empty |
+| `ChoosePokemon` | `ChoosePokemon` with a Bench slot | The step's side's Bench (Boss's Orders chooses from the opponent's). Skipped if it's empty |
 | `ChooseYesNo` | `AnswerYes`, `AnswerNo` | No jumps past the `may` block |
 
 The player answering is `who.player`. Choosing from the deck shows the chooser their whole deck;
 hiding what a player shouldn't see is the observation layer's job (Milestone 4).
+
+## Trainers are effects
+
+An Item or Supporter is moved from the hand to `PlayerState::resolving` and its program starts with
+`then = DiscardTrainer`. When the program finishes, the card goes to the discard pile. Until then it
+isn't in the hand (Ultra Ball can't discard itself) or the discard pile (Night Stretcher can't take
+it back). The `MainPhase` decision stays underneath, so the turn carries on afterwards. See
+[main actions](../actions/main_actions.md#trainer-cards).
 
 ## Attacks are effects
 

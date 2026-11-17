@@ -140,6 +140,23 @@ Attacks with effects so far: Froakie's Collect, Frogadier's Summoning Jutsu, Pur
 Evil, Greninja ex's Shinobi Blade, Raging Bolt ex's Burst Roar, Chien-Pao's Icicle Loop and
 Dunsparce's Trading Places.
 
+An Item or Supporter has a top-level `effects` list, and optionally `requires`: the
+[conditions](../../src/cards/effects/program.md#conditions) that must hold before it can be played.
+
+```json
+{
+  "requires": [{ "hand_besides": 2 }],
+  "effects": [
+    { "op": "discard_from_hand", "count": 2 },
+    { "op": "search_deck", "count": 1, "filter": { "kind": "pokemon" } }
+  ]
+}
+```
+
+Trainers with effects so far: Switch, Boss's Orders, Ultra Ball, Night Stretcher, Energy
+Retrieval, Poké Pad (ASC and POR), Cyrano, Lillie's Determination, Judge, Unfair Stamp, Hilda, Dawn,
+Secret Box, Buddy-Buddy Poffin and Lana's Aid.
+
 ## `raw/`
 
 ```

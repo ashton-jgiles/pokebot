@@ -18,7 +18,8 @@ These are the formal model's *Legal* and *δ* (transition) functions.
 
 | Covered | Not yet (Milestone 3) |
 |---|---|
-| Setup: coin flip, opening hands, mulligans with bonus draws, Active/Bench, 6 Prize cards | Trainer cards (they stay in hand) |
+| Setup: coin flip, opening hands, mulligans with bonus draws, Active/Bench, 6 Prize cards | What Stadiums and Tools do (they can be played, but have no effect yet) |
+| Trainers: Items, Supporters, Stadiums, Tools, their limits and `"requires"`; 16 with effects | Trainers whose effects aren't written yet (they can't be played) |
 | Turn loop: draw, main phase, end of turn, Pokémon Checkup step | Abilities |
 | Benching, evolving, attaching Energy, retreating | Damage formulas, Bench damage and most other attack effects |
 | Attacks: Energy costs, Weakness, Resistance, damage, and [effects](effects/interpreter.md) (draw, search, switch, "you may"…) | Special Conditions (Checkup runs, but does nothing yet) |

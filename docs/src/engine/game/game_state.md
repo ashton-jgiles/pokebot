@@ -75,6 +75,8 @@ Special Conditions will be added in Milestone 3.
 | `hand`, `prizes`, `discard`, `lost_zone` | The other zones |
 | `active` | `std::optional<PokemonInPlay>`; empty only while choosing a new Active, or after the game is decided |
 | `bench` | Up to 5 Pokémon |
+| `resolving` | Up to 2 Trainer cards being played, while their effect runs |
+| `stadium` | This player's Stadium in play, or `kNoCard`. At most one player has one |
 | `mulligans` | Mulligans taken during setup |
 
 ## `TurnFlags`
@@ -95,7 +97,7 @@ A copied attack (N's Zoroark ex, Mew ex, Slowking) runs the other card's text wi
 ## `EffectRun`
 
 An effect part way through: who it's for (`EffectContext`), which compiled program (`ProgramRef`:
-card, `ProgramKind`, index), what to do when it finishes (`AfterEffect`), the next step (`pc`), and
+card, `ProgramKind` (`Attack` or `Trainer`), index), what to do when it finishes (`AfterEffect`), the next step (`pc`), and
 the choices made so far (`chosen`, `chosen_pokemon`). `GameState::effects` stacks up to 4. See the
 [interpreter](../effects/interpreter.md).
 
@@ -153,7 +155,7 @@ Helpers: `player(p)`, `def(card)`, `decision()` (the top of `pending`), `is_over
 
 A `static_assert` requires `GameState` to be **trivially copyable**. Adding a `std::vector` or
 `std::string` to it stops the build, because copying the state is how search explores the game.
-A whole game is **1,816 bytes**.
+A whole game is **1,824 bytes**.
 
 ## Tests
 
