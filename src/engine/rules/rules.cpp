@@ -167,11 +167,11 @@ namespace pokebot::rules {
                def.evolves_from == game.def(pokemon.top()).name;
     }
 
-    int attack_damage(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, const Attack& attack) {
-        if (attack.damage <= 0) {
+    int attack_damage(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, int base) {
+        if (base <= 0) {
             return 0;
         }
-        int damage = attack.damage;
+        int damage = base;
         damage = attacker_side(game, attacker, defender, damage);
         damage = apply_weakness(game, attacker, defender, damage);
         damage = apply_resistance(game, attacker, defender, damage);

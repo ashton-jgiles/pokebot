@@ -56,7 +56,7 @@ namespace pokebot::detail {
     void add_attack_actions(const GameState& game, std::vector<Action>& out);
     void apply_attack(GameState& game, const Action& action);
     void perform_attack(GameState& game, const EffectContext& who, AttackRef attack);
-    void deal_attack_damage(GameState& game, const EffectContext& who, const Attack& attack);
+    void deal_attack_damage(GameState& game, const EffectContext& who, int base);
     void finish_attack(GameState& game, const EffectContext& who);
     void handle_knockouts(GameState& game);
     void add_promote_actions(const GameState& game, std::vector<Action>& out);
@@ -71,7 +71,7 @@ namespace pokebot::detail {
 
     // effects/interpreter.cpp
     bool is_effect_decision(DecisionKind kind);
-    bool condition_holds(const GameState& game, int player, const Condition& condition, CardIndex playing);
+    bool condition_holds(const GameState& game, int player, const Condition& condition, CardIndex playing, const EffectRun* run = nullptr);
     bool requirements_met(const GameState& game, int player, CardIndex card);
     void start_effect(GameState& game, const EffectContext& who, ProgramRef program, AfterEffect then);
     void add_effect_choice_actions(const GameState& game, std::vector<Action>& out);

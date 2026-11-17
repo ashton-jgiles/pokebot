@@ -58,6 +58,10 @@ namespace pokebot {
                     }
                     case Zone::Bench:
                         return nullptr;
+                    case Zone::DeckTop:
+                        return &p.deck;
+                    case Zone::YourAttachedEnergy:
+                        return nullptr; // spread over several Pokemon; see choosable and take_card
                 }
                 return nullptr;
             }
@@ -68,6 +72,17 @@ namespace pokebot {
 
             std::vector<CardIndex> choosable(const GameState& game, const EffectRun& run, const Step& step) {
                 std::vector<CardIndex> cards;
+                if (step.from == Zone::YourAttachedEnergy) {
+                    const PlayerState& p = game.player(run.who.player);
+                    for (const Slot slot : in_play_slots(p)) {
+                        for (const CardIndex card : pokemon_at(p, slot).energy) {
+                            if (!run.chosen.contains(card) && matches(step.filter, game.def(card))) {
+                                cards.push_back(card);
+                            }
+                        }
+                    }
+                    return cards;
+                }
                 const CardZone* zone = zone_of(game, run, step.from);
                 if (zone == nullptr) {
                     return cards;
@@ -96,12 +111,27 @@ namespace pokebot {
                 game.pending.push_back(Decision{kind, run.who.player, static_cast<std::uint8_t>(max), static_cast<std::uint8_t>(min)});
             }
 
+            bool take_card(GameState& game, const EffectRun& run, Zone from, CardIndex card) {
+                if (from == Zone::YourAttachedEnergy) {
+                    PlayerState& p = game.player(run.who.player);
+                    for (const Slot slot : in_play_slots(p)) {
+                        if (pokemon_at(p, slot).energy.remove(card)) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+                CardZone* zone = zone_of(game, run, from);
+                return zone != nullptr && zone->remove(card);
+            }
+
             void move_chosen(GameState& game, EffectRun& run, const Step& step) {
-                CardZone* from = zone_of(game, run, step.from);
+                int moved = 0;
                 for (const CardIndex card : run.chosen) {
-                    if (from == nullptr || !from->remove(card)) {
+                    if (!take_card(game, run, step.from, card)) {
                         continue;
                     }
+                    ++moved;
                     if (step.to == Zone::Bench) {
                         game.player(run.who.player).bench.push_back(new_pokemon(card, game.turn));
                         raise(game, Event{EventKind::PutOnBench, run.who.player, card, kNoCard});
@@ -110,6 +140,71 @@ namespace pokebot {
                     }
                 }
                 run.chosen.clear();
+                run.value = static_cast<std::int16_t>(moved);
+            }
+
+            int hand_to_deck_bottom(GameState& game, int player) {
+                PlayerState& p = game.player(player);
+                const int moved = static_cast<int>(p.hand.size());
+                game.rng.shuffle(p.hand);
+                CardZone deck = p.hand; // the bottom of the deck is the front
+                for (const CardIndex card : p.deck) {
+                    deck.push_back(card);
+                }
+                p.deck = deck;
+                p.hand.clear();
+                return moved;
+            }
+
+            int count_value(const GameState& game, const EffectRun& run, const Count& count) {
+                int total = 0;
+                for (const int player : players_on(count.side, run.who.player)) {
+                    const PlayerState& p = game.player(player);
+                    switch (count.kind) {
+                        case CountKind::None:
+                            break;
+                        case CountKind::Value:
+                            return run.value;
+                        case CountKind::Hand:
+                            total += static_cast<int>(p.hand.size());
+                            break;
+                        case CountKind::Discard:
+                            for (const CardIndex card : p.discard) {
+                                total += matches(count.filter, game.def(card)) ? 1 : 0;
+                            }
+                            break;
+                        case CountKind::Benched:
+                            total += static_cast<int>(p.bench.size());
+                            break;
+                        case CountKind::PrizesTaken:
+                            total += static_cast<int>(kPrizeCount - p.prizes.size());
+                            break;
+                        case CountKind::ActiveEnergy:
+                            total += p.active ? static_cast<int>(p.active->energy.size()) : 0;
+                            break;
+                        case CountKind::DamageCountersOnSelf: {
+                            const PokemonInPlay* self = find_pokemon(game, run.who.self);
+                            return self != nullptr ? self->damage_counters : 0;
+                        }
+                    }
+                }
+                return total;
+            }
+
+            bool shares_type(const GameState& game, int player) {
+                const PlayerState& mine = game.player(player);
+                const PlayerState& theirs = game.player(opponent_of(player));
+                for (const Slot a : in_play_slots(mine)) {
+                    const auto my_types = rules::types(game, pokemon_at(mine, a));
+                    for (const Slot b : in_play_slots(theirs)) {
+                        for (const EnergyType type : rules::types(game, pokemon_at(theirs, b))) {
+                            if (my_types.contains(type)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
             }
 
             void shuffle_hand_into_deck(GameState& game, int player) {
@@ -142,7 +237,7 @@ namespace pokebot {
                 PlayerState& p = game.player(run.who.player);
                 switch (step.op) {
                     case Op::Damage:
-                        deal_attack_damage(game, run.who, game.def(run.program.card).attacks[run.program.index]);
+                        deal_attack_damage(game, run.who, run.damage);
                         break;
                     case Op::Draw:
                         for (const int player : players_on(step.side, run.who.player)) {
@@ -187,7 +282,7 @@ namespace pokebot {
                         ask(game, run, DecisionKind::ChooseYesNo, 0, 0);
                         return false;
                     case Op::JumpUnless:
-                        if (!condition_holds(game, run.who.player, step.condition, run.who.source)) {
+                        if (!condition_holds(game, run.who.player, step.condition, run.who.source, &run)) {
                             run.pc = step.jump;
                             return true;
                         }
@@ -195,6 +290,36 @@ namespace pokebot {
                     case Op::Jump:
                         run.pc = step.jump;
                         return true;
+                    case Op::SetDamage:
+                        run.damage = static_cast<std::int16_t>(step.amount + step.per * count_value(game, run, step.count));
+                        break;
+                    case Op::AddDamage:
+                        run.damage = static_cast<std::int16_t>(run.damage + step.amount + step.per * count_value(game, run, step.count));
+                        break;
+                    case Op::FlipCoins: {
+                        int heads = 0;
+                        for (int i = 0; i < step.max; ++i) {
+                            heads += game.rng.coin_flip() ? 1 : 0;
+                        }
+                        run.value = static_cast<std::int16_t>(heads);
+                        break;
+                    }
+                    case Op::FlipUntilTails: {
+                        int heads = 0;
+                        while (game.rng.coin_flip()) {
+                            ++heads;
+                        }
+                        run.value = static_cast<std::int16_t>(heads);
+                        break;
+                    }
+                    case Op::HandToDeckBottom: {
+                        int moved = 0;
+                        for (const int player : players_on(step.side, run.who.player)) {
+                            moved += hand_to_deck_bottom(game, player);
+                        }
+                        run.value = static_cast<std::int16_t>(moved);
+                        break;
+                    }
                     case Op::ApplySpecialCondition:
                         for (const int player : players_on(step.side, run.who.player)) {
                             PlayerState& target = game.player(player);
@@ -263,7 +388,7 @@ namespace pokebot {
             return kind == DecisionKind::ChooseCards || kind == DecisionKind::ChoosePokemon || kind == DecisionKind::ChooseYesNo;
         }
 
-        bool condition_holds(const GameState& game, int player, const Condition& condition, CardIndex playing) {
+        bool condition_holds(const GameState& game, int player, const Condition& condition, CardIndex playing, const EffectRun* run) {
             const PlayerState& p = game.player(player);
             const PlayerState& opponent = game.player(opponent_of(player));
             switch (condition.kind) {
@@ -283,6 +408,12 @@ namespace pokebot {
                     return p.bench.size() < rules::bench_size(game, player);
                 case ConditionKind::DiscardHas:
                     return discard_has(game, player, condition.filter);
+                case ConditionKind::ValueAtLeast:
+                    return run != nullptr && run->value >= condition.value;
+                case ConditionKind::OpponentPrizesAtMost:
+                    return static_cast<int>(opponent.prizes.size()) <= condition.value;
+                case ConditionKind::SharesType:
+                    return shares_type(game, player);
             }
             return false;
         }
@@ -301,6 +432,9 @@ namespace pokebot {
             run.who = who;
             run.program = program;
             run.then = then;
+            if (program.kind == ProgramKind::Attack) {
+                run.damage = static_cast<std::int16_t>(game.def(program.card).attacks[program.index].damage);
+            }
             game.effects.push_back(run);
             run_effects(game);
         }

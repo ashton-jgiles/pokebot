@@ -19,6 +19,8 @@ namespace pokebot {
         Discard,
         AttachedEnergy,
         Bench,
+        YourAttachedEnergy,
+        DeckTop,
     };
 
     enum class Side : std::uint8_t {
@@ -41,6 +43,11 @@ namespace pokebot {
         JumpUnless,
         Jump,
         ApplySpecialCondition,
+        SetDamage,
+        AddDamage,
+        FlipCoins,
+        FlipUntilTails,
+        HandToDeckBottom,
     };
 
     enum class StageFilter : std::uint8_t {
@@ -71,11 +78,31 @@ namespace pokebot {
         OpponentHasBenched,
         BenchNotFull,
         DiscardHas,
+        ValueAtLeast,
+        OpponentPrizesAtMost,
+        SharesType,
     };
 
     struct Condition {
         ConditionKind kind = ConditionKind::HandBesides;
         int value = 0;
+        CardFilter filter;
+    };
+
+    enum class CountKind : std::uint8_t {
+        None,
+        Value,
+        Hand,
+        Discard,
+        Benched,
+        PrizesTaken,
+        ActiveEnergy,
+        DamageCountersOnSelf,
+    };
+
+    struct Count {
+        CountKind kind = CountKind::None;
+        Side side = Side::You;
         CardFilter filter;
     };
 
@@ -89,6 +116,9 @@ namespace pokebot {
         CardFilter filter;
         Condition condition;
         SpecialCondition special = SpecialCondition::Poisoned;
+        std::int16_t amount = 0;
+        std::int16_t per = 0;
+        Count count;
         std::uint8_t jump = 0;
     };
 

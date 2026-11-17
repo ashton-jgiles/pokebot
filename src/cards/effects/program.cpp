@@ -137,6 +137,31 @@ namespace pokebot {
             return block.contains("filter") ? parse_filter_fields(block.at("filter")) : CardFilter{};
         }
 
+        Count parse_count(const json& each) {
+            Count count;
+            const std::string of = each.at("of").get<std::string>();
+            if (of == "heads" || of == "moved") {
+                count.kind = CountKind::Value;
+            } else if (of == "hand") {
+                count.kind = CountKind::Hand;
+            } else if (of == "discard") {
+                count.kind = CountKind::Discard;
+            } else if (of == "benched") {
+                count.kind = CountKind::Benched;
+            } else if (of == "prizes_taken") {
+                count.kind = CountKind::PrizesTaken;
+            } else if (of == "active_energy") {
+                count.kind = CountKind::ActiveEnergy;
+            } else if (of == "damage_counters") {
+                count.kind = CountKind::DamageCountersOnSelf;
+            } else {
+                throw CardDataError("unknown thing to count '" + of + "'");
+            }
+            count.side = side_of(each);
+            count.filter = parse_filter(each);
+            return count;
+        }
+
         Condition parse_condition(const json& item) {
             if (!item.is_object() || item.size() != 1) {
                 throw CardDataError("a condition is an object with one key");
@@ -160,22 +185,30 @@ namespace pokebot {
             } else if (key == "discard_has") {
                 condition.kind = ConditionKind::DiscardHas;
                 condition.filter = parse_filter_fields(value);
+            } else if (key == "heads_at_least" || key == "moved_at_least") {
+                condition.kind = ConditionKind::ValueAtLeast;
+                condition.value = value.get<int>();
+            } else if (key == "opponent_prizes_at_most") {
+                condition.kind = ConditionKind::OpponentPrizesAtMost;
+                condition.value = value.get<int>();
+            } else if (key == "shares_type") {
+                condition.kind = ConditionKind::SharesType;
             } else {
                 throw CardDataError("unknown condition '" + key + "'");
             }
             return condition;
         }
 
-        bool places_damage(const json& effects) {
+        bool uses_op(const json& effects, const std::string& name) {
             for (const auto& block : effects) {
                 if (!block.is_object()) {
                     continue;
                 }
-                if (block.value("op", "") == "damage") {
+                if (block.value("op", "") == name) {
                     return true;
                 }
                 for (const char* list : {"effects", "then", "else"}) {
-                    if (block.contains(list) && places_damage(block.at(list))) {
+                    if (block.contains(list) && uses_op(block.at(list), name)) {
                         return true;
                     }
                 }
@@ -233,6 +266,22 @@ namespace pokebot {
                 add(move);
             }
 
+            void change_damage(Op op, const json& block) {
+                if (!attack_) {
+                    throw CardDataError("only attacks change their damage");
+                }
+                Step step;
+                step.op = op;
+                step.amount = static_cast<std::int16_t>(block.value("amount", 0));
+                step.per = static_cast<std::int16_t>(block.value("per", 0));
+                if (block.contains("for_each")) {
+                    step.count = parse_count(block.at("for_each"));
+                } else if (step.per != 0) {
+                    throw CardDataError("\"per\" needs \"for_each\"");
+                }
+                add(step);
+            }
+
             void switch_active(Side side) {
                 Step choose;
                 choose.op = Op::ChooseBenched;
@@ -284,7 +333,13 @@ namespace pokebot {
                     choose_and_move(Zone::Discard, destination(block), min, count, parse_filter(block));
                 } else if (op == "move_attached_energy") {
                     const std::uint8_t count = count_of(block, 1);
-                    choose_and_move(Zone::AttachedEnergy, destination(block), count, count, parse_filter(block));
+                    const std::uint8_t min = block.value("up_to", false) ? 0 : count;
+                    const std::string from = block.value("from", "self");
+                    if (from != "self" && from != "your_pokemon") {
+                        throw CardDataError("move_attached_energy is from \"self\" or \"your_pokemon\"");
+                    }
+                    const Zone zone = from == "self" ? Zone::AttachedEnergy : Zone::YourAttachedEnergy;
+                    choose_and_move(zone, destination(block), min, count, parse_filter(block));
                 } else if (op == "switch_self") {
                     switch_active(Side::You);
                 } else if (op == "switch_active") {
@@ -300,6 +355,36 @@ namespace pokebot {
                     apply.side = block.contains("player") ? side_of(block) : Side::Opponent;
                     apply.max = count_of(block, 1);
                     add(apply);
+                } else if (op == "set_damage") {
+                    change_damage(Op::SetDamage, block);
+                } else if (op == "add_damage") {
+                    change_damage(Op::AddDamage, block);
+                } else if (op == "flip_coins") {
+                    Step flip;
+                    flip.op = Op::FlipCoins;
+                    flip.max = count_of(block, 1);
+                    add(flip);
+                } else if (op == "flip_until_tails") {
+                    add(Op::FlipUntilTails);
+                } else if (op == "hand_to_deck_bottom") {
+                    Step bottom;
+                    bottom.op = Op::HandToDeckBottom;
+                    bottom.side = side_of(block);
+                    add(bottom);
+                } else if (op == "search_to_top") {
+                    Step choose;
+                    choose.op = Op::ChooseCards;
+                    choose.from = Zone::Deck;
+                    choose.to = Zone::DeckTop;
+                    choose.max = count_of(block, 1);
+                    choose.filter = parse_filter(block);
+                    add(choose);
+                    add(Op::ShuffleDeck);
+                    Step move;
+                    move.op = Op::MoveChosen;
+                    move.from = Zone::Deck;
+                    move.to = Zone::DeckTop;
+                    add(move);
                 } else if (op == "may") {
                     const std::size_t ask = program.size();
                     add(Op::AskYesNo);
@@ -333,7 +418,11 @@ namespace pokebot {
             }
             try {
                 Compiler compiler(attack);
-                if (attack && !places_damage(effects)) {
+                const bool placed = uses_op(effects, "damage");
+                if (attack && !placed && (uses_op(effects, "set_damage") || uses_op(effects, "add_damage"))) {
+                    throw CardDataError("an attack that changes its damage must place a \"damage\" step");
+                }
+                if (attack && !placed) {
                     compiler.add(Op::Damage);
                 }
                 compiler.blocks(effects);
@@ -451,6 +540,16 @@ namespace pokebot {
                 return "jump";
             case Op::ApplySpecialCondition:
                 return "apply Special Condition";
+            case Op::SetDamage:
+                return "set damage";
+            case Op::AddDamage:
+                return "add damage";
+            case Op::FlipCoins:
+                return "flip coins";
+            case Op::FlipUntilTails:
+                return "flip until tails";
+            case Op::HandToDeckBottom:
+                return "hand to bottom of deck";
         }
         return "unknown op";
     }
