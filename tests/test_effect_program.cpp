@@ -109,3 +109,79 @@ TEST_CASE("adding a card compiles its attacks and names the attack on a mistake"
         CHECK(std::string(e.what()).find("Collect") != std::string::npos);
     }
 }
+
+TEST_CASE("if jumps to else on false, and past it after then", "[effects]") {
+    const auto program = pokebot::compile_trainer(json::parse(
+        R"([{"op": "if", "condition": {"prizes_exactly": 6}, "then": [{"op": "draw", "count": 8}], "else": [{"op": "draw", "count": 6}]}])"));
+    REQUIRE(ops(program) == std::vector<Op>{Op::JumpUnless, Op::Draw, Op::Jump, Op::Draw});
+    CHECK(program[0].jump == 3);
+    CHECK(program[0].condition.kind == pokebot::ConditionKind::PrizesExactly);
+    CHECK(program[0].condition.value == 6);
+    CHECK(program[2].jump == 4);
+
+    const auto no_else = pokebot::compile_trainer(json::parse(R"([{"op": "if", "condition": {"has_benched": true}, "then": [{"op": "draw"}]}])"));
+    REQUIRE(ops(no_else) == std::vector<Op>{Op::JumpUnless, Op::Draw});
+    CHECK(no_else[0].jump == 2);
+}
+
+TEST_CASE("Trainer effects have no damage step and can name a player", "[effects]") {
+    const auto program = pokebot::compile_trainer(json::parse(R"([{"op": "draw", "count": 2, "player": "opponent"}])"));
+    REQUIRE(ops(program) == std::vector<Op>{Op::Draw});
+    CHECK(program[0].side == pokebot::Side::Opponent);
+    CHECK_THROWS_AS(pokebot::compile_trainer(json::parse(R"([{"op": "damage"}])")), CardDataError);
+    CHECK_THROWS_AS(pokebot::compile_trainer(json::parse(R"([{"op": "draw", "player": "everyone"}])")), CardDataError);
+    CHECK_THROWS_AS(pokebot::compile_trainer(json::parse(R"([{"op": "switch_active", "player": "each"}])")), CardDataError);
+}
+
+TEST_CASE("requirements compile to conditions and reject mistakes", "[effects]") {
+    const auto conditions = pokebot::compile_conditions(json::parse(R"([{"hand_besides": 2}, {"discard_has": {"kind": "energy"}}])"));
+    REQUIRE(conditions.size() == 2);
+    CHECK(conditions[0].kind == pokebot::ConditionKind::HandBesides);
+    CHECK(conditions[0].value == 2);
+    CHECK(conditions[1].kind == pokebot::ConditionKind::DiscardHas);
+    CHECK(conditions[1].filter.kind == pokebot::CardKind::Energy);
+    CHECK_THROWS_AS(pokebot::compile_conditions(json::parse(R"([{"moon_is_full": true}])")), CardDataError);
+    CHECK_THROWS_AS(pokebot::compile_conditions(json::parse(R"([{"hand_besides": 2, "has_benched": true}])")), CardDataError);
+    CHECK_THROWS_AS(pokebot::compile_conditions(json::parse(R"({"hand_besides": 2})")), CardDataError);
+}
+
+TEST_CASE("filters match Trainer kind, stage, Rule Box, HP and any of several", "[effects]") {
+    using pokebot::CardFilter;
+    auto small = test::basic_pokemon("TST-1", "Smallmon", 70);
+    auto big = test::basic_pokemon("TST-2", "Bigmon ex", 200);
+    big.rules.ex = true;
+    const auto stage2 = test::evolution("TST-3", "Topmon", pokebot::Stage::Stage2, "Midmon");
+    pokebot::CardDef item;
+    item.kind = pokebot::CardKind::Trainer;
+    item.trainer_kind = pokebot::TrainerKind::Item;
+    const auto energy = test::basic_energy("TST-4", "Fire Energy", pokebot::EnergyType::Fire);
+
+    CardFilter items;
+    items.trainer = pokebot::TrainerKind::Item;
+    CHECK(matches(items, item));
+    CHECK_FALSE(matches(items, small));
+
+    CardFilter evolution;
+    evolution.stage = pokebot::StageFilter::Evolution;
+    CHECK(matches(evolution, stage2));
+    CHECK_FALSE(matches(evolution, small));
+
+    CardFilter no_rule_box;
+    no_rule_box.rule_box = false;
+    CHECK(matches(no_rule_box, small));
+    CHECK_FALSE(matches(no_rule_box, big));
+
+    CardFilter up_to_70;
+    up_to_70.max_hp = 70;
+    CHECK(matches(up_to_70, small));
+    CHECK_FALSE(matches(up_to_70, big));
+    CHECK_FALSE(matches(up_to_70, energy));
+
+    CardFilter pokemon_or_energy;
+    pokemon_or_energy.any_of.resize(2);
+    pokemon_or_energy.any_of[0].kind = pokebot::CardKind::Pokemon;
+    pokemon_or_energy.any_of[1].kind = pokebot::CardKind::Energy;
+    CHECK(matches(pokemon_or_energy, small));
+    CHECK(matches(pokemon_or_energy, energy));
+    CHECK_FALSE(matches(pokemon_or_energy, item));
+}

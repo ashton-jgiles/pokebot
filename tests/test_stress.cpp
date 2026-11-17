@@ -76,9 +76,10 @@ TEST_CASE("1,000 biased random games on the real decks never break an invariant"
     const auto ends = play_many<pokebot::BiasedRandomAgent>(*real, 1000);
     INFO(summary(ends));
     CHECK(ends[static_cast<std::size_t>(GameEnd::ActionLimit)] == 0);
-    // The biased agent exists to exercise combat: most games should end by Knock Outs.
+    // The biased agent exists to exercise combat, so plenty of games should end by Knock Outs. Random
+    // players also burn through their decks with draw and search cards, so deck-outs are common too.
     const int by_knock_outs = ends[static_cast<std::size_t>(GameEnd::PrizeCards)] + ends[static_cast<std::size_t>(GameEnd::NoPokemon)];
-    CHECK(by_knock_outs > 500);
+    CHECK(by_knock_outs > 300);
 }
 
 TEST_CASE("1,000 uniform random games on the real decks never break an invariant", "[stress]") {

@@ -19,7 +19,7 @@ namespace test {
             n += p.active->stack.size() + p.active->energy.size() + (p.active->tool != pokebot::kNoCard ? 1 : 0);
         }
         for (const auto& pokemon : p.bench) {
-            n += pokemon.stack.size() + pokemon.energy.size() + (p.active->tool != pokebot::kNoCard ? 1 : 0);
+            n += pokemon.stack.size() + pokemon.energy.size() + (pokemon.tool != pokebot::kNoCard ? 1 : 0);
         }
         return n;
     }
