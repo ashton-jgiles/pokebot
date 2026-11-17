@@ -1,0 +1,1 @@
+{"requires": [{"hand_besides": 2}], "effects": [{"op": "discard_from_hand", "count": 2}, {"op": "search_deck", "count": 1, "filter": {"kind": "pokemon"}}]}

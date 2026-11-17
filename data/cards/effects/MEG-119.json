@@ -1,0 +1,1 @@
+{"effects": [{"op": "shuffle_hand_into_deck"}, {"op": "if", "condition": {"prizes_exactly": 6}, "then": [{"op": "draw", "count": 8}], "else": [{"op": "draw", "count": 6}]}]}

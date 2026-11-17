@@ -1,0 +1,1 @@
+{"effects": [{"op": "shuffle_hand_into_deck", "player": "each"}, {"op": "draw", "count": 4, "player": "each"}]}

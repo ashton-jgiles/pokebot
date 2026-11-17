@@ -1,0 +1,1 @@
+{"requires": [{"discard_has": {"any_of": [{"kind": "pokemon", "rule_box": false}, {"kind": "energy", "basic": true}]}}], "effects": [{"op": "from_discard", "count": 3, "up_to": true, "filter": {"any_of": [{"kind": "pokemon", "rule_box": false}, {"kind": "energy", "basic": true}]}}]}
