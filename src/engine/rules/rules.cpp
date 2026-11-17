@@ -72,6 +72,10 @@ namespace pokebot::rules {
         return std::max(game.def(pokemon.top()).retreat, 0);
     }
 
+    const Attack& attack_text(const GameState& game, AttackRef attack) {
+        return game.def(attack.text_from).attacks[attack.index];
+    }
+
     EnergyList attack_cost(const GameState& game, const PokemonInPlay& pokemon, std::size_t attack) {
         return to_list(game.def(pokemon.top()).attacks[attack].cost);
     }
@@ -103,6 +107,10 @@ namespace pokebot::rules {
 
     bool can_attack(const GameState& game, int player) {
         return game.turn != 1 && game.player(player).active.has_value();
+    }
+
+    int attacks_per_turn(const GameState&, const PokemonInPlay&) {
+        return 1;
     }
 
     bool can_evolve(const GameState& game, const PokemonInPlay& pokemon) {

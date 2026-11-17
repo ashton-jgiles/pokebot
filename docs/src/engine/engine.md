@@ -47,9 +47,11 @@ use them to set up positions.
 | `new_pokemon(card, turn)` | A fresh `PokemonInPlay` with `turn_played = turn` |
 | `pokemon_at(player, slot)` | The Pokémon in a slot (must be occupied) |
 | `in_play_slots(player)` | Every occupied slot, Active first |
+| `find_pokemon(game, id)` | The Pokémon in play with this [`id()`](game/game_state.md#pokemoninplay), or `nullptr` |
+| `raise(game, event)` | Announces an [event](events/events.md) |
 | `draw_cards(game, player, count)` | Draws up to `count`; returns how many. Running out here doesn't lose the game |
 | `set_winner(game, player)` | Ends the game and clears pending decisions |
 | `begin_turn`, `end_turn`, `continue_game` | Turn flow; see [turn](actions/turn.md) |
-| `can_pay_cost`, `attack_damage`, `handle_knockouts` | Combat; see [combat](actions/combat.md) |
+| `can_pay_cost`, `attack_damage`, `perform_attack`, `handle_knockouts`, `add_extra_attack_actions` | Combat; see [combat](actions/combat.md) |
 
 `is_first_turn` moved to [`rules`](rules/rules.md), since cards check it too.

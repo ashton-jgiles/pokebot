@@ -19,6 +19,7 @@ namespace pokebot::rules {
     std::optional<Weakness> weakness(const GameState& game, const PokemonInPlay& pokemon);
     std::optional<Resistance> resistance(const GameState& game, const PokemonInPlay& pokemon);
     int retreat_cost(const GameState& game, const PokemonInPlay& pokemon);
+    const Attack& attack_text(const GameState& game, AttackRef attack);
     EnergyList attack_cost(const GameState& game, const PokemonInPlay& pokemon, std::size_t attack);
     EnergyList energy_provided(const GameState& game, const PokemonInPlay& pokemon, CardIndex energy);
     int prize_value(const GameState& game, const PokemonInPlay& pokemon);
@@ -29,6 +30,7 @@ namespace pokebot::rules {
     bool can_attach_energy(const GameState& game, int player);
     bool can_retreat(const GameState& game, int player);
     bool can_attack(const GameState& game, int player);
+    int attacks_per_turn(const GameState& game, const PokemonInPlay& pokemon);
     bool can_evolve(const GameState& game, const PokemonInPlay& pokemon);
     bool evolves_into(const GameState& game, const PokemonInPlay& pokemon, CardIndex evolution);
 

@@ -50,6 +50,23 @@ namespace pokebot {
             return player.bench[static_cast<std::size_t>(slot) - 1];
         }
 
+        const PokemonInPlay* find_pokemon(const GameState& game, CardIndex id) {
+            const PlayerState& p = game.player(owner_of(id));
+            if (p.active && p.active->id() == id) {
+                return &*p.active;
+            }
+            for (const PokemonInPlay& pokemon : p.bench) {
+                if (pokemon.id() == id) {
+                    return &pokemon;
+                }
+            }
+            return nullptr;
+        }
+
+        PokemonInPlay* find_pokemon(GameState& game, CardIndex id) {
+            return const_cast<PokemonInPlay*>(find_pokemon(static_cast<const GameState&>(game), id));
+        }
+
         FixedVector<Slot, kBenchSize + 1> in_play_slots(const PlayerState& player) {
             FixedVector<Slot, kBenchSize + 1> slots;
             if (player.active) {
@@ -87,6 +104,8 @@ namespace pokebot {
             detail::add_retreat_discard_actions(game, actions);
         } else if (kind == DecisionKind::PromoteActive) {
             detail::add_promote_actions(game, actions);
+        } else if (kind == DecisionKind::ExtraAttack) {
+            detail::add_extra_attack_actions(game, actions);
         } else {
             throw std::logic_error("unknown decision");
         }
@@ -106,7 +125,7 @@ namespace pokebot {
         const DecisionKind kind = game.decision().kind;
         if (is_setup_decision(kind)) {
             detail::apply_setup_action(game, action);
-        } else if (kind == DecisionKind::MainPhase) {
+        } else if (kind == DecisionKind::MainPhase || kind == DecisionKind::ExtraAttack) {
             detail::apply_main_phase_action(game, action);
         } else if (kind == DecisionKind::RetreatDiscard) {
             detail::apply_retreat_discard(game, action);

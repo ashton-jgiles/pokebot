@@ -8,7 +8,7 @@ The milestone plan from the project proposal, with the current status of each.
 | M0 | Project setup | ✅ Done |
 | M1 | Card data, decklist parser, deck validator | ✅ Done |
 | M2 | Basic engine | ✅ Done |
-| M3 | Effects system and every card in the four decks | ⬜ Next |
+| M3 | Effects system and every card in the four decks | 🟨 In progress |
 | M3b | Standard coverage: card-text translator and coverage report | ⬜ Not started |
 | M4 | Observation layer, command-line client, replays | ⬜ Not started |
 | M5 | Greedy agent, match harness, profiling | ⬜ Not started |
@@ -69,7 +69,7 @@ invariant checker after every action (about 10 million actions): **no problems f
 Tools added: `pokebot-sim` (run many games, or `--print` one game move by move), random and biased random
 agents, the invariant checker, and text descriptions of any state or action.
 
-## M3 — Effects system ⬜ (next)
+## M3 — Effects system 🟨 (in progress)
 
 **Done when:** `pokebot-import` reports 0 attacks, abilities and cards still needing effects (88 today,
 across all four decks), every card has a test, and the 100,000-game stress test still passes.
@@ -93,15 +93,16 @@ The 88 texts come in five shapes:
 
 | Step | Builds | Status |
 |---|---|---|
-| 3.1 | Effect format, loader and compiler, the step interpreter, new decisions (choose cards / Pokémon / yes-no), first building blocks run through attack effects. **Plus the foundations from the [Standard scan](research/standard-scan.md):** every rule cards can bend becomes a question with the rulebook's default answer, an event dispatcher, and game-history fields. *3.1a done: the [rules questions](src/engine/rules/rules.md) with rulebook defaults* | 🟨 |
-| 3.2 | Trainer rules (Item, Supporter, Stadium, Tool, play conditions) and the simple Trainers | ⬜ |
-| 3.3 | Special Conditions and the full Pokémon Checkup | ⬜ |
-| 3.4 | Attack effects: damage formulas, damage to Benched Pokémon, damage counters, Tera bench protection | ⬜ |
-| 3.5 | Lasting effects and game history (Knocked Out last turn) | ⬜ |
-| 3.6 | Abilities (once per turn, triggers, passive modifiers), Tools and Stadiums in play | ⬜ |
-| 3.7 | Special Energy and full Energy cost matching | ⬜ |
-| 3.8 | One-of-a-kind cards in custom C++ (Night Joker, Transformation Tome, Rare Candy, Area Zero, …) | ⬜ |
-| 3.9 | Sign-off: 0 missing, a test per card, test-only cards for unused mechanics, 100k-game stress test | ⬜ |
+| 3.1 | **Engine foundations** from the [Standard scan](research/standard-scan.md): every rule cards can bend is a [question](src/engine/rules/rules.md) with the rulebook's default answer; Pokémon ids, `AttackRef` and `EffectContext` (effects run for "this Pokémon", which makes copy attacks work); attacks per turn with an `ExtraAttack` decision; [events](src/engine/events/events.md) at every moment cards react to; three turns of game history | ✅ |
+| 3.2 | **Effect language:** the effects-file format, loader and compiler, the resumable step interpreter (its state stored in `GameState`), new decisions (choose cards / Pokémon / attack / yes-no), and the first building blocks, proven on simple attack effects | ⬜ |
+| 3.3 | Trainer rules (Item, Supporter, Stadium, Tool, play conditions) and the simple Trainers | ⬜ |
+| 3.4 | Special Conditions and the full Pokémon Checkup | ⬜ |
+| 3.5 | Attack effects: damage formulas, damage to Benched Pokémon, damage counters, Tera bench protection, copy attacks | ⬜ |
+| 3.6 | Lasting effects ("during your opponent's next turn") and the rest of the game history | ⬜ |
+| 3.7 | Abilities (once per turn, triggers on events, passive modifiers that change the rule questions), Tools and Stadiums in play, Festival Lead | ⬜ |
+| 3.8 | Special Energy and full Energy cost matching | ⬜ |
+| 3.9 | One-of-a-kind cards in custom C++ (Night Joker, Transformation Tome, Rare Candy, Area Zero, …) | ⬜ |
+| 3.10 | Sign-off: 0 missing, a test per card, test-only cards for unused mechanics, 100k-game stress test | ⬜ |
 
 **Designed for all of Standard (2026-11-16).** A [scan of every Standard-legal card](research/standard-scan.md)
 (TEF–DLR: 2,213 distinct cards, 1,455 distinct effect texts) found that 97.6% of texts use known, templated

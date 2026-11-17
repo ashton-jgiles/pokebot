@@ -34,6 +34,7 @@ namespace {
         CardDef steel = test::basic_pokemon("TST-3", "Steelmon", 100);
         steel.types = {E::Metal};
         steel.resistance = pokebot::Resistance{E::Fire, 30};
+        steel.attacks = {test::attack("Iron Bash", {E::Metal}, 40)};
 
         CardDef big = test::basic_pokemon("TST-4", "Bigmon ex", 200);
         big.rules.ex = true;
@@ -152,6 +153,39 @@ TEST_CASE("Weakness doubles damage; Resistance reduces it, but never below 0", "
     const auto& steel = *f.game.player(f.them).active;
     CHECK(pokebot::detail::attack_damage(f.game, attacker, steel, tackle) == 0); // 30 - 30
     CHECK(pokebot::detail::attack_damage(f.game, attacker, steel, blast) == 30); // 60 - 30
+}
+
+TEST_CASE("a copied attack uses the attacker's type and needs none of the copied cost", "[engine][attacks]") {
+    Fixture f;
+    f.arrange("TST-2", {}, 1); // Fire Attackmon with no Energy against Grassmon (Weakness Fire)
+    const auto& attacker = *f.game.player(f.me).active;
+    pokebot::CardIndex steelmon = pokebot::kNoCard;
+    for (const auto card : f.game.player(f.me).deck) {
+        if (f.game.def(card).id == "TST-3") {
+            steelmon = card;
+        }
+    }
+    REQUIRE(steelmon != pokebot::kNoCard);
+
+    const pokebot::EffectContext who{static_cast<std::uint8_t>(f.me), attacker.id(), attacker.top()};
+    pokebot::detail::perform_attack(f.game, who, pokebot::AttackRef{steelmon, 0}); // Iron Bash [M] 40
+
+    CHECK(f.game.player(f.them).active->damage_counters == 8); // 40 x2: Attackmon is Fire
+}
+
+TEST_CASE("a Pokemon keeps its id when it moves between the Active Spot and the Bench", "[engine][attacks]") {
+    Fixture f;
+    f.arrange("TST-2", {}, 0);
+    test::clear_bench(f.game, f.me);
+    test::add_to_bench(f.game, f.me, "TST-4");
+    auto& p = f.game.player(f.me);
+    const auto attackmon = p.active->id();
+    const auto bigmon = p.bench[0].id();
+
+    std::swap(*p.active, p.bench[0]);
+    CHECK(pokebot::detail::find_pokemon(f.game, attackmon) == &p.bench[0]);
+    CHECK(pokebot::detail::find_pokemon(f.game, bigmon) == &*p.active);
+    CHECK(pokebot::detail::find_pokemon(f.game, p.deck[0]) == nullptr);
 }
 
 TEST_CASE("a Knock Out discards the Pokemon, gives a Prize, and asks for a new Active", "[engine][attacks]") {

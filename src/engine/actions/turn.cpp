@@ -6,8 +6,8 @@ namespace pokebot {
 
         namespace {
 
-            // will handle later
-            void pokemon_checkup(GameState& /*game*/) {
+            void pokemon_checkup(GameState& game) {
+                raise(game, Event{EventKind::Checkup, game.current_player, kNoCard, kNoCard});
             }
 
         } // namespace
@@ -16,6 +16,7 @@ namespace pokebot {
             game.current_player = static_cast<std::uint8_t>(player);
             ++game.turn;
             game.flags = TurnFlags{};
+            game.history.start_turn(game.current_player);
             game.phase = TurnPhase::Main;
 
             if (game.player(player).deck.empty()) {
@@ -36,6 +37,7 @@ namespace pokebot {
             while (!game.is_over() && game.pending.empty()) {
                 switch (game.phase) {
                     case TurnPhase::AfterMain:
+                        raise(game, Event{EventKind::TurnEnding, game.current_player, kNoCard, kNoCard});
                         game.phase = TurnPhase::Checkup;
                         pokemon_checkup(game);
                         handle_knockouts(game);

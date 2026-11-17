@@ -35,16 +35,32 @@ counts until their effects are written (Milestone 3).
 
 ## An attack: `apply_attack`
 
-1. Removes the `MainPhase` decision: **attacking ends the turn**.
-2. Puts damage counters on the opponent's Active.
-3. Sets the phase to `AfterMain`, resolves Knock Outs, and runs [`continue_game`](turn.md#continue_game).
+1. Removes the `MainPhase` (or `ExtraAttack`) decision and counts the attack in `flags.attacks_used`.
+2. Records the attacker and attack in [history](../game/game_state.md#gamehistory).
+3. Calls `perform_attack`, then raises `AttackDone`.
+4. If the same Pokémon is still Active and `rules::attacks_per_turn` allows another attack, pushes an
+   `ExtraAttack` decision. Otherwise **the turn ends**: the phase becomes `AfterMain`.
+5. Resolves Knock Outs and runs [`continue_game`](turn.md#continue_game).
+
+The `ExtraAttack` decision is pushed **before** Knock Outs, so any "choose a new Active" decisions
+sit on top of it: the opponent promotes first, then the attacker attacks again or ends the turn
+(Festival Lead: "after your opponent chooses a new Active Pokémon"). It offers the attacks of the
+Pokémon whose id is in `decision.target` only, plus `EndTurn`.
+
+## Using an attack's text: `perform_attack(game, who, attack)`
+
+Deals the damage of `rules::attack_text(game, attack)` with `who.self` as the attacker, and raises
+`DamagedByAttack` when the damage is above 0. It doesn't check or pay a cost. `apply_attack` calls it
+for an ordinary attack; a copy attack's effect will call it with another card's `AttackRef`, which
+is why the copied attack's own cost is never paid. Attack effects will run here too.
 
 ## Knock Outs: `handle_knockouts(game)`
 
 Runs after every attack and after every Pokémon Checkup (rulebook p. 14):
 
-1. Every Pokémon `rules::is_knocked_out` says is (damage ≥ its HP) is **Knocked Out**: it and every attached card go to its
-   owner's discard pile.
+1. Every Pokémon `rules::is_knocked_out` says is (damage ≥ its HP) is **Knocked Out**. The `KnockedOut`
+   event is raised and counted in history first; then it and every attached card go to its owner's
+   discard pile.
 2. The opponent takes `rules::prize_value` Prize cards: **1**, **2** for Pokémon ex, **3** for Mega Evolution Pokémon ex,
    or as many as remain. Prize cards are face down, so which ones are taken is random.
 3. **Check for a winner** (below). If the game is over, stop.

@@ -48,6 +48,7 @@ namespace pokebot {
         std::uint16_t damage_counters = 0;
         std::uint16_t turn_played = 0;
 
+        CardIndex id() const { return stack.front(); }
         CardIndex top() const { return stack.back(); }
         bool operator==(const PokemonInPlay&) const = default;
     };
@@ -70,6 +71,7 @@ namespace pokebot {
         bool supporter_played = false;
         bool stadium_played = false;
         bool retreated = false;
+        std::uint8_t attacks_used = 0;
 
         bool operator==(const TurnFlags&) const = default;
     };
@@ -89,6 +91,7 @@ namespace pokebot {
         MainPhase,
         RetreatDiscard,
         PromoteActive,
+        ExtraAttack,
     };
 
     struct Decision {
@@ -98,6 +101,48 @@ namespace pokebot {
         std::uint8_t target = 0;
 
         bool operator==(const Decision&) const = default;
+    };
+
+    struct AttackRef {
+        CardIndex text_from = kNoCard;
+        std::uint8_t index = 0;
+
+        bool operator==(const AttackRef&) const = default;
+    };
+
+    struct EffectContext {
+        std::uint8_t player = 0;
+        CardIndex self = kNoCard;
+        CardIndex source = kNoCard;
+
+        bool operator==(const EffectContext&) const = default;
+    };
+
+    struct TurnRecord {
+        std::uint8_t player = 0;
+        std::array<std::uint8_t, kPlayers> knocked_out{};
+        CardIndex attacker = kNoCard;
+        AttackRef attack;
+
+        bool operator==(const TurnRecord&) const = default;
+    };
+
+    struct GameHistory {
+        std::array<TurnRecord, 3> turns{};
+
+        TurnRecord& this_turn() { return turns[0]; }
+        const TurnRecord& this_turn() const { return turns[0]; }
+        const TurnRecord& opponents_last_turn() const { return turns[1]; }
+        const TurnRecord& your_last_turn() const { return turns[2]; }
+
+        void start_turn(std::uint8_t player) {
+            turns[2] = turns[1];
+            turns[1] = turns[0];
+            turns[0] = TurnRecord{};
+            turns[0].player = player;
+        }
+
+        bool operator==(const GameHistory&) const = default;
     };
 
     enum class GameResult : std::uint8_t {
@@ -115,6 +160,7 @@ namespace pokebot {
         std::uint16_t turn = 0;
         TurnPhase phase = TurnPhase::Setup;
         TurnFlags flags;
+        GameHistory history;
         FixedVector<Decision, 8> pending;
         Rng rng;
         GameResult result = GameResult::Ongoing;

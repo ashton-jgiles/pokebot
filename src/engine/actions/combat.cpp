@@ -72,6 +72,8 @@ namespace pokebot {
             }
 
             void knockout(GameState& game, int owner, const PokemonInPlay& pokemon) {
+                raise(game, Event{EventKind::KnockedOut, static_cast<std::uint8_t>(owner), pokemon.id(), kNoCard});
+                ++game.history.this_turn().knocked_out[static_cast<std::size_t>(owner)];
                 const int prizes = rules::prize_value(game, pokemon);
                 discard_pokemon(game, pokemon);
                 take_prizes(game, opponent_of(owner), prizes);
@@ -123,18 +125,42 @@ namespace pokebot {
         }
 
         void apply_attack(GameState& game, const Action& action) {
-            const int attacking_player = game.current_player;
-            const PokemonInPlay& attacker = *game.player(attacking_player).active;
-            PokemonInPlay& defender = *game.player(opponent_of(attacking_player)).active;
-            const Attack& attack = game.def(attacker.top()).attacks[action.amount];
+            const auto player = static_cast<std::uint8_t>(game.current_player);
+            const PokemonInPlay& attacker = *game.player(player).active;
+            const EffectContext who{player, attacker.id(), attacker.top()};
+            const AttackRef attack{attacker.top(), action.amount};
 
             game.pending.pop_back();
-            const int damage = attack_damage(game, attacker, defender, attack);
-            defender.damage_counters = static_cast<std::uint16_t>(defender.damage_counters + damage / 10);
+            ++game.flags.attacks_used;
+            game.history.this_turn().attacker = who.self;
+            game.history.this_turn().attack = attack;
+            perform_attack(game, who, attack);
+            raise(game, Event{EventKind::AttackDone, player, who.self, kNoCard});
 
-            game.phase = TurnPhase::AfterMain;
+            const PokemonInPlay* still_active = game.player(player).active ? &*game.player(player).active : nullptr;
+            if (still_active != nullptr && still_active->id() == who.self &&
+                game.flags.attacks_used < rules::attacks_per_turn(game, *still_active)) {
+                game.pending.push_back(Decision{DecisionKind::ExtraAttack, player, 0, who.self});
+            } else {
+                game.phase = TurnPhase::AfterMain;
+            }
             handle_knockouts(game);
             continue_game(game);
+        }
+
+        void perform_attack(GameState& game, const EffectContext& who, AttackRef attack) {
+            const PokemonInPlay* attacker = find_pokemon(game, who.self);
+            PlayerState& opponent = game.player(opponent_of(who.player));
+            if (attacker == nullptr || !opponent.active) {
+                return;
+            }
+            const Attack& text = rules::attack_text(game, attack);
+            PokemonInPlay& defender = *opponent.active;
+            const int damage = rules::attack_damage(game, *attacker, defender, text);
+            defender.damage_counters = static_cast<std::uint16_t>(defender.damage_counters + damage / 10);
+            if (damage > 0) {
+                raise(game, Event{EventKind::DamagedByAttack, static_cast<std::uint8_t>(opponent_of(who.player)), defender.id(), who.self});
+            }
         }
 
         void handle_knockouts(GameState& game) {
@@ -172,6 +198,14 @@ namespace pokebot {
             for (std::size_t i = 0; i < p.bench.size(); ++i) {
                 out.push_back(Action{ActionKind::Promote, kNoCard, bench_slot(i), 0});
             }
+        }
+
+        void add_extra_attack_actions(const GameState& game, std::vector<Action>& out) {
+            const PlayerState& p = game.player(game.current_player);
+            if (p.active && p.active->id() == game.decision().target) {
+                add_attack_actions(game, out);
+            }
+            out.push_back(Action{ActionKind::EndTurn, kNoCard, kActiveSlot, 0});
         }
 
         void apply_promote(GameState& game, const Action& action) {

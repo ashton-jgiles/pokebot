@@ -8,6 +8,7 @@ add_library(pokebot_lib
   engine/game/game_state.cpp
   engine/engine.cpp
   engine/rules/rules.cpp
+  engine/events/events.cpp
   engine/setup/setup.cpp
   engine/actions/turn.cpp
   engine/actions/main_actions.cpp

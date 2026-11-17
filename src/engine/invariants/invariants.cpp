@@ -130,7 +130,7 @@ namespace pokebot {
                     }
                 }
                 const Decision& decision = game_.decision();
-                if (decision.kind == DecisionKind::MainPhase &&
+                if ((decision.kind == DecisionKind::MainPhase || decision.kind == DecisionKind::ExtraAttack) &&
                     (decision.player != game_.current_player || game_.phase != TurnPhase::Main)) {
                     fail("a main-phase decision for a player whose turn it isn't, or outside the main phase");
                 }

@@ -95,8 +95,13 @@ namespace pokebot {
                 player.discard.push_back(card);
             }
 
-            void swap_with_bench(PlayerState& player, Slot target) {
-                std::swap(*player.active, pokemon_at(player, target));
+            void finish_retreat(GameState& game, int player, Slot target) {
+                PlayerState& p = game.player(player);
+                const CardIndex retreated = p.active->id();
+                std::swap(*p.active, pokemon_at(p, target));
+                const auto owner = static_cast<std::uint8_t>(player);
+                raise(game, Event{EventKind::Retreated, owner, retreated, kNoCard});
+                raise(game, Event{EventKind::MovedToBench, owner, retreated, kNoCard});
             }
 
             bool discard_choice_matters(const GameState& game, const PokemonInPlay& pokemon, std::size_t cost) {
@@ -122,7 +127,7 @@ namespace pokebot {
                 for (std::size_t i = 0; i < cost; ++i) {
                     discard_attatched_energy(p, p.active->energy.back());
                 }
-                swap_with_bench(p, target);
+                finish_retreat(game, player, target);
             }
         } // namespace
 
@@ -137,24 +142,30 @@ namespace pokebot {
         }
 
         void apply_main_phase_action(GameState& game, const Action& action) {
-            PlayerState& p = game.player(game.current_player);
+            const std::uint8_t player = game.current_player;
+            PlayerState& p = game.player(player);
             switch (action.kind) {
                 case ActionKind::PlayBasic:
                     p.hand.remove(action.card);
                     p.bench.push_back(new_pokemon(action.card, game.turn));
+                    raise(game, Event{EventKind::PutOnBench, player, action.card, kNoCard});
                     break;
                 case ActionKind::Evolve: {
                     p.hand.remove(action.card);
                     PokemonInPlay& pokemon = pokemon_at(p, action.target);
                     pokemon.stack.push_back(action.card);
                     pokemon.turn_played = game.turn;
+                    raise(game, Event{EventKind::Evolved, player, pokemon.id(), action.card});
                     break;
                 }
-                case ActionKind::AttachEnergy:
+                case ActionKind::AttachEnergy: {
                     p.hand.remove(action.card);
-                    pokemon_at(p, action.target).energy.push_back(action.card);
+                    PokemonInPlay& pokemon = pokemon_at(p, action.target);
+                    pokemon.energy.push_back(action.card);
                     game.flags.energy_attached = true;
+                    raise(game, Event{EventKind::EnergyAttached, player, pokemon.id(), action.card});
                     break;
+                }
                 case ActionKind::Retreat:
                     start_retreat(game, game.current_player, action.target);
                     break;
@@ -186,8 +197,9 @@ namespace pokebot {
             --decision.amount;
             if (decision.amount == 0) {
                 const Slot target = decision.target;
+                const int player = decision.player;
                 game.pending.pop_back();
-                swap_with_bench(p, target);
+                finish_retreat(game, player, target);
             }
         }
     } // namespace detail

@@ -58,6 +58,8 @@ namespace pokebot {
                     return "discard Energy to retreat";
                 case DecisionKind::PromoteActive:
                     return "choose a new Active Pokemon";
+                case DecisionKind::ExtraAttack:
+                    return "attack again or end the turn";
             }
             return "unknown decision";
         }

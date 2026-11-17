@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "engine/actions/action.hpp"
+#include "engine/events/events.hpp"
 #include "engine/game/game_state.hpp"
 #include "engine/rules/rules.hpp"
 
@@ -18,6 +19,10 @@ namespace pokebot::detail {
     PokemonInPlay& pokemon_at(PlayerState& player, Slot slot);
     const PokemonInPlay& pokemon_at(const PlayerState& player, Slot slot);
 
+    // the Pokemon in play whose id() is this card, or nullptr if it has left play
+    PokemonInPlay* find_pokemon(GameState& game, CardIndex id);
+    const PokemonInPlay* find_pokemon(const GameState& game, CardIndex id);
+
     // every occupied slots the active pokemon first then the bench in order left to right
     FixedVector<Slot, kBenchSize + 1> in_play_slots(const PlayerState& player);
 
@@ -26,6 +31,9 @@ namespace pokebot::detail {
 
     // set the winner of the game
     void set_winner(GameState& game, int player);
+
+    // events.cpp: tells the event hook, and later every card that reacts to this event
+    void raise(GameState& game, const Event& event);
 
     // turn.cpp
     void begin_turn(GameState& game, int player);
@@ -47,8 +55,10 @@ namespace pokebot::detail {
     int attack_damage(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, const Attack& attack);
     void add_attack_actions(const GameState& game, std::vector<Action>& out);
     void apply_attack(GameState& game, const Action& action);
+    void perform_attack(GameState& game, const EffectContext& who, AttackRef attack);
     void handle_knockouts(GameState& game);
     void add_promote_actions(const GameState& game, std::vector<Action>& out);
+    void add_extra_attack_actions(const GameState& game, std::vector<Action>& out);
     void apply_promote(GameState& game, const Action& action);
 
 } // namespace pokebot::detail

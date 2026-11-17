@@ -35,6 +35,8 @@ Pokémon have different names, so they don't.
 | `Attack` | Handed to [combat](combat.md) |
 | `EndTurn` | Handed to [`end_turn`](turn.md) |
 
+Benching, evolving, attaching and retreating each raise an [event](../events/events.md).
+
 Clearing Special Conditions on evolving and retreating arrives with Special Conditions in Milestone 3.
 
 ## Retreating

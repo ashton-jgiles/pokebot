@@ -53,6 +53,7 @@ the decision being made now.
 | `MainPhase` | Current player | bench, evolve, attach, retreat, attack, end turn | [main actions](actions/main_actions.md) |
 | `RetreatDiscard` | Current player | which Energy to discard for a Retreat Cost | [main actions](actions/main_actions.md) |
 | `PromoteActive` | Player whose Active was Knocked Out | a Benched Pokémon | [combat](actions/combat.md) |
+| `ExtraAttack` | Current player, after an attack when more are allowed | that Pokémon's attacks, or end the turn | [combat](actions/combat.md) |
 
 A decision can belong to the player whose turn it *isn't*. After a Knock Out, the opponent
 chooses their new Active.
@@ -104,6 +105,7 @@ bug can be replayed exactly.
 | `actions/action.hpp` | [action.md](actions/action.md) | `Action`, `ActionKind`, slots |
 | `engine.hpp/.cpp`, `internal.hpp` | [engine.md](engine.md) | Public interface, dispatch, shared helpers |
 | `rules/rules.hpp/.cpp` | [rules.md](rules/rules.md) | Every rule a card can change, asked as a question |
+| `events/events.hpp/.cpp` | [events.md](events/events.md) | Moments cards react to, and the event hook |
 | `setup/setup.cpp` | [setup.md](setup/setup.md) | `new_game`, mulligans, setup decisions |
 | `actions/turn.cpp` | [turn.md](actions/turn.md) | Starting and ending turns, `continue_game` |
 | `actions/main_actions.cpp` | [main_actions.md](actions/main_actions.md) | Bench, evolve, attach, retreat |
