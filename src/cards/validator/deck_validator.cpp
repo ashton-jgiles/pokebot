@@ -1,4 +1,4 @@
-#include "cards/deck_validator.hpp"
+#include "cards/validator/deck_validator.hpp"
 
 #include <map>
 

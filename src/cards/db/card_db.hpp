@@ -8,7 +8,7 @@
 
 #include <nlohmann/json.hpp>
 
-#include "cards/card.hpp"
+#include "cards/card/card.hpp"
 #include "core/decklist.hpp"
 
 namespace pokebot {

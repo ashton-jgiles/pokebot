@@ -6,7 +6,7 @@
 #include <optional>
 #include <type_traits>
 
-#include "cards/card_db.hpp"
+#include "cards/db/card_db.hpp"
 #include "core/decklist.hpp"
 #include "engine/fixed_vector.hpp"
 #include "engine/rng.hpp"

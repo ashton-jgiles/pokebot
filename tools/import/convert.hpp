@@ -5,7 +5,7 @@
 
 #include <nlohmann/json.hpp>
 
-#include "cards/card.hpp"
+#include "cards/card/card.hpp"
 
 namespace pokebot::import {
 

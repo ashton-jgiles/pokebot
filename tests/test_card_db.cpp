@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "cards/card_db.hpp"
+#include "cards/db/card_db.hpp"
 
 using nlohmann::json;
 using pokebot::CardDataError;

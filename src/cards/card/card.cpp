@@ -1,4 +1,4 @@
-#include "cards/card.hpp"
+#include "cards/card/card.hpp"
 
 #include <array>
 

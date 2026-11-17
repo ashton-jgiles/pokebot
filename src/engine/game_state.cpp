@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "cards/deck_validator.hpp"
+#include "cards/validator/deck_validator.hpp"
 
 namespace pokebot {
 

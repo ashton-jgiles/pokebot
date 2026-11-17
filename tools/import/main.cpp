@@ -8,8 +8,8 @@
 #include <utility>
 #include <vector>
 
-#include "cards/card_db.hpp"
-#include "cards/deck_validator.hpp"
+#include "cards/db/card_db.hpp"
+#include "cards/validator/deck_validator.hpp"
 #include "convert.hpp"
 #include "core/decklist.hpp"
 #include "http_client.hpp"

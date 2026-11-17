@@ -2,9 +2,9 @@
 # Engine, cards, agents and harness sources get added here as milestones land.
 add_library(pokebot_lib
   core/decklist.cpp
-  cards/card.cpp
-  cards/card_db.cpp
-  cards/deck_validator.cpp
+  cards/card/card.cpp
+  cards/db/card_db.cpp
+  cards/validator/deck_validator.cpp
   engine/game_state.cpp
   engine/engine.cpp
   engine/setup.cpp

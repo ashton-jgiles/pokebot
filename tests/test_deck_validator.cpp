@@ -3,7 +3,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "cards/deck_validator.hpp"
+#include "cards/validator/deck_validator.hpp"
 
 using pokebot::CardDB;
 using pokebot::CardDef;
