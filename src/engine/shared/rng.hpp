@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <utility>
 
-#include "engine/fixed_vector.hpp"
+#include "engine/shared/fixed_vector.hpp"
 
 namespace pokebot {
 

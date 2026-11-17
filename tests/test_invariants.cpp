@@ -3,7 +3,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "engine/engine.hpp"
-#include "engine/invariants.hpp"
+#include "engine/invariants/invariants.hpp"
 #include "support/test_cards.hpp"
 #include "support/test_game.hpp"
 

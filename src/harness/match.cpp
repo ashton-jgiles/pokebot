@@ -4,9 +4,9 @@
 #include <stdexcept>
 #include <string>
 
-#include "engine/describe.hpp"
+#include "engine/describe/describe.hpp"
 #include "engine/engine.hpp"
-#include "engine/invariants.hpp"
+#include "engine/invariants/invariants.hpp"
 
 namespace pokebot {
 

@@ -1,9 +1,8 @@
 #include "engine/engine.hpp"
+#include "engine/internal.hpp"
 
 #include <algorithm>
 #include <stdexcept>
-
-#include "engine/internal.hpp"
 
 namespace pokebot {
 

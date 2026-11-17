@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "engine/game_state.hpp"
+#include "engine/game/game_state.hpp"
 
 namespace pokebot {
 

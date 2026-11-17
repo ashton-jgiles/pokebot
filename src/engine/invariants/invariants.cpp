@@ -1,4 +1,4 @@
-#include "engine/invariants.hpp"
+#include "engine/invariants/invariants.hpp"
 
 #include <array>
 #include <string>

@@ -9,7 +9,7 @@
 
 #include "agents/random_agent.hpp"
 #include "cards/db/card_db.hpp"
-#include "engine/describe.hpp"
+#include "engine/describe/describe.hpp"
 #include "engine/engine.hpp"
 #include "harness/match.hpp"
 

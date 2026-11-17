@@ -1,4 +1,4 @@
-#include "engine/game_state.hpp"
+#include "engine/game/game_state.hpp"
 
 #include <stdexcept>
 #include <string>

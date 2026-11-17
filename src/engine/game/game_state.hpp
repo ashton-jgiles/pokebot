@@ -8,8 +8,8 @@
 
 #include "cards/db/card_db.hpp"
 #include "core/decklist.hpp"
-#include "engine/fixed_vector.hpp"
-#include "engine/rng.hpp"
+#include "engine/shared/fixed_vector.hpp"
+#include "engine/shared/rng.hpp"
 
 namespace pokebot {
 

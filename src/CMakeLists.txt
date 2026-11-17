@@ -5,14 +5,14 @@ add_library(pokebot_lib
   cards/card/card.cpp
   cards/db/card_db.cpp
   cards/validator/deck_validator.cpp
-  engine/game_state.cpp
+  engine/game/game_state.cpp
   engine/engine.cpp
-  engine/setup.cpp
-  engine/turn.cpp
-  engine/main_actions.cpp
-  engine/combat.cpp
-  engine/invariants.cpp
-  engine/describe.cpp
+  engine/setup/setup.cpp
+  engine/actions/turn.cpp
+  engine/actions/main_actions.cpp
+  engine/actions/combat.cpp
+  engine/invariants/invariants.cpp
+  engine/describe/describe.cpp
   agents/random_agent.cpp
   harness/match.cpp
 )

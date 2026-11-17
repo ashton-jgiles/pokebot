@@ -3,8 +3,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "engine/action.hpp"
-#include "engine/game_state.hpp"
+#include "engine/actions/action.hpp"
+#include "engine/game/game_state.hpp"
 
 using pokebot::CardDB;
 using pokebot::CardDef;
