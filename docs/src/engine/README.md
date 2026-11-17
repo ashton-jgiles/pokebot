@@ -1,0 +1,116 @@
+# `src/engine` — the rules engine
+
+**Library:** `pokebot_lib` · **Namespace:** `pokebot` (shared helpers in `pokebot::detail`)
+
+The engine holds a game in memory, knows every legal choice, and applies choices. Everything that
+plays the game (random agents, the simulator, and later the search-based AIs) uses only the
+three functions in [`engine.hpp`](engine.md):
+
+```cpp
+GameState new_game(const CardTable& cards, std::uint64_t seed);
+std::vector<Action> legal_actions(const GameState& game);
+void apply(GameState& game, const Action& action);
+```
+
+These are the formal model's *Legal* and *δ* (transition) functions.
+
+## What the engine covers (Milestone 2)
+
+| Covered | Not yet (Milestone 3) |
+|---|---|
+| Setup: coin flip, opening hands, mulligans with bonus draws, Active/Bench, 6 Prize cards | Trainer cards (they stay in hand) |
+| Turn loop: draw, main phase, end of turn, Pokémon Checkup step | Abilities |
+| Benching, evolving, attaching Energy, retreating | Attack effects: attacks deal their printed damage only |
+| Attacks: Energy costs, Weakness, Resistance, damage | Special Conditions (Checkup runs, but does nothing yet) |
+| Knock Outs, Prize cards (1 / 2 ex / 3 Mega ex), new Active | Special Energy: it can be attached but provides nothing |
+| Winning: Prize cards, no Pokémon left, deck-out, both at once | Tera bench protection, damage modifiers from effects |
+
+## Key ideas
+
+### A game is a plain value
+
+[`GameState`](game_state.md) contains no pointers to things that change and no heap
+allocations. Zones are [`FixedVector`](fixed_vector.md)s, and cards are small numbers
+(`CardIndex` 0–119). Copying a game is one ~1.5 KB memory copy, which is what lets search explore
+millions of positions. A `static_assert` stops the build if anyone breaks this.
+
+The only pointer is `GameState::cards`, to the [`CardTable`](game_state.md#cardtable) that maps
+card numbers to card definitions. It never changes during a game, so every copy shares it.
+**Lifetime rule:** the `CardDB` must outlive the `CardTable`, which must outlive every game using it.
+
+### Every choice is a decision
+
+The engine runs automatically (shuffling, drawing, Knock Outs) until a player has to choose
+something, then stops. Open decisions live on a stack, `GameState::pending`. The top (`back()`) is
+the decision being made now.
+
+| Decision | Who decides | Legal actions | Defined in |
+|---|---|---|---|
+| `ChooseTurnOrder` | Coin-flip winner | go first / go second | [setup](setup.md) |
+| `SetupActive` | Each player | a Basic Pokémon from hand | [setup](setup.md) |
+| `SetupBench` | Each player | a Basic to bench, or done | [setup](setup.md) |
+| `MulliganDraws` | Opponent of whoever mulliganed more | draw 0..N extra cards | [setup](setup.md) |
+| `MainPhase` | Current player | bench, evolve, attach, retreat, attack, end turn | [main actions](main_actions.md) |
+| `RetreatDiscard` | Current player | which Energy to discard for a Retreat Cost | [main actions](main_actions.md) |
+| `PromoteActive` | Player whose Active was Knocked Out | a Benched Pokémon | [combat](combat.md) |
+
+A decision can belong to the player whose turn it *isn't*. After a Knock Out, the opponent
+chooses their new Active.
+
+### Duplicate choices are merged
+
+Three Dreepy in hand give **one** "put Dreepy on the Bench" action, not three, because the copies
+are interchangeable. The same goes for attaching identical Energy and discarding identical Energy.
+This keeps the number of choices search has to consider small.
+
+### Where the turn is: `TurnPhase`
+
+Some events need choices in the middle, for example "your Active was Knocked Out, pick a new one".
+`GameState::phase` records where the turn is, so the engine knows how to carry on once those
+choices are made:
+
+```
+Main ──(Attack or EndTurn)──► AfterMain ──► Checkup ──► begin_turn(opponent) ──► Main
+                                 │              │
+                     Knock Outs → promote   Knock Outs → promote
+```
+
+[`continue_game`](turn.md#continue_game) runs this forward whenever no decision is pending.
+
+### Slots
+
+A `Slot` names a place in play: **0 is the Active Spot, 1–5 are Bench positions**.
+`detail::pokemon_at(player, slot)` and `detail::in_play_slots(player)` work with them.
+
+### Randomness is seeded
+
+Every random event (shuffles, coin flips, which Prize card is taken) uses the [`Rng`](rng.md)
+inside the game state. **The same seed and the same choices always give the same game**, so any
+bug can be replayed exactly.
+
+## Files
+
+| File | Doc | Contents |
+|---|---|---|
+| `fixed_vector.hpp` | [fixed_vector.md](fixed_vector.md) | Fixed-capacity list with no heap use |
+| `rng.hpp` | [rng.md](rng.md) | Seeded random number generator |
+| `game_state.hpp/.cpp` | [game_state.md](game_state.md) | `CardTable`, `PokemonInPlay`, `PlayerState`, `GameState`, decisions |
+| `action.hpp` | [action.md](action.md) | `Action`, `ActionKind`, slots |
+| `engine.hpp/.cpp`, `internal.hpp` | [engine.md](engine.md) | Public interface, dispatch, shared helpers |
+| `setup.cpp` | [setup.md](setup.md) | `new_game`, mulligans, setup decisions |
+| `turn.cpp` | [turn.md](turn.md) | Starting and ending turns, `continue_game` |
+| `main_actions.cpp` | [main_actions.md](main_actions.md) | Bench, evolve, attach, retreat |
+| `combat.cpp` | [combat.md](combat.md) | Attacks, damage, Knock Outs, Prize cards, winning |
+| `invariants.hpp/.cpp` | [invariants.md](invariants.md) | Consistency checker |
+| `describe.hpp/.cpp` | [describe.md](describe.md) | Text descriptions of states and actions |
+
+## Known simplifications
+
+- **Setup is sequential, not face down.** Player 1 places Pokémon after player 0. Hiding what player 1
+  shouldn't see is the observation layer's job (Milestone 4).
+- **After a mulligan bonus draw, any Basic in hand may be benched**, not only the ones just drawn.
+- **Damage modifiers are ignored:** "20×" and "30+" attacks deal their printed number.
+- **Cost matching is greedy**, which is exact while every Energy provides a single type. Energy that
+  provides a choice of types (Milestone 3) will need a proper matching.
+- **`apply` re-checks legality** by building the legal action list each time. That catches agent
+  bugs at once, but costs speed; it can become debug-only later.

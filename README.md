@@ -9,17 +9,18 @@ Information-Set MCTS for looking several turns ahead, and an expectiminimax solv
 
 | Folder | Contents |
 |---|---|
-| `src/core` | Shared types and utilities |
-| `src/engine` | Rules engine: game state, legal actions, effects |
-| `src/cards` | Card-specific effect code |
-| `src/agents` | AI agents (random, greedy, planner, MCTS…) |
-| `src/harness` | Match runner and statistics |
-| `src/client` | Command-line client |
-| `tools` | Decklist parser, deck validator, data tools |
+| `src/core` | Decklist parser |
+| `src/cards` | Card definitions, card database, deck validator |
+| `src/engine` | Rules engine: game state, legal actions, applying actions |
+| `src/agents` | AI agents (random so far; planner, MCTS… later) |
+| `src/harness` | Playing games between agents |
+| `src/client` | Command-line client (placeholder) |
+| `tools/import` | `pokebot-import`: downloads and converts card data |
+| `tools/sim` | `pokebot-sim`: plays many games, or narrates one |
 | `data/cards` | Card definitions (JSON) |
 | `data/decks` | Decklists |
 | `tests` | Catch2 test suite |
-| `docs` | Design documents |
+| `docs` | Documentation for every file, mirroring this layout; start at `docs/README.md` |
 
 ## Building
 
@@ -33,3 +34,18 @@ ctest --preset debug
 ```
 
 Other presets: `release` (optimized MinGW build) and `msvc` (Visual Studio 2026).
+
+## Running
+
+From the repository root. Import the cards for every deck first (needs network once, then cached):
+
+```bash
+./build/debug/tools/import/pokebot-import.exe data/decks/*.txt
+```
+
+Play 1,000 games between random agents and report how they went, or narrate one game:
+
+```bash
+./build/debug/tools/sim/pokebot-sim.exe --games 1000
+./build/debug/tools/sim/pokebot-sim.exe --print --seed 3
+```
