@@ -52,6 +52,7 @@ If an invariant breaks, it stops with the seed, the broken rules and the game st
 | Milestone 2 (no effects) | about 10,000 games/s, 1.0 million actions/s | about 4,100 games/s |
 | Step 3.4 (attack and Trainer effects, Special Conditions) | about 5,100 games/s, 0.7 million actions/s | about 1,700 games/s |
 | Step 3.5a (damage formulas) | about 4,250 games/s, 0.6 million actions/s | about 1,650 games/s |
+| Step 3.7a (lasting and always-on effects) | about 4,340 games/s, 0.6 million actions/s | |
 
 Games are longer now (about 145 actions each, up from about 100), so compare actions/s between
 versions. The release preset uses link-time optimization; without it the

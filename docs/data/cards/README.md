@@ -148,7 +148,17 @@ N's Darmanitan (Flamebody Cannon), Wellspring Mask Ogerpon ex (Torrential Pump),
 (Mirage Barrage, Stealthy Slash), Fezandipiti ex (Cruel Arrow), Meowth ex (Tuck Tail) and N's
 Zoroark ex (Night Joker). With lasting effects: Koraidon ex (Impact Blow), N's Zekrom (Rampaging
 Thunder), Latias ex (Eon Blade), Iron Leaves ex (Prism Edge), Yveltal (Clutch), Wellspring Mask
-Ogerpon ex (Sob) and Budew (Itchy Pollen).
+Ogerpon ex (Sob) and Budew (Itchy Pollen). N's Zekrom's Shred ignores effects on the Defending Pokémon.
+
+A Tool, a Stadium or a passive Ability has a [`"passive"`](../../src/cards/effects/program.md#always-on-effects-passive)
+list instead:
+
+```json
+{ "passive": [{ "modify": "retreat_cost", "add": -2 }] }
+```
+
+With passive effects so far: Air Balloon, Hero's Cape and Binding Mochi (Tools), N's Castle
+(Stadium), and Latias ex's Skyliner and Lillie's Clefairy ex's Fairy Zone (Abilities).
 
 
 An Item or Supporter has a top-level `effects` list, and optionally `requires`: the

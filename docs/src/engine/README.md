@@ -21,12 +21,13 @@ These are the formal model's *Legal* and *δ* (transition) functions.
 | Setup: coin flip, opening hands, mulligans with bonus draws, Active/Bench, 6 Prize cards | What Stadiums and Tools do (they can be played, but have no effect yet) |
 | Trainers: Items, Supporters, Stadiums, Tools, their limits and `"requires"`; 16 with effects | Trainers whose effects aren't written yet (they can't be played) |
 | Turn loop: draw, main phase, end of turn, Pokémon Checkup step | Abilities |
-| Benching, evolving, attaching Energy, retreating | Abilities, and what Tools and Stadiums do (step 3.7) |
+| Benching, evolving, attaching Energy, retreating | Abilities you choose to use, and triggered effects (steps 3.7b and 3.7c) |
 | [Lasting effects](actions/lasting.md): can't attack, can't use an attack, can't retreat, Item lock, damage bonus | |
 | Attacks: Energy costs, Weakness, Resistance, damage, and [effects](effects/interpreter.md): draw, search, switch, "you may", damage formulas, Bench damage, damage counters, copy attacks | |
 | [Special Conditions](actions/conditions.md) and the full Pokémon Checkup | |
 | Knock Outs, Prize cards (1 / 2 ex / 3 Mega ex), new Active | Special Energy: it can be attached but provides nothing |
-| Winning: Prize cards, no Pokémon left, deck-out, both at once | Damage modifiers from Abilities, Tools and Stadiums |
+| Winning: Prize cards, no Pokémon left, deck-out, both at once | Special Energy (step 3.8) |
+| [Always-on effects](rules/rules.md#always-on-effects) from Tools, Stadiums and passive Abilities: HP, Retreat Cost, Weakness, damage bonuses | |
 | Tera Bench protection | |
 
 ## Key ideas

@@ -47,6 +47,7 @@ attack text says how the final damage is worked out.
 | `name` | Ability name |
 | `text` | Printed text. Reference only; the engine never reads it |
 | `effects` | Engine-readable effects (JSON array), hand-written in Milestone 3 |
+| `passive`, `modifiers` | An always-on Ability's `"passive"` list (JSON), and the same compiled into [`Modifier`s](../effects/program.md#always-on-effects-passive) |
 
 ### `Attack`
 
@@ -60,7 +61,7 @@ attack text says how the final damage is worked out.
 | `effects` | Engine-readable effects (JSON), from the effects file |
 | `program` | `effects` compiled into [steps](../effects/program.md), filled in by `CardDB::add` |
 
-`CardDef` has the same pair for Items and Supporters (`effects` → `program`), plus `requirements`
+`CardDef` also has `passive` and `modifiers` for Tools and Stadiums. It has the same pair for Items and Supporters (`effects` → `program`), plus `requirements`
 (the card's `"requires"` JSON) and `conditions` (compiled from it): what must hold for the card to be
 played. `requires` itself is a C++20 keyword, hence the different name.
 

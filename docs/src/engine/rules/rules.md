@@ -15,11 +15,11 @@ bend; this file is where they live.
 
 | Question | Rulebook answer | Cards that will change it (examples) |
 |---|---|---|
-| `max_hp(game, pokemon)` | Printed HP of the top card | Hero's Cape, Lively Stadium |
+| `max_hp(game, pokemon)` | Printed HP of the top card, plus [always-on](#always-on-effects) `max_hp` changes | Hero's Cape, Lively Stadium |
 | `remaining_hp`, `is_knocked_out` | Max HP − 10 per damage counter; Knocked Out at 0 or less | Survival Brace |
 | `types(game, pokemon)` | Printed types | Carbink, Scovillain ex |
-| `weakness`, `resistance` | Printed | Lillie's Clefairy ex, Illumise |
-| `retreat_cost(game, pokemon)` | Printed Retreat Cost | Air Balloon, Rescue Board |
+| `weakness`, `resistance` | Printed; `weakness_type` changes the Weakness type | Lillie's Clefairy ex, Illumise |
+| `retreat_cost(game, pokemon)` | Printed Retreat Cost, plus `retreat_cost` changes; a `set` wins; never below 0 | Air Balloon, N's Castle, Latias ex |
 | `attack_text(game, attack_ref)` | The attack printed on `attack_ref.text_from` | (copy attacks pass another card) |
 | `attack_cost(game, pokemon, attack)` | Printed cost | Counter Gain, Kyurem |
 | `energy_provided(game, pokemon, energy)` | The card's `provides` list | Prism Energy, Meganium's Wild Growth |
@@ -60,8 +60,25 @@ base (printed damage, after the attack's formula) → attacker-side effects → 
 Prevented damage is 0. **Weakness and Resistance apply only when the defender is Active**; damage to
 a Benched Pokémon skips them, as the rulebook says.
 
-The attacker-side stage adds lasting damage bonuses (Black Belt's Training) when the defender is
-Active. The defender-side stage does nothing yet. An attack with no damage does none.
+The attacker-side stage adds lasting damage bonuses (Black Belt's Training) and always-on
+`damage_dealt` bonuses (Binding Mochi) when the defender is Active. The defender-side stage does
+nothing yet. An attack with no damage does none.
+
+`attack_damage(…, ignore_defender_effects)` is for Shred: it uses the defender's **printed**
+Weakness and Resistance and skips the defender-side stage.
+
+## Always-on effects
+
+Tools, Stadiums and passive Abilities carry [`Modifier`s](../../cards/effects/program.md#always-on-effects-passive).
+Two private helpers in `rules.cpp` connect them to the questions:
+
+- `each_modifier(game, visit)` visits every modifier in play: the Stadium's, then each Tool's and
+  each Ability's for every Pokémon in play, with its owner and the Pokémon holding it.
+- `applies(game, modifier, owner, holder, target)` decides whether a modifier reaches a Pokémon,
+  from `applies_to`, the filter, and `if_poisoned`.
+
+Nothing is cached: each question looks through what's in play when it's asked, so a Tool or Stadium
+works the moment it's played and stops the moment it leaves.
 
 ## Speed
 

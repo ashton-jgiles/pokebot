@@ -39,6 +39,7 @@ Each block is a JSON object with an `"op"`:
 | `switch_self` | — | Switch this Pokémon with 1 of your Benched Pokémon | `ChooseBenched`, `SwitchWithChosen` |
 | `switch_active` | `player` (`"you"` or `"opponent"`) | Switch that player's Active with 1 of their Benched Pokémon, chosen by you (Switch, Boss's Orders) | `ChooseBenched`, `SwitchWithChosen` |
 | `may` | `effects` (a list) | "You may …": ask first, and skip the list on no | `AskYesNo`, then the list |
+| `ignore_defender_effects` | — | "This attack's damage isn't affected by any effects on your opponent's Active Pokémon" (Shred): the printed Weakness and Resistance are used and defender-side effects skipped. Must come before a placed `damage` step. Attacks only | `IgnoreDefenderEffects` |
 | `lasting` | `effect`, `until`, `on` (`"self"`), `player`, `amount`, `only_ex` | A [lasting effect](../../engine/actions/lasting.md). `effect`: `"cant_attack"`, `"cant_use_attack"` (this attack), `"cant_retreat"`, `"no_items"`, `"damage_bonus"`. `until`: `"this_turn"`, `"opponents_next_turn"`, `"your_next_turn"`. `on`: `"self"` or `"defending"` for the first three (attacks only), `"player"` (with `player`) for the last two | `AddLasting` |
 | `if` | `condition`, `then`, `else` (optional) | Do `then` if the [condition](#conditions) holds when the step runs, otherwise `else` | `JumpUnless`, `then`, `Jump`, `else` |
 
@@ -119,6 +120,27 @@ Each is an object with one key, from the point of view of the player the card be
 Anything the compiler doesn't recognise (an unknown op, filter field or destination, a bad count,
 a value of the wrong JSON type) throws `CardDataError`.
 
+## Always-on effects (`"passive"`)
+
+A Tool, a Stadium or a passive Ability has a `"passive"` list instead of `effects`. Each entry is
+compiled into a `Modifier`, which changes a [rule question](../../engine/rules/rules.md#always-on-effects)
+for as long as the card is in play:
+
+```json
+{ "modify": "retreat_cost", "set": 0, "applies_to": "all", "filter": { "name_prefix": "N's" } }
+```
+
+| Field | Meaning |
+|---|---|
+| `modify` | `"max_hp"`, `"retreat_cost"`, `"weakness_type"` (needs `type`) or `"damage_dealt"` (attacks by the Pokémon do `add` more to the opponent's Active, before Weakness) |
+| `add` / `set` | A change, or a new value. A `set` wins over `add`s ("has no Retreat Cost") |
+| `type` | For `weakness_type`: the new Weakness type. A Pokémon with no printed Weakness gets one, ×2 |
+| `applies_to` | `"holder"` (the default: the Pokémon the Tool is attached to, or the Pokémon with the Ability), `"yours"`, `"opponents"` or `"all"` (everyone's Pokémon in play) |
+| `filter` | Which Pokémon it affects, matched against the Pokémon's top card |
+| `if_poisoned` | Only while that Pokémon is Poisoned |
+
+`compile_passive(json)` compiles a list; mistakes throw `CardDataError`.
+
 ## Steps (what the engine runs)
 
 | `Op` | Uses | Does |
@@ -146,6 +168,7 @@ a value of the wrong JSON type) throws `CardDataError`.
 | `ChooseAttack` | `filter` | The player chooses a Benched Pokémon's attack |
 | `UseChosenAttack` | — | Runs the chosen attack's program, then carries on |
 | `AddLasting` | `lasting`, `side`, `amount` | Adds a lasting effect |
+| `IgnoreDefenderEffects` | — | Sets the run's `ignore_defender` flag for its `Damage` step |
 
 `Draw` uses `side` too. `Side` is `You`, `Opponent` or `Each`.
 

@@ -93,7 +93,10 @@ namespace pokebot::import {
                 if (a.value("type", "") != "Ability") {
                     throw CardDataError("ability type '" + a.value("type", "") + "' isn't supported yet");
                 }
-                c.abilities.push_back({a.at("name").get<std::string>(), a.value("effect", ""), json::array()});
+                Ability ability;
+                ability.name = a.at("name").get<std::string>();
+                ability.text = a.value("effect", "");
+                c.abilities.push_back(std::move(ability));
             }
             for (const auto& a : t.value("attacks", json::array())) {
                 Attack attack;
