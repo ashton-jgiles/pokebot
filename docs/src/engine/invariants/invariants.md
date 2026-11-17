@@ -28,6 +28,7 @@ for.
 | An effect's decision has an effect running | `an effect's decision is pending but no effect is running` |
 | A card being played has an effect running | `… card is still being played but no effect is running` |
 | A Stadium in play is a Stadium card, and at most one is in play | `… Stadium in play isn't a stadium card`, `two Stadiums are in play` |
+| Only the Active has Special Conditions, and at most one of Asleep, Confused and Paralyzed | `… Bench 2 has a Special Condition, but only the Active Pokemon can`, `… more than one of Asleep, Confused and Paralyzed` |
 | A main-phase decision is the current player's, during the main phase | |
 | After setup, each player has an Active, unless they're choosing a new one | `player 0 has no Active Pokemon and isn't choosing one` |
 

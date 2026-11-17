@@ -59,13 +59,12 @@ the table must outlive every `GameState` that uses it.
 | `tool` | Attached Tool, or `kNoCard` |
 | `damage_counters` | Each is 10 damage |
 | `turn_played` | Turn it came into play or last evolved (0 = setup); used by the evolution rules |
+| `special` | Its [Special Conditions](../actions/conditions.md): `asleep`, `confused`, `paralyzed`, `burned`, `poison` (counters per Checkup, 0 = not Poisoned), `paralyzed_turn`; `any()` |
 
 `id()` returns the **bottom** card. It never changes while the Pokémon stays in play, even when it
 evolves, retreats or changes slot, so effects, events and history use it to name a Pokémon. Slots
 shift when a Benched Pokémon leaves; ids don't. `detail::find_pokemon(game, id)` finds it again, or
 returns `nullptr` once it has left play.
-
-Special Conditions will be added in Milestone 3.
 
 ## `PlayerState`
 
@@ -155,7 +154,7 @@ Helpers: `player(p)`, `def(card)`, `decision()` (the top of `pending`), `is_over
 
 A `static_assert` requires `GameState` to be **trivially copyable**. Adding a `std::vector` or
 `std::string` to it stops the build, because copying the state is how search explores the game.
-A whole game is **1,824 bytes**.
+A whole game is **1,920 bytes**.
 
 ## Tests
 

@@ -44,10 +44,18 @@ Invariants checked after every action: no problems found
 If an invariant breaks, it stops with the seed, the broken rules and the game state (see
 [`play_game`](../../src/harness/match.md)).
 
-**Speed:** use the release build for real numbers. On the reference machine it ran about
-10,000 games/s (1 million actions/s) with `--no-check`, and about 4,100 games/s with checks. The
-release preset uses link-time optimization; without it the [rules](../../src/engine/rules/rules.md)
-questions cost about 15%.
+**Speed:** use the release build for real numbers. On the reference machine, `--games 20000
+--agent biased --seed 7`:
+
+| Version | `--no-check` | With checks |
+|---|---|---|
+| Milestone 2 (no effects) | about 10,000 games/s, 1.0 million actions/s | about 4,100 games/s |
+| Step 3.4 (attack and Trainer effects, Special Conditions) | about 5,100 games/s, 0.7 million actions/s | about 1,700 games/s |
+
+Games are longer now (about 145 actions each, up from about 100), so compare actions/s between
+versions. The release preset uses link-time optimization; without it the
+[rules](../../src/engine/rules/rules.md) questions cost about 15%. Profiling the engine is part of
+the Milestone 3 sign-off, before search needs the speed.
 
 ```bash
 cmake --preset release

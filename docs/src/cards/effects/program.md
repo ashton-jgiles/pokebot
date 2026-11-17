@@ -23,6 +23,7 @@ Each block is a JSON object with an `"op"`:
 | `discard_from_hand` | `count` (1), `filter` | Discard exactly `count` cards from your hand | `ChooseCards`, `MoveChosen` |
 | `from_discard` | `count` (1), `filter`, `to` (`"hand"`), `up_to` (`false`) | Take exactly `count` matching cards from your discard pile, or up to `count` with `"up_to": true` | `ChooseCards`, `MoveChosen` |
 | `move_attached_energy` | `count` (1), `filter`, `to` (`"hand"`) | Move exactly `count` Energy attached to this Pokémon (fewer if it has fewer) | `ChooseCards`, `MoveChosen` |
+| `special_condition` | `condition`, `player` (`"opponent"`), `count` (1) | Give that player's Active Pokémon a [Special Condition](../../engine/actions/conditions.md): `"asleep"`, `"burned"`, `"confused"`, `"paralyzed"` or `"poisoned"`. **Defaults to the opponent**, since cards almost always say "your opponent's Active Pokémon is now …". `count` is the Poison damage counters per Checkup | `ApplySpecialCondition` |
 | `switch_self` | — | Switch this Pokémon with 1 of your Benched Pokémon | `ChooseBenched`, `SwitchWithChosen` |
 | `switch_active` | `player` (`"you"` or `"opponent"`) | Switch that player's Active with 1 of their Benched Pokémon, chosen by you (Switch, Boss's Orders) | `ChooseBenched`, `SwitchWithChosen` |
 | `may` | `effects` (a list) | "You may …": ask first, and skip the list on no | `AskYesNo`, then the list |
@@ -87,6 +88,7 @@ a value of the wrong JSON type) throws `CardDataError`.
 | `AskYesNo` | `jump` | On no, carries on at step `jump` |
 | `JumpUnless` | `condition`, `jump` | If the condition is false, carries on at step `jump` |
 | `Jump` | `jump` | Carries on at step `jump` |
+| `ApplySpecialCondition` | `special`, `side`, `max` | Gives that side's Active the Special Condition (`max` = Poison counters) |
 
 `Draw` uses `side` too. `Side` is `You`, `Opponent` or `Each`.
 

@@ -22,7 +22,8 @@ These are the formal model's *Legal* and *δ* (transition) functions.
 | Trainers: Items, Supporters, Stadiums, Tools, their limits and `"requires"`; 16 with effects | Trainers whose effects aren't written yet (they can't be played) |
 | Turn loop: draw, main phase, end of turn, Pokémon Checkup step | Abilities |
 | Benching, evolving, attaching Energy, retreating | Damage formulas, Bench damage and most other attack effects |
-| Attacks: Energy costs, Weakness, Resistance, damage, and [effects](effects/interpreter.md) (draw, search, switch, "you may"…) | Special Conditions (Checkup runs, but does nothing yet) |
+| Attacks: Energy costs, Weakness, Resistance, damage, and [effects](effects/interpreter.md) (draw, search, switch, "you may"…) | Damage formulas and Bench damage (step 3.5) |
+| [Special Conditions](actions/conditions.md) and the full Pokémon Checkup | |
 | Knock Outs, Prize cards (1 / 2 ex / 3 Mega ex), new Active | Special Energy: it can be attached but provides nothing |
 | Winning: Prize cards, no Pokémon left, deck-out, both at once | Tera bench protection, damage modifiers from effects |
 
@@ -115,6 +116,7 @@ bug can be replayed exactly.
 | `actions/turn.cpp` | [turn.md](actions/turn.md) | Starting and ending turns, `continue_game` |
 | `actions/main_actions.cpp` | [main_actions.md](actions/main_actions.md) | Bench, evolve, attach, retreat |
 | `actions/combat.cpp` | [combat.md](actions/combat.md) | Attacks, damage, Knock Outs, Prize cards, winning |
+| `actions/conditions.cpp` | [conditions.md](actions/conditions.md) | Special Conditions and what Pokémon Checkup does with them |
 | `invariants/invariants.hpp/.cpp` | [invariants.md](invariants/invariants.md) | Consistency checker |
 | `describe/describe.hpp/.cpp` | [describe.md](describe/describe.md) | Text descriptions of states and actions |
 

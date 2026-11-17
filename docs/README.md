@@ -43,6 +43,7 @@ see the engine through `legal_actions` and `apply`.
 | | [turn.md](src/engine/actions/turn.md) | Turn flow, `continue_game`, Pokémon Checkup |
 | | [main_actions.md](src/engine/actions/main_actions.md) | Bench, evolve, attach, retreat |
 | | [combat.md](src/engine/actions/combat.md) | Attacks, damage, Knock Outs, Prize cards, winning |
+| | [conditions.md](src/engine/actions/conditions.md) | Special Conditions and Pokémon Checkup |
 | | [rules.md](src/engine/rules/rules.md) | The questions cards can change: HP, costs, damage, turn limits |
 | | [events.md](src/engine/events/events.md) | Moments cards react to, the event hook |
 | | [interpreter.md](src/engine/effects/interpreter.md) | Running effects and their choices |

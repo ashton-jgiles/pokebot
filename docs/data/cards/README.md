@@ -138,7 +138,8 @@ effects come in later Milestone 3 steps; the importer reports how many still hav
 
 Attacks with effects so far: Froakie's Collect, Frogadier's Summoning Jutsu, Purrloin's Invite
 Evil, Greninja ex's Shinobi Blade, Raging Bolt ex's Burst Roar, Chien-Pao's Icicle Loop and
-Dunsparce's Trading Places.
+Dunsparce's Trading Places, Mega Froslass ex's Absolute Snow (Asleep) and Munkidori's Mind Bend
+(Confused).
 
 An Item or Supporter has a top-level `effects` list, and optionally `requires`: the
 [conditions](../../src/cards/effects/program.md#conditions) that must hold before it can be played.

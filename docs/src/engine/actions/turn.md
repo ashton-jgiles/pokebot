@@ -34,8 +34,10 @@ cover Knock Outs from Poison and Burn in Milestone 3.
 
 ## Pokémon Checkup
 
-Runs between every turn (rulebook pp. 15–16). It raises the `Checkup` [event](../events/events.md) and is otherwise **empty for now**: Special Conditions arrive in
-Milestone 3. `handle_knockouts` runs right after it either way.
+Runs between every turn (rulebook pp. 15–16). It raises the `Checkup` [event](../events/events.md),
+then applies both Active Pokémon's [Special Conditions](conditions.md): Poison and Burn damage, and
+the Asleep, Burned and Paralyzed recoveries. `handle_knockouts` runs right after, so a Pokémon
+Knocked Out by Poison gives up Prize cards like any other.
 
 ## Tests
 

@@ -13,7 +13,7 @@ The main-phase choices, plus the retreat-discard decision.
 | `PlayBasic` | Bench has fewer than 5 Pokémon | p. 10 |
 | `Evolve` | The card evolves from the target's current name; **not** the player's first turn; the target didn't come into play or evolve this turn; its stack isn't full | p. 11 |
 | `AttachEnergy` | No Energy attached yet this turn | p. 11 |
-| `Retreat` | Not retreated yet this turn; a Benched Pokémon exists; the Active has at least as many Energy as its Retreat Cost | p. 12 |
+| `Retreat` | Not retreated yet this turn; a Benched Pokémon exists; the Active isn't Asleep or Paralyzed and has at least as many Energy as its Retreat Cost | p. 12 |
 | `PlayTrainer` | See [Trainer cards](#trainer-cards) | pp. 11–12 |
 | `AttachTool` | The target has no Tool | p. 12 |
 | `Attack` | See [combat](combat.md) | p. 13 |
@@ -54,7 +54,7 @@ step 3.7. Every Trainer played raises `TrainerPlayed`.
 
 Benching, evolving, attaching and retreating each raise an [event](../events/events.md).
 
-Clearing Special Conditions on evolving and retreating arrives with Special Conditions in Milestone 3.
+Evolving and retreating remove all [Special Conditions](conditions.md).
 
 ## Retreating
 

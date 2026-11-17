@@ -23,12 +23,16 @@ bend; this file is where they live.
 | `attack_text(game, attack_ref)` | The attack printed on `attack_ref.text_from` | (copy attacks pass another card) |
 | `attack_cost(game, pokemon, attack)` | Printed cost | Counter Gain, Kyurem |
 | `energy_provided(game, pokemon, energy)` | The card's `provides` list | Prism Energy, Meganium's Wild Growth |
+| `is_active(game, pokemon)` | Whether it's in its owner's Active Spot | |
+| `can_get_special_condition(game, pokemon, condition)` | Only the Active Pokémon | Festival Grounds, Hoothoot, Slowpoke |
+| `poison_counters(game, pokemon)` | What Poisoned it said (usually 1) | Perilous Jungle |
+| `burn_counters(game, pokemon)` | 2 | |
 | `prize_value(game, pokemon)` | 1, 2 for ex, 3 for Mega ex | Lillie's Pearl, Legacy Energy |
 | `bench_size(game, player)` | 5 | Area Zero Underdepths |
 | `is_first_turn(game)` | Turns 1 and 2 | (used by other questions) |
 | `can_attach_energy(game, player)` | Not yet this turn | Emboar, Iono's Bellibolt ex |
-| `can_retreat(game, player)` | Not yet this turn, with a Benched Pokémon to switch in | Clutch |
-| `can_attack(game, player)` | Not on turn 1, and only with an Active | Item/attack locks |
+| `can_retreat(game, player)` | Not yet this turn, with a Benched Pokémon to switch in, and the Active isn't Asleep or Paralyzed | Clutch |
+| `can_attack(game, player)` | Not on turn 1, only with an Active, and not while it's Asleep or Paralyzed | Item/attack locks |
 | `can_play_item(game, player)` | Yes | Budew, Tyranitar (Item locks) |
 | `can_play_supporter(game, player)` | Not yet this turn, and not on turn 1 | |
 | `can_play_stadium(game, player, card)` | Not yet this turn, and not the same name as the one in play | Copperajah |

@@ -37,7 +37,9 @@ counts until their effects are written (Milestone 3).
 
 1. Removes the `MainPhase` (or `ExtraAttack`) decision and counts the attack in `flags.attacks_used`.
 2. Records the attacker and attack in [history](../game/game_state.md#gamehistory).
-3. Starts the attack's [effect program](../effects/interpreter.md) with `then = FinishAttack`. Its
+3. If the attacker is **Confused**, flips a coin. On tails the attack does nothing: the attacker gets
+   3 damage counters and it goes straight to `finish_attack` (see [conditions](conditions.md)).
+   Otherwise, starts the attack's [effect program](../effects/interpreter.md) with `then = FinishAttack`. Its
    `Damage` step calls `deal_attack_damage`. The program may stop for choices.
 4. **`finish_attack`**, once the whole effect is done: raises `AttackDone`. If the same Pokémon is still Active and `rules::attacks_per_turn` allows another attack, pushes an
    `ExtraAttack` decision. Otherwise **the turn ends**: the phase becomes `AfterMain`.
