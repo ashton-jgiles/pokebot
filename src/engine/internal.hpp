@@ -19,4 +19,8 @@ namespace pokebot::detail {
 
     void apply_setup_action(GameState& game, const Action& action);
 
+    void add_main_phase_actions(const GameState& game, std::vector<Action>& out);
+
+    void apply_main_phase_action(GameState& game, const Action& action);
+
 } // namespace pokebot::detail

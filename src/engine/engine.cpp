@@ -29,19 +29,16 @@ namespace pokebot {
             game.pending.clear();
         }
 
-        void begin_turn(GameState& game, int player) {
-            game.current_player = static_cast<std::uint8_t>(player);
-            ++game.turn;
-            game.flags = TurnFlags{};
-
-            if (game.player(player).deck.empty()) {
-                set_winner(game, opponent_of(player));
-                return;
-            }
-            draw_cards(game, player, 1);
-            game.pending.push_back(Decision{DecisionKind::MainPhase, static_cast<std::uint8_t>(player), 0});
-        }
     } // namespace detail
+
+    namespace {
+
+        bool is_setup_decision(DecisionKind kind) {
+            return kind == DecisionKind::ChooseTurnOrder || kind == DecisionKind::SetupActive ||
+                   kind == DecisionKind::SetupBench || kind == DecisionKind::MulliganDraws;
+        }
+
+    } // namespace
 
     std::vector<Action> legal_actions(const GameState& game) {
         std::vector<Action> actions;
@@ -49,16 +46,13 @@ namespace pokebot {
             return actions;
         }
 
-        const Decision& decision = game.decision();
-        switch (decision.kind) {
-            case DecisionKind::ChooseTurnOrder:
-            case DecisionKind::SetupActive:
-            case DecisionKind::SetupBench:
-            case DecisionKind::MulliganDraws:
-                detail::add_setup_actions(game, decision, actions);
-                break;
-            default:
-                throw std::logic_error("this decision isn't implemented yet (steps 2.3-2.5)");
+        const DecisionKind kind = game.decision().kind;
+        if (is_setup_decision(kind)) {
+            detail::add_setup_actions(game, game.decision(), actions);
+        } else if (kind == DecisionKind::MainPhase) {
+            detail::add_main_phase_actions(game, actions);
+        } else {
+            throw std::logic_error("this decision isn't implemented yet (steps 2.4-2.5)");
         }
         return actions;
     }
@@ -73,15 +67,13 @@ namespace pokebot {
             throw std::invalid_argument("apply: that action isn't legal right now");
         }
 
-        switch (game.decision().kind) {
-            case DecisionKind::ChooseTurnOrder:
-            case DecisionKind::SetupActive:
-            case DecisionKind::SetupBench:
-            case DecisionKind::MulliganDraws:
-                detail::apply_setup_action(game, action);
-                break;
-            default:
-                throw std::logic_error("this decision isn't implemented yet (steps 2.3-2.5)");
+        const DecisionKind kind = game.decision().kind;
+        if (is_setup_decision(kind)) {
+            detail::apply_setup_action(game, action);
+        } else if (kind == DecisionKind::MainPhase) {
+            detail::apply_main_phase_action(game, action);
+        } else {
+            throw std::logic_error("this decision isn't implemented yet (steps 2.4-2.5)");
         }
     }
 
