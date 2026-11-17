@@ -64,6 +64,9 @@ namespace pokebot {
         RestToBottom,
         ChooseCounterSource,
         MoveCounters,
+        CountersOnSelf,
+        DiscardStadium,
+        SwitchToActive,
     };
 
     enum class StageFilter : std::uint8_t {
@@ -85,6 +88,7 @@ namespace pokebot {
         std::string name;
         std::string name_prefix;
         std::string not_name;
+        std::optional<EnergyType> not_type;
         std::vector<CardFilter> any_of;
     };
 
@@ -106,6 +110,15 @@ namespace pokebot {
         ActiveIs,       // your Active Pokemon matches `filter`
         SelfHasEnergy,  // an Energy attached to this Pokemon matches `filter`
         YouHaveDamaged, // one of your Pokemon in play has damage counters
+        SelfIs,         // "this Pokemon" matches `filter`
+        StadiumInPlay,  // a Stadium is in play
+    };
+
+    // When a triggered effect happens on its own, without being chosen.
+    enum class Trigger : std::uint8_t {
+        None,
+        PlayedToBench, // an Ability: "when you play this Pokemon from your hand onto your Bench"
+        PutOnBench,    // a Stadium: "whenever any player puts a Pokemon onto their Bench during their turn"
     };
 
     struct Condition {
@@ -209,6 +222,8 @@ namespace pokebot {
     Program compile_trainer(const nlohmann::json& effects);
     std::vector<Condition> compile_conditions(const nlohmann::json& requirements);
     std::vector<Modifier> compile_passive(const nlohmann::json& passive);
+    Trigger trigger_from_string(const std::string& name);
+    const char* to_string(Trigger trigger);
     const char* to_string(Op op);
 
 } // namespace pokebot

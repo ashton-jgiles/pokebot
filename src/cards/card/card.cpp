@@ -125,6 +125,9 @@ namespace pokebot {
                 if (a.active_only) {
                     ability["active_only"] = true;
                 }
+                if (a.trigger != Trigger::None) {
+                    ability["trigger"] = to_string(a.trigger);
+                }
                 abilities.push_back(ability);
             }
             j["abilities"] = abilities;
@@ -156,6 +159,9 @@ namespace pokebot {
             }
             if (!c.passive.empty()) {
                 j["passive"] = c.passive;
+            }
+            if (c.trigger != Trigger::None) {
+                j["trigger"] = to_string(c.trigger);
             }
         }
     }
@@ -205,6 +211,7 @@ namespace pokebot {
                     ability.once_per_turn = a.value("once_per_turn", true);
                     ability.one_per_name = a.value("one_per_name", false);
                     ability.active_only = a.value("active_only", false);
+                    ability.trigger = trigger_from_string(a.value("trigger", "none"));
                     c.abilities.push_back(std::move(ability));
                 }
                 for (const auto& a : j.value("attacks", json::array())) {
@@ -229,6 +236,7 @@ namespace pokebot {
                 c.effects = effects_or_empty(j);
                 c.requirements = j.value("requires", json::array());
                 c.passive = j.value("passive", json::array());
+                c.trigger = trigger_from_string(j.value("trigger", "none"));
             }
         } catch (const json::exception& e) {
             throw CardDataError(std::string("bad card data: ") + e.what());

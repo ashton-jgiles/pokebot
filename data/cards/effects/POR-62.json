@@ -1,1 +1,1 @@
-{"rules": ["ex"], "attacks": {"Tuck Tail": {"effects": [{"op": "return_self_to_hand"}]}}}
+{"rules": ["ex"], "attacks": {"Tuck Tail": {"effects": [{"op": "return_self_to_hand"}]}}, "abilities": {"Last-Ditch Catch": {"trigger": "played_to_bench", "one_per_name": true, "effects": [{"op": "may", "effects": [{"op": "search_deck", "count": 1, "filter": {"trainer": "supporter"}}]}]}}}

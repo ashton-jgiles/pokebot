@@ -205,6 +205,24 @@ namespace pokebot {
                 to->damage_counters = static_cast<std::uint16_t>(to->damage_counters + moved);
             }
 
+            // "This Pokemon" moves from the Bench into the Active Spot; the old Active goes to the Bench.
+            void switch_to_active(GameState& game, const EffectRun& run) {
+                PlayerState& p = game.player(run.who.player);
+                if (!p.active || p.active->id() == run.who.self) {
+                    return;
+                }
+                for (PokemonInPlay& benched : p.bench) {
+                    if (benched.id() == run.who.self) {
+                        const CardIndex leaving = p.active->id();
+                        std::swap(*p.active, benched);
+                        clear_special_conditions(benched);
+                        end_effects_on(game, benched.id());
+                        raise(game, Event{EventKind::MovedToBench, run.who.player, leaving, kNoCard});
+                        return;
+                    }
+                }
+            }
+
             // Cards always go to their owner's hand, deck or discard pile, even when the effect is the opponent's.
             CardZone* owner_zone(GameState& game, const EffectRun& run, Zone zone, CardIndex card) {
                 PlayerState& owner = game.player(owner_of(card));
@@ -623,6 +641,23 @@ namespace pokebot {
                     case Op::MoveCounters:
                         move_counters(game, run, step);
                         break;
+                    case Op::CountersOnSelf:
+                        if (PokemonInPlay* self = find_pokemon(game, run.who.self)) {
+                            self->damage_counters = static_cast<std::uint16_t>(self->damage_counters + step.max);
+                        }
+                        break;
+                    case Op::DiscardStadium:
+                        for (int player = 0; player < kPlayers; ++player) {
+                            PlayerState& owner = game.player(player);
+                            if (owner.stadium != kNoCard) {
+                                owner.discard.push_back(owner.stadium);
+                                owner.stadium = kNoCard;
+                            }
+                        }
+                        break;
+                    case Op::SwitchToActive:
+                        switch_to_active(game, run);
+                        break;
                     case Op::IgnoreDefenderEffects:
                         run.ignore_defender = true;
                         break;
@@ -733,6 +768,12 @@ namespace pokebot {
                 }
                 case ConditionKind::YouHaveDamaged:
                     return !damaged_slots(game, player).empty();
+                case ConditionKind::SelfIs: {
+                    const PokemonInPlay* self = run != nullptr ? find_pokemon(game, run->who.self) : nullptr;
+                    return self != nullptr && matches(condition.filter, game.def(self->top()));
+                }
+                case ConditionKind::StadiumInPlay:
+                    return rules::stadium_in_play(game) != kNoCard;
                 case ConditionKind::HasBenched:
                     return !p.bench.empty();
                 case ConditionKind::OpponentHasBenched:
@@ -767,6 +808,14 @@ namespace pokebot {
         void start_effect(GameState& game, const EffectContext& who, ProgramRef program, AfterEffect then) {
             game.effects.push_back(make_run(game, who, program, then));
             run_effects(game);
+        }
+
+        void queue_effect(GameState& game, const EffectContext& who, ProgramRef program, AfterEffect then) {
+            if (game.effects.empty()) {
+                start_effect(game, who, program, then);
+                return;
+            }
+            game.effects.push_back(make_run(game, who, program, then)); // the running loop picks it up next
         }
 
         void add_effect_choice_actions(const GameState& game, std::vector<Action>& out) {

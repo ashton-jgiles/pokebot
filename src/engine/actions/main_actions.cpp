@@ -173,23 +173,10 @@ namespace pokebot {
             bool ability_ready(const GameState& game, int player, Slot slot, std::size_t index) {
                 const PokemonInPlay& pokemon = pokemon_at(game.player(player), slot);
                 const Ability& ability = game.def(pokemon.top()).abilities[index];
-                if (ability.program.empty() || !rules::has_abilities(game, pokemon) || (ability.active_only && slot != kActiveSlot)) {
+                if (ability.program.empty() || ability.trigger != Trigger::None || (ability.active_only && slot != kActiveSlot)) {
                     return false;
                 }
-                for (const AbilityUse& use : game.flags.abilities_used) {
-                    const bool same = use.pokemon == pokemon.id() && use.card == pokemon.top() && use.index == index;
-                    if ((ability.once_per_turn && same) || (ability.one_per_name && game.def(use.card).abilities[use.index].name == ability.name)) {
-                        return false;
-                    }
-                }
-                EffectRun context;
-                context.who = EffectContext{static_cast<std::uint8_t>(player), pokemon.id(), pokemon.top()};
-                for (const Condition& condition : ability.conditions) {
-                    if (!condition_holds(game, player, condition, kNoCard, &context)) {
-                        return false;
-                    }
-                }
-                return true;
+                return ability_allowed(game, player, pokemon, index);
             }
 
             void add_ability_actions(const GameState& game, int player, std::vector<Action>& out) {
@@ -204,7 +191,8 @@ namespace pokebot {
                     }
                 }
                 const CardIndex stadium = rules::stadium_in_play(game);
-                if (stadium != kNoCard && !game.def(stadium).program.empty() && !game.flags.stadium_used && requirements_met(game, player, stadium)) {
+                if (stadium != kNoCard && !game.def(stadium).program.empty() && game.def(stadium).trigger == Trigger::None && !game.flags.stadium_used &&
+                    requirements_met(game, player, stadium)) {
                     out.push_back(Action{ActionKind::UseStadium, stadium, kActiveSlot, 0});
                 }
             }
@@ -265,6 +253,7 @@ namespace pokebot {
                     p.hand.remove(action.card);
                     p.bench.push_back(new_pokemon(action.card, game.turn));
                     raise(game, Event{EventKind::PutOnBench, player, action.card, kNoCard});
+                    raise(game, Event{EventKind::PlayedToBench, player, action.card, kNoCard});
                     break;
                 case ActionKind::Evolve: {
                     p.hand.remove(action.card);

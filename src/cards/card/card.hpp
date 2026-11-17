@@ -34,6 +34,7 @@ namespace pokebot {
         bool once_per_turn = true; // "Once during your turn"
         bool one_per_name = false; // "You can't use more than 1 <name> Ability each turn"
         bool active_only = false;  // "if this Pokemon is in the Active Spot"
+        Trigger trigger = Trigger::None;
     };
 
     struct Attack {
@@ -82,6 +83,7 @@ namespace pokebot {
         std::vector<Condition> conditions;
         nlohmann::json passive = nlohmann::json::array();
         std::vector<Modifier> modifiers;
+        Trigger trigger = Trigger::None; // a Stadium's effect that happens on its own
 
         int prize_value() const;
     };

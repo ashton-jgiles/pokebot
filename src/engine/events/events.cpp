@@ -32,6 +32,8 @@ namespace pokebot {
                 return "turn ending";
             case EventKind::Checkup:
                 return "Pokemon Checkup";
+            case EventKind::PlayedToBench:
+                return "played to Bench";
             case EventKind::TrainerPlayed:
                 return "trainer played";
         }
@@ -48,6 +50,7 @@ namespace pokebot {
             if (event_hook != nullptr) {
                 event_hook(game, event);
             }
+            run_triggers(game, event);
         }
 
     } // namespace detail

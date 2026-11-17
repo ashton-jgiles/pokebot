@@ -108,9 +108,9 @@ TEST_CASE("benching, evolving and attaching Energy raise events", "[engine][even
     pokebot::apply(f.game, test::find_action(f.game, ActionKind::Evolve, "TST-4"));
     pokebot::apply(f.game, test::find_action(f.game, ActionKind::AttachEnergy, "TST-5", kActiveSlot));
 
-    CHECK(kinds() == std::vector<EventKind>{EventKind::PutOnBench, EventKind::Evolved, EventKind::EnergyAttached});
-    CHECK(f.game.def(seen[1].card).id == "TST-4");
-    CHECK(seen[1].pokemon == f.game.player(f.me).active->id());
+    CHECK(kinds() == std::vector<EventKind>{EventKind::PutOnBench, EventKind::PlayedToBench, EventKind::Evolved, EventKind::EnergyAttached});
+    CHECK(f.game.def(seen[2].card).id == "TST-4");
+    CHECK(seen[2].pokemon == f.game.player(f.me).active->id());
 }
 
 TEST_CASE("retreating raises Retreated and MovedToBench for the Pokemon that left", "[engine][events]") {

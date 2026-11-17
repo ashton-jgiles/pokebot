@@ -35,6 +35,9 @@ namespace pokebot {
             if (to == "bench") {
                 return Zone::Bench;
             }
+            if (to == "self") {
+                return Zone::AttachedEnergy;
+            }
             throw CardDataError("unknown destination '" + to + "'");
         }
 
@@ -188,6 +191,8 @@ namespace pokebot {
                     filter.name_prefix = value.get<std::string>();
                 } else if (key == "not_name") {
                     filter.not_name = value.get<std::string>();
+                } else if (key == "not_type") {
+                    filter.not_type = energy_type_from_string(value.get<std::string>());
                 } else if (key == "any_of") {
                     for (const auto& option : value) {
                         filter.any_of.push_back(parse_filter_fields(option));
@@ -260,6 +265,11 @@ namespace pokebot {
                 condition.filter = parse_filter_fields(value);
             } else if (key == "has_damaged") {
                 condition.kind = ConditionKind::YouHaveDamaged;
+            } else if (key == "self_is") {
+                condition.kind = ConditionKind::SelfIs;
+                condition.filter = parse_filter_fields(value);
+            } else if (key == "stadium_in_play") {
+                condition.kind = ConditionKind::StadiumInPlay;
             } else if (key == "has_benched") {
                 condition.kind = ConditionKind::HasBenched;
             } else if (key == "opponent_has_benched") {
@@ -537,6 +547,15 @@ namespace pokebot {
                     choose.filter = parse_filter(block);
                     add(choose);
                     add(Op::UseChosenAttack);
+                } else if (op == "counters_on_self") {
+                    Step put;
+                    put.op = Op::CountersOnSelf;
+                    put.max = count_of(block, 1);
+                    add(put);
+                } else if (op == "discard_stadium") {
+                    add(Op::DiscardStadium);
+                } else if (op == "switch_to_active") {
+                    add(Op::SwitchToActive);
                 } else if (op == "counters_to") {
                     choose_targets(block, false);
                     Step put;
@@ -680,6 +699,12 @@ namespace pokebot {
         if (!filter.not_name.empty() && card.name == filter.not_name) {
             return false;
         }
+        if (filter.not_type) {
+            const auto& types = card.kind == CardKind::Energy ? card.provides : card.types;
+            if (std::find(types.begin(), types.end(), *filter.not_type) != types.end()) {
+                return false;
+            }
+        }
         if (!stage_matches(filter.stage, card)) {
             return false;
         }
@@ -786,6 +811,31 @@ namespace pokebot {
         }
     }
 
+    Trigger trigger_from_string(const std::string& name) {
+        if (name == "none") {
+            return Trigger::None;
+        }
+        if (name == "played_to_bench") {
+            return Trigger::PlayedToBench;
+        }
+        if (name == "put_on_bench") {
+            return Trigger::PutOnBench;
+        }
+        throw CardDataError("unknown trigger '" + name + "'");
+    }
+
+    const char* to_string(Trigger trigger) {
+        switch (trigger) {
+            case Trigger::None:
+                return "none";
+            case Trigger::PlayedToBench:
+                return "played_to_bench";
+            case Trigger::PutOnBench:
+                return "put_on_bench";
+        }
+        return "none";
+    }
+
     const char* to_string(Op op) {
         switch (op) {
             case Op::Damage:
@@ -852,6 +902,12 @@ namespace pokebot {
                 return "choose where damage counters come from";
             case Op::MoveCounters:
                 return "move damage counters";
+            case Op::CountersOnSelf:
+                return "damage counters on this Pokemon";
+            case Op::DiscardStadium:
+                return "discard the Stadium";
+            case Op::SwitchToActive:
+                return "switch into the Active Spot";
         }
         return "unknown op";
     }

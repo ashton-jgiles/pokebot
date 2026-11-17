@@ -1,0 +1,1 @@
+{"trigger": "put_on_bench", "effects": [{"op": "if", "condition": {"self_is": {"kind": "pokemon", "stage": "basic", "not_type": "darkness"}}, "then": [{"op": "counters_on_self", "count": 2}]}]}

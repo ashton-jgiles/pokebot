@@ -30,6 +30,7 @@ add_executable(pokebot_tests
   test_engine_lasting.cpp
   test_engine_passive.cpp
   test_engine_abilities.cpp
+  test_engine_triggers.cpp
   test_invariants.cpp
   test_agents.cpp
   test_stress.cpp

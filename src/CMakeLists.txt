@@ -11,6 +11,7 @@ add_library(pokebot_lib
   engine/rules/rules.cpp
   engine/events/events.cpp
   engine/effects/interpreter.cpp
+  engine/effects/triggers.cpp
   engine/setup/setup.cpp
   engine/actions/turn.cpp
   engine/actions/main_actions.cpp

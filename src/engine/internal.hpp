@@ -79,6 +79,12 @@ namespace pokebot::detail {
     bool condition_holds(const GameState& game, int player, const Condition& condition, CardIndex playing, const EffectRun* run = nullptr);
     bool requirements_met(const GameState& game, int player, CardIndex card);
     void start_effect(GameState& game, const EffectContext& who, ProgramRef program, AfterEffect then);
+    // Runs the effect now, or, if one is already running, right after its current step.
+    void queue_effect(GameState& game, const EffectContext& who, ProgramRef program, AfterEffect then);
+
+    // effects/triggers.cpp
+    bool ability_allowed(const GameState& game, int player, const PokemonInPlay& pokemon, std::size_t index);
+    void run_triggers(GameState& game, const Event& event);
     void add_effect_choice_actions(const GameState& game, std::vector<Action>& out);
     void apply_effect_choice(GameState& game, const Action& action);
 } // namespace pokebot::detail
