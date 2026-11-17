@@ -74,7 +74,7 @@ namespace {
         return db;
     }
 
-    const pokebot::Decklist kDeck = test::deck({{4, 1}, {4, 2}, {4, 3}, {4, 4}, {4, 5}, {24, 6}, {4, 7}, {4, 8}, {8, 9}});
+    const pokebot::Decklist kDeck = test::deck({{4, 1}, {4, 2}, {4, 3}, {4, 4}, {4, 5}, {28, 6}, {4, 7}, {4, 8}, {4, 9}});
 
     // Turn 2: `me` has Plainmon Active with one Energy and an empty Bench.
     struct Fixture {
