@@ -58,6 +58,7 @@ namespace pokebot {
         ChooseAttack,
         UseChosenAttack,
         AddLasting,
+        IgnoreDefenderEffects,
     };
 
     enum class StageFilter : std::uint8_t {
@@ -167,10 +168,36 @@ namespace pokebot {
 
     using Program = std::vector<Step>;
 
+    // An always-on change to a rule question, from a Tool, a Stadium or a passive Ability.
+    enum class Modifies : std::uint8_t {
+        MaxHp,
+        RetreatCost,
+        WeaknessType,
+        DamageDealt, // attacks by the Pokemon do `add` more to the opponent's Active (before Weakness)
+    };
+
+    enum class AppliesTo : std::uint8_t {
+        Holder,    // the Pokemon the Tool is attached to, or the Pokemon with the Ability
+        Yours,     // every Pokemon in play of the card's owner
+        Opponents, // every Pokemon in play of the owner's opponent
+        All,       // every Pokemon in play
+    };
+
+    struct Modifier {
+        Modifies what = Modifies::MaxHp;
+        AppliesTo to = AppliesTo::Holder;
+        int add = 0;
+        std::optional<int> set;
+        std::optional<EnergyType> type;
+        CardFilter filter;
+        bool only_if_poisoned = false;
+    };
+
     bool matches(const CardFilter& filter, const CardDef& card);
     Program compile_attack(const nlohmann::json& effects);
     Program compile_trainer(const nlohmann::json& effects);
     std::vector<Condition> compile_conditions(const nlohmann::json& requirements);
+    std::vector<Modifier> compile_passive(const nlohmann::json& passive);
     const char* to_string(Op op);
 
 } // namespace pokebot

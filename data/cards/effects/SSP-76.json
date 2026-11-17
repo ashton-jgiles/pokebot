@@ -1,1 +1,1 @@
-{"rules": ["ex"], "attacks": {"Eon Blade": {"effects": [{"op": "lasting", "effect": "cant_attack", "until": "your_next_turn"}]}}}
+{"rules": ["ex"], "attacks": {"Eon Blade": {"effects": [{"op": "lasting", "effect": "cant_attack", "until": "your_next_turn"}]}}, "abilities": {"Skyliner": {"passive": [{"modify": "retreat_cost", "set": 0, "applies_to": "yours", "filter": {"stage": "basic"}}]}}}

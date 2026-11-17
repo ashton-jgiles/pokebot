@@ -1,1 +1,1 @@
-{"rules": ["ex"], "attacks": {"Full Moon Rondo": {"effects": [{"op": "add_damage", "per": 20, "for_each": {"of": "benched", "player": "each"}}, {"op": "damage"}]}}}
+{"rules": ["ex"], "attacks": {"Full Moon Rondo": {"effects": [{"op": "add_damage", "per": 20, "for_each": {"of": "benched", "player": "each"}}, {"op": "damage"}]}}, "abilities": {"Fairy Zone": {"passive": [{"modify": "weakness_type", "type": "psychic", "applies_to": "opponents", "filter": {"kind": "pokemon", "type": "dragon"}}]}}}

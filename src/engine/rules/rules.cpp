@@ -29,7 +29,66 @@ namespace pokebot::rules {
             return false;
         }
 
+        // Calls visit(modifier, owner, holder) for every passive modifier in play: the Stadium's, each Tool's and each
+        // Ability's. holder is the Pokemon a Tool is attached to or the Pokemon with the Ability, or nullptr for a Stadium.
+        template <class Visit>
+        void each_modifier(const GameState& game, Visit visit) {
+            const CardIndex stadium = stadium_in_play(game);
+            if (stadium != kNoCard) {
+                for (const Modifier& m : game.def(stadium).modifiers) {
+                    visit(m, owner_of(stadium), nullptr);
+                }
+            }
+            for (int p = 0; p < kPlayers; ++p) {
+                const PlayerState& player = game.player(p);
+                const auto each_pokemon = [&](const PokemonInPlay& pokemon) {
+                    if (pokemon.tool != kNoCard) {
+                        for (const Modifier& m : game.def(pokemon.tool).modifiers) {
+                            visit(m, p, &pokemon);
+                        }
+                    }
+                    for (const Ability& ability : game.def(pokemon.top()).abilities) {
+                        for (const Modifier& m : ability.modifiers) {
+                            visit(m, p, &pokemon);
+                        }
+                    }
+                };
+                if (player.active) {
+                    each_pokemon(*player.active);
+                }
+                for (const PokemonInPlay& pokemon : player.bench) {
+                    each_pokemon(pokemon);
+                }
+            }
+        }
+
+        bool applies(const GameState& game, const Modifier& m, int owner, const PokemonInPlay* holder, const PokemonInPlay& target) {
+            bool in_reach = false;
+            switch (m.to) {
+                case AppliesTo::Holder:
+                    in_reach = holder != nullptr && holder->id() == target.id();
+                    break;
+                case AppliesTo::Yours:
+                    in_reach = owner_of(target.id()) == owner;
+                    break;
+                case AppliesTo::Opponents:
+                    in_reach = owner_of(target.id()) != owner;
+                    break;
+                case AppliesTo::All:
+                    in_reach = true;
+                    break;
+            }
+            return in_reach && matches(m.filter, game.def(target.top())) && (!m.only_if_poisoned || target.special.poison > 0);
+        }
+
         int attacker_side(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, int damage) {
+            if (is_active(game, defender)) {
+                each_modifier(game, [&](const Modifier& m, int owner, const PokemonInPlay* holder) {
+                    if (m.what == Modifies::DamageDealt && applies(game, m, owner, holder, attacker)) {
+                        damage += m.add;
+                    }
+                });
+            }
             const int player = owner_of(attacker.id());
             const bool defender_ex = game.def(defender.top()).rules.ex;
             for (const LastingEffect& effect : game.lasting) {
@@ -41,16 +100,16 @@ namespace pokebot::rules {
             return damage;
         }
 
-        int apply_weakness(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, int damage) {
-            const auto w = weakness(game, defender);
+        int apply_weakness(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, int damage, bool printed) {
+            const auto w = printed ? game.def(defender.top()).weakness : weakness(game, defender);
             if (w && attacker_has_type(game, attacker, w->type)) {
                 damage *= w->multiplier;
             }
             return damage;
         }
 
-        int apply_resistance(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, int damage) {
-            const auto r = resistance(game, defender);
+        int apply_resistance(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, int damage, bool printed) {
+            const auto r = printed ? game.def(defender.top()).resistance : resistance(game, defender);
             if (r && attacker_has_type(game, attacker, r->type)) {
                 damage -= r->amount;
             }
@@ -64,7 +123,13 @@ namespace pokebot::rules {
     } // namespace
 
     int max_hp(const GameState& game, const PokemonInPlay& pokemon) {
-        return game.def(pokemon.top()).hp;
+        int hp = game.def(pokemon.top()).hp;
+        each_modifier(game, [&](const Modifier& m, int owner, const PokemonInPlay* holder) {
+            if (m.what == Modifies::MaxHp && applies(game, m, owner, holder, pokemon)) {
+                hp += m.add;
+            }
+        });
+        return hp;
     }
 
     int remaining_hp(const GameState& game, const PokemonInPlay& pokemon) {
@@ -80,7 +145,13 @@ namespace pokebot::rules {
     }
 
     std::optional<Weakness> weakness(const GameState& game, const PokemonInPlay& pokemon) {
-        return game.def(pokemon.top()).weakness;
+        std::optional<Weakness> w = game.def(pokemon.top()).weakness;
+        each_modifier(game, [&](const Modifier& m, int owner, const PokemonInPlay* holder) {
+            if (m.what == Modifies::WeaknessType && applies(game, m, owner, holder, pokemon)) {
+                w = Weakness{*m.type, w ? w->multiplier : 2};
+            }
+        });
+        return w;
     }
 
     std::optional<Resistance> resistance(const GameState& game, const PokemonInPlay& pokemon) {
@@ -88,7 +159,17 @@ namespace pokebot::rules {
     }
 
     int retreat_cost(const GameState& game, const PokemonInPlay& pokemon) {
-        return std::max(game.def(pokemon.top()).retreat, 0);
+        int cost = game.def(pokemon.top()).retreat;
+        std::optional<int> set;
+        each_modifier(game, [&](const Modifier& m, int owner, const PokemonInPlay* holder) {
+            if (m.what == Modifies::RetreatCost && applies(game, m, owner, holder, pokemon)) {
+                cost += m.add;
+                if (m.set) {
+                    set = set ? std::min(*set, *m.set) : *m.set;
+                }
+            }
+        });
+        return std::max(set ? *set : cost, 0);
     }
 
     const Attack& attack_text(const GameState& game, AttackRef attack) {
@@ -202,17 +283,19 @@ namespace pokebot::rules {
         return game.def(defender.top()).rules.tera && !is_active(game, defender);
     }
 
-    int attack_damage(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, int base) {
+    int attack_damage(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, int base, bool ignore_defender_effects) {
         if (base <= 0 || damage_prevented(game, attacker, defender)) {
             return 0;
         }
         int damage = base;
         damage = attacker_side(game, attacker, defender, damage);
         if (is_active(game, defender)) {
-            damage = apply_weakness(game, attacker, defender, damage);
-            damage = apply_resistance(game, attacker, defender, damage);
+            damage = apply_weakness(game, attacker, defender, damage, ignore_defender_effects);
+            damage = apply_resistance(game, attacker, defender, damage, ignore_defender_effects);
         }
-        damage = defender_side(game, attacker, defender, damage);
+        if (!ignore_defender_effects) {
+            damage = defender_side(game, attacker, defender, damage);
+        }
         return std::max(damage, 0);
     }
 

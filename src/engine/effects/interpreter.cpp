@@ -382,7 +382,7 @@ namespace pokebot {
                 PlayerState& p = game.player(run.who.player);
                 switch (step.op) {
                     case Op::Damage:
-                        deal_attack_damage(game, run.who, run.damage);
+                        deal_attack_damage(game, run.who, run.damage, run.ignore_defender);
                         break;
                     case Op::Draw:
                         for (const int player : players_on(step.side, run.who.player)) {
@@ -507,6 +507,9 @@ namespace pokebot {
                         game.effects.push_back(nested); // runs next; this effect carries on after it
                         return true;
                     }
+                    case Op::IgnoreDefenderEffects:
+                        run.ignore_defender = true;
+                        break;
                     case Op::AddLasting:
                         add_lasting(game, run, step);
                         break;

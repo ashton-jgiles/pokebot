@@ -1,1 +1,1 @@
-{"attacks": {"Rampaging Thunder": {"effects": [{"op": "lasting", "effect": "cant_attack", "until": "your_next_turn"}]}}}
+{"attacks": {"Rampaging Thunder": {"effects": [{"op": "lasting", "effect": "cant_attack", "until": "your_next_turn"}]}, "Shred": {"effects": [{"op": "ignore_defender_effects"}, {"op": "damage"}]}}}

@@ -24,6 +24,8 @@ namespace pokebot {
         std::string name;
         std::string text;
         nlohmann::json effects = nlohmann::json::array();
+        nlohmann::json passive = nlohmann::json::array();
+        std::vector<Modifier> modifiers;
     };
 
     struct Attack {
@@ -70,6 +72,8 @@ namespace pokebot {
         nlohmann::json requirements = nlohmann::json::array();
         Program program;
         std::vector<Condition> conditions;
+        nlohmann::json passive = nlohmann::json::array();
+        std::vector<Modifier> modifiers;
 
         int prize_value() const;
     };

@@ -1,0 +1,1 @@
+{"passive": [{"modify": "damage_dealt", "add": 40, "if_poisoned": true}]}

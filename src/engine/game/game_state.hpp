@@ -168,6 +168,7 @@ namespace pokebot {
         std::int16_t value = 0;            // heads flipped, or cards just moved
         FixedVector<CardIndex, 6> targets; // ids of the Pokemon chosen as targets
         AttackRef chosen_attack;
+        bool ignore_defender = false; // the attack isn't affected by effects on the Defending Pokemon
 
         bool operator==(const EffectRun&) const = default;
     };

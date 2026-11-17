@@ -93,8 +93,16 @@ namespace pokebot {
                 card.program = compile_trainer(card.effects);
             }
             card.conditions = compile_conditions(card.requirements);
+            card.modifiers = compile_passive(card.passive);
         } catch (const CardDataError& e) {
             throw CardDataError(card.id + ": " + e.what());
+        }
+        for (Ability& ability : card.abilities) {
+            try {
+                ability.modifiers = compile_passive(ability.passive);
+            } catch (const CardDataError& e) {
+                throw CardDataError(card.id + " ability '" + ability.name + "': " + e.what());
+            }
         }
         const std::string id = card.id;
         cards_.insert_or_assign(id, std::move(card));
@@ -116,11 +124,11 @@ namespace pokebot {
         std::vector<std::string> missing;
         for (const auto& [id, c] : cards_) {
             const std::string label = id + " " + c.name;
-            if (!c.text.empty() && c.effects.empty()) {
+            if (!c.text.empty() && c.effects.empty() && c.passive.empty()) {
                 missing.push_back(label);
             }
             for (const auto& a : c.abilities) {
-                if (!a.text.empty() && a.effects.empty()) {
+                if (!a.text.empty() && a.effects.empty() && a.passive.empty()) {
                     missing.push_back(label + ": ability " + a.name);
                 }
             }

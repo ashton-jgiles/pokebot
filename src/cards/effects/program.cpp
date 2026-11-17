@@ -520,6 +520,9 @@ namespace pokebot {
                     choose.filter = parse_filter(block);
                     add(choose);
                     add(Op::UseChosenAttack);
+                } else if (op == "ignore_defender_effects") {
+                    attack_only(op);
+                    add(Op::IgnoreDefenderEffects);
                 } else if (op == "lasting") {
                     Step step;
                     step.op = Op::AddLasting;
@@ -567,7 +570,8 @@ namespace pokebot {
             try {
                 Compiler compiler(attack);
                 const bool placed = uses_op(effects, "damage");
-                if (attack && !placed && (uses_op(effects, "set_damage") || uses_op(effects, "add_damage"))) {
+                if (attack && !placed &&
+                    (uses_op(effects, "set_damage") || uses_op(effects, "add_damage") || uses_op(effects, "ignore_defender_effects"))) {
                     throw CardDataError("an attack that changes its damage must place a \"damage\" step");
                 }
                 if (attack && !placed) {
@@ -663,6 +667,60 @@ namespace pokebot {
         }
     }
 
+    std::vector<Modifier> compile_passive(const nlohmann::json& passive) {
+        if (!passive.is_array()) {
+            throw CardDataError("passive must be a list");
+        }
+        try {
+            std::vector<Modifier> modifiers;
+            for (const auto& item : passive) {
+                Modifier m;
+                const std::string what = item.at("modify").get<std::string>();
+                if (what == "max_hp") {
+                    m.what = Modifies::MaxHp;
+                } else if (what == "retreat_cost") {
+                    m.what = Modifies::RetreatCost;
+                } else if (what == "weakness_type") {
+                    m.what = Modifies::WeaknessType;
+                } else if (what == "damage_dealt") {
+                    m.what = Modifies::DamageDealt;
+                } else {
+                    throw CardDataError("unknown thing to modify '" + what + "'");
+                }
+
+                const std::string to = item.value("applies_to", "holder");
+                if (to == "holder") {
+                    m.to = AppliesTo::Holder;
+                } else if (to == "yours") {
+                    m.to = AppliesTo::Yours;
+                } else if (to == "opponents") {
+                    m.to = AppliesTo::Opponents;
+                } else if (to == "all") {
+                    m.to = AppliesTo::All;
+                } else {
+                    throw CardDataError("unknown \"applies_to\" '" + to + "'");
+                }
+
+                m.add = item.value("add", 0);
+                if (item.contains("set")) {
+                    m.set = item.at("set").get<int>();
+                }
+                if (item.contains("type")) {
+                    m.type = energy_type_from_string(item.at("type").get<std::string>());
+                }
+                m.filter = parse_filter(item);
+                m.only_if_poisoned = item.value("if_poisoned", false);
+                if (m.what == Modifies::WeaknessType ? !m.type : (m.add == 0 && !m.set)) {
+                    throw CardDataError("'" + what + "' needs " + (m.what == Modifies::WeaknessType ? "a \"type\"" : "\"add\" or \"set\""));
+                }
+                modifiers.push_back(m);
+            }
+            return modifiers;
+        } catch (const nlohmann::json::exception& e) {
+            throw CardDataError(std::string("badly formed passive effect: ") + e.what());
+        }
+    }
+
     const char* to_string(Op op) {
         switch (op) {
             case Op::Damage:
@@ -717,6 +775,8 @@ namespace pokebot {
                 return "use the chosen attack";
             case Op::AddLasting:
                 return "add a lasting effect";
+            case Op::IgnoreDefenderEffects:
+                return "ignore effects on the defender";
         }
         return "unknown op";
     }

@@ -46,6 +46,8 @@ namespace pokebot::rules {
 
     // base damage -> attacker effects -> Weakness -> Resistance -> defender effects
     bool damage_prevented(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender);
-    int attack_damage(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, int base);
+    // ignore_defender_effects: "this attack's damage isn't affected by any effects on your opponent's Active Pokemon"
+    int attack_damage(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, int base,
+                      bool ignore_defender_effects = false);
 
 } // namespace pokebot::rules

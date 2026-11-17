@@ -109,7 +109,11 @@ namespace pokebot {
 
             json abilities = json::array();
             for (const auto& a : c.abilities) {
-                abilities.push_back({{"name", a.name}, {"text", a.text}, {"effects", a.effects}});
+                json ability = {{"name", a.name}, {"text", a.text}, {"effects", a.effects}};
+                if (!a.passive.empty()) {
+                    ability["passive"] = a.passive;
+                }
+                abilities.push_back(ability);
             }
             j["abilities"] = abilities;
 
@@ -137,6 +141,9 @@ namespace pokebot {
 
             if (!c.requirements.empty()) {
                 j["requires"] = c.requirements;
+            }
+            if (!c.passive.empty()) {
+                j["passive"] = c.passive;
             }
         }
     }
@@ -177,7 +184,12 @@ namespace pokebot {
                 }
                 c.retreat = j.value("retreat", 0);
                 for (const auto& a : j.value("abilities", json::array())) {
-                    c.abilities.push_back({required<std::string>(a, "name"), a.value("text", ""), effects_or_empty(a)});
+                    Ability ability;
+                    ability.name = required<std::string>(a, "name");
+                    ability.text = a.value("text", "");
+                    ability.effects = effects_or_empty(a);
+                    ability.passive = a.value("passive", json::array());
+                    c.abilities.push_back(std::move(ability));
                 }
                 for (const auto& a : j.value("attacks", json::array())) {
                     Attack atk;
@@ -200,6 +212,7 @@ namespace pokebot {
                 c.text = j.value("text", "");
                 c.effects = effects_or_empty(j);
                 c.requirements = j.value("requires", json::array());
+                c.passive = j.value("passive", json::array());
             }
         } catch (const json::exception& e) {
             throw CardDataError(std::string("bad card data: ") + e.what());
