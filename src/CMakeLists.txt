@@ -10,6 +10,7 @@ add_library(pokebot_lib
   engine/setup.cpp
   engine/turn.cpp
   engine/main_actions.cpp
+  engine/combat.cpp
 )
 target_include_directories(pokebot_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 # card.hpp includes nlohmann/json, so anything using pokebot_lib needs it too.

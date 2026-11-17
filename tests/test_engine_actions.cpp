@@ -270,15 +270,24 @@ TEST_CASE("random games with the real decks keep every card accounted for", "[en
 
     pokebot::Rng chooser(2024);
     long long actions_played = 0;
+    long long attacks = 0, attack_chances = 0, prizes_taken = 0;
+    int by_prizes = 0, by_no_pokemon = 0, by_deck_out = 0, draws = 0;
     for (std::uint64_t seed = 0; seed < 200; ++seed) {
         const CardTable table(db, decks[seed % decks.size()], decks[(seed / decks.size()) % decks.size()]);
         GameState game = pokebot::new_game(table, seed);
 
-        // No attacks yet (step 2.5), so every game ends by deck-out.
+        // Games end by Prize cards, no Pokemon left, or deck-out.
         for (int step = 0; step < 20000 && !game.is_over(); ++step) {
             const auto actions = pokebot::legal_actions(game);
             REQUIRE_FALSE(actions.empty());
-            pokebot::apply(game, actions[chooser.below(static_cast<std::uint32_t>(actions.size()))]);
+            if (test::offers(actions, ActionKind::Attack)) {
+                ++attack_chances;
+            }
+            const auto& chosen = actions[chooser.below(static_cast<std::uint32_t>(actions.size()))];
+            if (chosen.kind == ActionKind::Attack) {
+                ++attacks;
+            }
+            pokebot::apply(game, chosen);
             ++actions_played;
 
             INFO("seed " << seed << ", turn " << game.turn);
@@ -288,7 +297,24 @@ TEST_CASE("random games with the real decks keep every card accounted for", "[en
             }
         }
         REQUIRE(game.is_over());
+        prizes_taken += 12 - static_cast<long long>(game.player(0).prizes.size() + game.player(1).prizes.size());
+
+        if (game.result == pokebot::GameResult::Draw) {
+            ++draws;
+        } else {
+            const int winner = game.result == pokebot::GameResult::Player0Wins ? 0 : 1;
+            const auto& loser = game.player(pokebot::opponent_of(winner));
+            if (game.player(winner).prizes.empty()) {
+                ++by_prizes;
+            } else if (!loser.active && loser.bench.empty()) {
+                ++by_no_pokemon;
+            } else {
+                ++by_deck_out;
+            }
+        }
     }
-    INFO(actions_played << " actions played");
+    INFO(actions_played << " actions played; games won by Prize cards: " << by_prizes << ", no Pokemon left: " << by_no_pokemon
+                        << ", deck-out: " << by_deck_out << ", draws: " << draws << "; turns with an attack available: " << attack_chances
+                        << ", attacks made: " << attacks << ", Prize cards taken: " << prizes_taken);
     CHECK(actions_played > 0);
 }

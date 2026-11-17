@@ -89,8 +89,10 @@ namespace pokebot {
             detail::add_main_phase_actions(game, actions);
         } else if (kind == DecisionKind::RetreatDiscard) {
             detail::add_retreat_discard_actions(game, actions);
+        } else if (kind == DecisionKind::PromoteActive) {
+            detail::add_promote_actions(game, actions);
         } else {
-            throw std::logic_error("this decision isn't implemented yet (steps 2.4-2.5)");
+            throw std::logic_error("unknown decision");
         }
         return actions;
     }
@@ -112,8 +114,10 @@ namespace pokebot {
             detail::apply_main_phase_action(game, action);
         } else if (kind == DecisionKind::RetreatDiscard) {
             detail::apply_retreat_discard(game, action);
+        } else if (kind == DecisionKind::PromoteActive) {
+            detail::apply_promote(game, action);
         } else {
-            throw std::logic_error("this decision isn't implemented yet (steps 2.4-2.5)");
+            throw std::logic_error("unknown decision");
         }
     }
 

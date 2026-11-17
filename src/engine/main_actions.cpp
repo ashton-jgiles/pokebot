@@ -140,7 +140,7 @@ namespace pokebot {
             add_evolve_actions(game, player, out);
             add_attach_actions(game, player, out);
             add_retreat_actions(game, player, out);
-            // more actions to come
+            add_attack_actions(game, out);
             out.push_back(Action{ActionKind::EndTurn, kNoCard, kActiveSlot, 0});
         }
 
@@ -165,6 +165,9 @@ namespace pokebot {
                     break;
                 case ActionKind::Retreat:
                     start_retreat(game, game.current_player, action.target);
+                    break;
+                case ActionKind::Attack:
+                    apply_attack(game, action);
                     break;
                 case ActionKind::EndTurn:
                     end_turn(game);

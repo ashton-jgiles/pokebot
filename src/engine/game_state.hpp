@@ -74,6 +74,13 @@ namespace pokebot {
         bool operator==(const TurnFlags&) const = default;
     };
 
+    enum class TurnPhase : std::uint8_t {
+        Setup,
+        Main,
+        AfterMain,
+        Checkup,
+    };
+
     enum class DecisionKind : std::uint8_t {
         ChooseTurnOrder,
         SetupActive,
@@ -106,6 +113,7 @@ namespace pokebot {
         std::uint8_t current_player = 0;
         std::uint8_t first_player = 0;
         std::uint16_t turn = 0;
+        TurnPhase phase = TurnPhase::Setup;
         TurnFlags flags;
         FixedVector<Decision, 8> pending;
         Rng rng;

@@ -32,6 +32,7 @@ namespace pokebot::detail {
     // turn.cpp
     void begin_turn(GameState& game, int player);
     void end_turn(GameState& game);
+    void continue_game(GameState& game);
 
     // setup.cpp
     void add_setup_actions(const GameState& game, const Decision& decision, std::vector<Action>& out);
@@ -42,5 +43,14 @@ namespace pokebot::detail {
     void apply_main_phase_action(GameState& game, const Action& action);
     void add_retreat_discard_actions(const GameState& game, std::vector<Action>& out);
     void apply_retreat_discard(GameState& game, const Action& action);
+
+    // combat.cpp
+    bool can_pay_cost(const GameState& game, const PokemonInPlay& pokemon, const std::vector<EnergyType>& cost);
+    int attack_damage(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, const Attack& attack);
+    void add_attack_actions(const GameState& game, std::vector<Action>& out);
+    void apply_attack(GameState& game, const Action& action);
+    void handle_knockouts(GameState& game);
+    void add_promote_actions(const GameState& game, std::vector<Action>& out);
+    void apply_promote(GameState& game, const Action& action);
 
 } // namespace pokebot::detail

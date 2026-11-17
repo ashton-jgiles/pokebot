@@ -47,4 +47,12 @@ namespace test {
         return list;
     }
 
+    inline pokebot::Attack attack(const std::string& name, std::vector<pokebot::EnergyType> cost, int damage) {
+        pokebot::Attack a;
+        a.name = name;
+        a.cost = std::move(cost);
+        a.damage = damage;
+        return a;
+    }
+
 } // namespace test
