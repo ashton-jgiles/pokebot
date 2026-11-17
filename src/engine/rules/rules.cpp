@@ -229,6 +229,10 @@ namespace pokebot::rules {
                !lasting_applies(game, LastingKind::CantAttack, player, p.active->id());
     }
 
+    bool has_abilities(const GameState&, const PokemonInPlay&) {
+        return true;
+    }
+
     bool can_use_attack(const GameState& game, const PokemonInPlay& pokemon, std::size_t attack) {
         const AttackRef ref{pokemon.top(), static_cast<std::uint8_t>(attack)};
         for (const LastingEffect& effect : game.lasting) {

@@ -37,7 +37,12 @@ Each block is a JSON object with an `"op"`:
 | `search_to_top` | `count` (1), `filter` | Search your deck for up to `count` cards, shuffle, then put them on top; the last one chosen is the top card (Ciphermaniac's Codebreaking) | `ChooseCards`, `ShuffleDeck`, `MoveChosen` |
 | `special_condition` | `condition`, `player` (`"opponent"`), `count` (1) | Give that player's Active Pokémon a [Special Condition](../../engine/actions/conditions.md): `"asleep"`, `"burned"`, `"confused"`, `"paralyzed"` or `"poisoned"`. **Defaults to the opponent**, since cards almost always say "your opponent's Active Pokémon is now …". `count` is the Poison damage counters per Checkup | `ApplySpecialCondition` |
 | `switch_self` | — | Switch this Pokémon with 1 of your Benched Pokémon | `ChooseBenched`, `SwitchWithChosen` |
-| `switch_active` | `player` (`"you"` or `"opponent"`) | Switch that player's Active with 1 of their Benched Pokémon, chosen by you (Switch, Boss's Orders) | `ChooseBenched`, `SwitchWithChosen` |
+| `switch_active` | `player` (`"you"` or `"opponent"`), `filter` | Switch that player's Active with 1 of their Benched Pokémon that matches `filter`, chosen by you (Switch, Boss's Orders, Subjugating Chains) | `ChooseBenched`, `SwitchWithChosen` |
+| `counters_to` | `count` (1), `targets` (1), `on`, `player` (`"opponent"`) | Put `count` damage counters on each chosen Pokémon (Mortal Shuriken) | `ChooseTargets`, `CountersOnTargets` |
+| `move_counters` | `count` (1), `on`, `player` (`"opponent"`) | Choose one of your damaged Pokémon, then one of that player's, and move up to `count` damage counters (as many as it has, up to `count`) | `ChooseCounterSource`, `ChooseTargets`, `MoveCounters` |
+| `look_at_top` | `count` (1), `take` (1), `to` (`"hand"`), `filter` | Look at the top `count` cards, take `take` of them, and put the rest on the bottom in the same order (Recon Directive) | `ChooseCards`, `MoveChosen`, `RestToBottom` |
+| `attach_from_hand` | `count` (1), `filter` | Attach that many matching cards from your hand to this Pokémon (Teal Dance) | `ChooseCards`, `MoveChosen` |
+| `shuffle_self_into_deck` | — | Shuffle this Pokémon and everything attached into your deck (Run Away Draw) | `ShuffleSelfIntoDeck` |
 | `may` | `effects` (a list) | "You may …": ask first, and skip the list on no | `AskYesNo`, then the list |
 | `ignore_defender_effects` | — | "This attack's damage isn't affected by any effects on your opponent's Active Pokémon" (Shred): the printed Weakness and Resistance are used and defender-side effects skipped. Must come before a placed `damage` step. Attacks only | `IgnoreDefenderEffects` |
 | `lasting` | `effect`, `until`, `on` (`"self"`), `player`, `amount`, `only_ex` | A [lasting effect](../../engine/actions/lasting.md). `effect`: `"cant_attack"`, `"cant_use_attack"` (this attack), `"cant_retreat"`, `"no_items"`, `"damage_bonus"`. `until`: `"this_turn"`, `"opponents_next_turn"`, `"your_next_turn"`. `on`: `"self"` or `"defending"` for the first three (attacks only), `"player"` (with `player`) for the last two | `AddLasting` |
@@ -93,6 +98,7 @@ applied afterwards, in the [damage pipeline](../../engine/rules/rules.md#the-dam
 | `max_hp` | A Pokémon with at most this much HP |
 | `name` | That exact card name |
 | `name_prefix` | A name starting with this ("N's") |
+| `not_name` | Any name except this one ("except any Pecharunt ex") |
 | `any_of` | A list of filters; at least one must match ("a Pokémon or a Basic Energy card") |
 
 Every field given must match; `{}` (or no filter) matches any card.
@@ -112,10 +118,15 @@ Each is an object with one key, from the point of view of the player the card be
 | `{"opponent_has_benched": true}` | Your opponent has a Benched Pokémon |
 | `{"bench_not_full": true}` | Your Bench has room |
 | `{"discard_has": filter}` | Your discard pile has a card matching the filter |
-| `{"heads_at_least": N}`, `{"moved_at_least": N}` | The last flip gave at least N heads, or the last choice moved at least N cards ("if you do") |
+| `{"heads_at_least": N}`, `{"moved_at_least": N}`, `{"drew_at_least": N}` | The last flip gave at least N heads, the last choice moved at least N cards ("if you do"), or the last draw drew at least N |
 | `{"opponent_prizes_at_most": N}` | Your opponent has at most N Prize cards left |
 | `{"shares_type": true}` | One of your Pokémon in play shares a type with one of your opponent's |
 | `{"self_energy_at_least": N}` | This Pokémon has at least N Energy attached (only inside an effect) |
+| `{"hand_has": filter}` | A card in your hand (other than the one being played) matches |
+| `{"bench_has": filter}` | One of your Benched Pokémon matches |
+| `{"active_is": filter}` | Your Active Pokémon matches |
+| `{"self_has_energy": filter}` | An Energy attached to this Pokémon matches |
+| `{"has_damaged": true}` | One of your Pokémon in play has damage counters |
 
 Anything the compiler doesn't recognise (an unknown op, filter field or destination, a bad count,
 a value of the wrong JSON type) throws `CardDataError`.
@@ -169,6 +180,13 @@ for as long as the card is in play:
 | `UseChosenAttack` | — | Runs the chosen attack's program, then carries on |
 | `AddLasting` | `lasting`, `side`, `amount` | Adds a lasting effect |
 | `IgnoreDefenderEffects` | — | Sets the run's `ignore_defender` flag for its `Damage` step |
+| `CountersOnTargets` | `max` | `max` damage counters on each target |
+| `ShuffleSelfIntoDeck` | — | As named |
+| `RestToBottom` | `amount` | The top `amount` cards that weren't taken go to the bottom |
+| `ChooseCounterSource` | — | The player chooses one of their damaged Pokémon |
+| `MoveCounters` | `max` | Up to `max` counters from that Pokémon to the first target |
+
+`Draw` also records how many cards it drew, for `drew_at_least`.
 
 `Draw` uses `side` too. `Side` is `You`, `Opponent` or `Each`.
 

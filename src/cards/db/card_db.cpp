@@ -89,7 +89,7 @@ namespace pokebot {
             }
         }
         try {
-            if (card.trainer_kind == TrainerKind::Item || card.trainer_kind == TrainerKind::Supporter) {
+            if (card.trainer_kind == TrainerKind::Item || card.trainer_kind == TrainerKind::Supporter || card.trainer_kind == TrainerKind::Stadium) {
                 card.program = compile_trainer(card.effects);
             }
             card.conditions = compile_conditions(card.requirements);
@@ -100,6 +100,8 @@ namespace pokebot {
         for (Ability& ability : card.abilities) {
             try {
                 ability.modifiers = compile_passive(ability.passive);
+                ability.program = compile_trainer(ability.effects);
+                ability.conditions = compile_conditions(ability.requirements);
             } catch (const CardDataError& e) {
                 throw CardDataError(card.id + " ability '" + ability.name + "': " + e.what());
             }

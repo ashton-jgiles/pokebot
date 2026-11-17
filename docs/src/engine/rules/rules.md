@@ -33,6 +33,7 @@ bend; this file is where they live.
 | `can_attach_energy(game, player)` | Not yet this turn | Emboar, Iono's Bellibolt ex |
 | `can_retreat(game, player)` | Not yet this turn, with a Benched Pokémon to switch in, the Active isn't Asleep or Paralyzed, and no [lasting](../actions/lasting.md) "can't retreat" | Clutch, Sob |
 | `can_attack(game, player)` | Not on turn 1, only with an Active, not while it's Asleep or Paralyzed, and no lasting "can't attack" | Eon Blade, Prism Edge |
+| `has_abilities(game, pokemon)` | Yes | Team Rocket's Watchtower, Flutter Mane (Ability locks) |
 | `can_use_attack(game, pokemon, attack)` | Yes, unless a lasting "can't use this attack" is on it | Impact Blow |
 | `can_play_item(game, player)` | Yes, unless a lasting Item lock is on the player | Budew, Tyranitar (Item locks) |
 | `can_play_supporter(game, player)` | Not yet this turn, and not on turn 1 | |

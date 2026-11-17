@@ -29,6 +29,8 @@ namespace pokebot {
         Retreat,
         PlayTrainer,
         AttachTool,
+        UseAbility,
+        UseStadium,
         Attack,
         EndTurn,
 

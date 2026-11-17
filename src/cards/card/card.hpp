@@ -26,6 +26,14 @@ namespace pokebot {
         nlohmann::json effects = nlohmann::json::array();
         nlohmann::json passive = nlohmann::json::array();
         std::vector<Modifier> modifiers;
+
+        // An Ability you choose to use: its effects compile to `program`, `requires` to `conditions`.
+        nlohmann::json requirements = nlohmann::json::array();
+        Program program;
+        std::vector<Condition> conditions;
+        bool once_per_turn = true; // "Once during your turn"
+        bool one_per_name = false; // "You can't use more than 1 <name> Ability each turn"
+        bool active_only = false;  // "if this Pokemon is in the Active Spot"
     };
 
     struct Attack {

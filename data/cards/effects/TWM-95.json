@@ -1,1 +1,1 @@
-{"attacks": {"Mind Bend": {"effects": [{"op": "special_condition", "condition": "confused"}]}}}
+{"attacks": {"Mind Bend": {"effects": [{"op": "special_condition", "condition": "confused"}]}}, "abilities": {"Adrena-Brain": {"requires": [{"self_has_energy": {"type": "darkness"}}, {"has_damaged": true}], "effects": [{"op": "move_counters", "count": 3}]}}}

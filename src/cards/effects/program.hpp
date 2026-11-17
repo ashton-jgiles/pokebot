@@ -59,6 +59,11 @@ namespace pokebot {
         UseChosenAttack,
         AddLasting,
         IgnoreDefenderEffects,
+        CountersOnTargets,
+        ShuffleSelfIntoDeck,
+        RestToBottom,
+        ChooseCounterSource,
+        MoveCounters,
     };
 
     enum class StageFilter : std::uint8_t {
@@ -79,6 +84,7 @@ namespace pokebot {
         int max_hp = 0;
         std::string name;
         std::string name_prefix;
+        std::string not_name;
         std::vector<CardFilter> any_of;
     };
 
@@ -95,6 +101,11 @@ namespace pokebot {
         SharesType,
         SelfEnergyAtLeast,
         KnockedOutByAttackLastTurn,
+        HandHas,        // a card in your hand (other than the one being played) matches `filter`
+        BenchHas,       // one of your Benched Pokemon matches `filter`
+        ActiveIs,       // your Active Pokemon matches `filter`
+        SelfHasEnergy,  // an Energy attached to this Pokemon matches `filter`
+        YouHaveDamaged, // one of your Pokemon in play has damage counters
     };
 
     struct Condition {

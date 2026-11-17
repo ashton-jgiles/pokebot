@@ -82,12 +82,23 @@ namespace pokebot {
         bool operator==(const PlayerState&) const = default;
     };
 
+    // An Ability used this turn: by which Pokemon, from which card, and which Ability on it.
+    struct AbilityUse {
+        CardIndex pokemon = kNoCard;
+        CardIndex card = kNoCard;
+        std::uint8_t index = 0;
+
+        bool operator==(const AbilityUse&) const = default;
+    };
+
     struct TurnFlags {
         bool energy_attached = false;
         bool supporter_played = false;
         bool stadium_played = false;
+        bool stadium_used = false;
         bool retreated = false;
         std::uint8_t attacks_used = 0;
+        FixedVector<AbilityUse, 12> abilities_used;
 
         bool operator==(const TurnFlags&) const = default;
     };
@@ -141,6 +152,7 @@ namespace pokebot {
     enum class ProgramKind : std::uint8_t {
         Attack,
         Trainer,
+        Ability,
     };
 
     struct ProgramRef {
@@ -155,6 +167,7 @@ namespace pokebot {
         Nothing,
         FinishAttack,
         DiscardTrainer,
+        FinishAbility, // resolve any Knock Outs, and choose a new Active if the Active Spot is empty
     };
 
     struct EffectRun {

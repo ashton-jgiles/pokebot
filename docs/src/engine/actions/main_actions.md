@@ -16,6 +16,8 @@ The main-phase choices, plus the retreat-discard decision.
 | `Retreat` | Not retreated yet this turn; a Benched Pokémon exists; the Active isn't Asleep or Paralyzed and has at least as many Energy as its Retreat Cost | p. 12 |
 | `PlayTrainer` | See [Trainer cards](#trainer-cards) | pp. 11–12 |
 | `AttachTool` | The target has no Tool | p. 12 |
+| `UseAbility` | The Ability is [ready](abilities.md#when-an-ability-is-ready) | p. 13 |
+| `UseStadium` | The Stadium in play has an action, not used yet this turn, and its `"requires"` hold | |
 | `Attack` | See [combat](combat.md) | p. 13 |
 | `EndTurn` | Always (it's always the last action in the list) | |
 

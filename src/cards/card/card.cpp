@@ -113,6 +113,18 @@ namespace pokebot {
                 if (!a.passive.empty()) {
                     ability["passive"] = a.passive;
                 }
+                if (!a.requirements.empty()) {
+                    ability["requires"] = a.requirements;
+                }
+                if (!a.once_per_turn) {
+                    ability["once_per_turn"] = false;
+                }
+                if (a.one_per_name) {
+                    ability["one_per_name"] = true;
+                }
+                if (a.active_only) {
+                    ability["active_only"] = true;
+                }
                 abilities.push_back(ability);
             }
             j["abilities"] = abilities;
@@ -189,6 +201,10 @@ namespace pokebot {
                     ability.text = a.value("text", "");
                     ability.effects = effects_or_empty(a);
                     ability.passive = a.value("passive", json::array());
+                    ability.requirements = a.value("requires", json::array());
+                    ability.once_per_turn = a.value("once_per_turn", true);
+                    ability.one_per_name = a.value("one_per_name", false);
+                    ability.active_only = a.value("active_only", false);
                     c.abilities.push_back(std::move(ability));
                 }
                 for (const auto& a : j.value("attacks", json::array())) {

@@ -186,6 +186,8 @@ namespace pokebot {
                     filter.name = value.get<std::string>();
                 } else if (key == "name_prefix") {
                     filter.name_prefix = value.get<std::string>();
+                } else if (key == "not_name") {
+                    filter.not_name = value.get<std::string>();
                 } else if (key == "any_of") {
                     for (const auto& option : value) {
                         filter.any_of.push_back(parse_filter_fields(option));
@@ -244,6 +246,20 @@ namespace pokebot {
                 condition.kind = ConditionKind::KnockedOutLastTurn;
             } else if (key == "knocked_out_by_attack_last_turn") {
                 condition.kind = ConditionKind::KnockedOutByAttackLastTurn;
+            } else if (key == "hand_has") {
+                condition.kind = ConditionKind::HandHas;
+                condition.filter = parse_filter_fields(value);
+            } else if (key == "bench_has") {
+                condition.kind = ConditionKind::BenchHas;
+                condition.filter = parse_filter_fields(value);
+            } else if (key == "active_is") {
+                condition.kind = ConditionKind::ActiveIs;
+                condition.filter = parse_filter_fields(value);
+            } else if (key == "self_has_energy") {
+                condition.kind = ConditionKind::SelfHasEnergy;
+                condition.filter = parse_filter_fields(value);
+            } else if (key == "has_damaged") {
+                condition.kind = ConditionKind::YouHaveDamaged;
             } else if (key == "has_benched") {
                 condition.kind = ConditionKind::HasBenched;
             } else if (key == "opponent_has_benched") {
@@ -253,7 +269,7 @@ namespace pokebot {
             } else if (key == "discard_has") {
                 condition.kind = ConditionKind::DiscardHas;
                 condition.filter = parse_filter_fields(value);
-            } else if (key == "heads_at_least" || key == "moved_at_least") {
+            } else if (key == "heads_at_least" || key == "moved_at_least" || key == "drew_at_least") {
                 condition.kind = ConditionKind::ValueAtLeast;
                 condition.value = value.get<int>();
             } else if (key == "opponent_prizes_at_most") {
@@ -376,10 +392,11 @@ namespace pokebot {
                 }
             }
 
-            void switch_active(Side side) {
+            void switch_active(Side side, const CardFilter& filter = CardFilter{}) {
                 Step choose;
                 choose.op = Op::ChooseBenched;
                 choose.side = side;
+                choose.filter = filter;
                 add(choose);
 
                 Step swap;
@@ -441,7 +458,7 @@ namespace pokebot {
                     if (side == Side::Each) {
                         throw CardDataError("switch_active is for \"you\" or \"opponent\"");
                     }
-                    switch_active(side);
+                    switch_active(side, parse_filter(block));
                 } else if (op == "special_condition") {
                     Step apply;
                     apply.op = Op::ApplySpecialCondition;
@@ -520,6 +537,51 @@ namespace pokebot {
                     choose.filter = parse_filter(block);
                     add(choose);
                     add(Op::UseChosenAttack);
+                } else if (op == "counters_to") {
+                    choose_targets(block, false);
+                    Step put;
+                    put.op = Op::CountersOnTargets;
+                    put.max = count_of(block, 1);
+                    add(put);
+                } else if (op == "shuffle_self_into_deck") {
+                    add(Op::ShuffleSelfIntoDeck);
+                } else if (op == "look_at_top") {
+                    const std::uint8_t look = count_of(block, 1);
+                    const std::uint8_t take = static_cast<std::uint8_t>(block.value("take", 1));
+                    Step choose;
+                    choose.op = Op::ChooseCards;
+                    choose.from = Zone::DeckTop;
+                    choose.to = destination(block);
+                    choose.amount = look;
+                    choose.min = take;
+                    choose.max = take;
+                    choose.filter = parse_filter(block);
+                    add(choose);
+                    Step move;
+                    move.op = Op::MoveChosen;
+                    move.from = Zone::DeckTop;
+                    move.to = choose.to;
+                    add(move);
+                    Step rest;
+                    rest.op = Op::RestToBottom;
+                    rest.amount = look;
+                    add(rest);
+                } else if (op == "attach_from_hand") {
+                    const std::uint8_t count = count_of(block, 1);
+                    choose_and_move(Zone::Hand, Zone::AttachedEnergy, count, count, parse_filter(block));
+                } else if (op == "move_counters") {
+                    add(Op::ChooseCounterSource);
+                    Step choose;
+                    choose.op = Op::ChooseTargets;
+                    choose.side = opponent_unless_said(block);
+                    choose.from = where_on(block);
+                    choose.min = 1;
+                    choose.max = 1;
+                    add(choose);
+                    Step move;
+                    move.op = Op::MoveCounters;
+                    move.max = count_of(block, 1);
+                    add(move);
                 } else if (op == "ignore_defender_effects") {
                     attack_only(op);
                     add(Op::IgnoreDefenderEffects);
@@ -613,6 +675,9 @@ namespace pokebot {
             return false;
         }
         if (!filter.name_prefix.empty() && card.name.rfind(filter.name_prefix, 0) != 0) {
+            return false;
+        }
+        if (!filter.not_name.empty() && card.name == filter.not_name) {
             return false;
         }
         if (!stage_matches(filter.stage, card)) {
@@ -777,6 +842,16 @@ namespace pokebot {
                 return "add a lasting effect";
             case Op::IgnoreDefenderEffects:
                 return "ignore effects on the defender";
+            case Op::CountersOnTargets:
+                return "damage counters on targets";
+            case Op::ShuffleSelfIntoDeck:
+                return "shuffle into deck";
+            case Op::RestToBottom:
+                return "rest to the bottom of the deck";
+            case Op::ChooseCounterSource:
+                return "choose where damage counters come from";
+            case Op::MoveCounters:
+                return "move damage counters";
         }
         return "unknown op";
     }

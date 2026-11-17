@@ -170,6 +170,52 @@ namespace pokebot {
                 }
             }
 
+            bool ability_ready(const GameState& game, int player, Slot slot, std::size_t index) {
+                const PokemonInPlay& pokemon = pokemon_at(game.player(player), slot);
+                const Ability& ability = game.def(pokemon.top()).abilities[index];
+                if (ability.program.empty() || !rules::has_abilities(game, pokemon) || (ability.active_only && slot != kActiveSlot)) {
+                    return false;
+                }
+                for (const AbilityUse& use : game.flags.abilities_used) {
+                    const bool same = use.pokemon == pokemon.id() && use.card == pokemon.top() && use.index == index;
+                    if ((ability.once_per_turn && same) || (ability.one_per_name && game.def(use.card).abilities[use.index].name == ability.name)) {
+                        return false;
+                    }
+                }
+                EffectRun context;
+                context.who = EffectContext{static_cast<std::uint8_t>(player), pokemon.id(), pokemon.top()};
+                for (const Condition& condition : ability.conditions) {
+                    if (!condition_holds(game, player, condition, kNoCard, &context)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            void add_ability_actions(const GameState& game, int player, std::vector<Action>& out) {
+                const PlayerState& p = game.player(player);
+                for (const Slot slot : in_play_slots(p)) {
+                    const PokemonInPlay& pokemon = pokemon_at(p, slot);
+                    const auto& abilities = game.def(pokemon.top()).abilities;
+                    for (std::size_t i = 0; i < abilities.size(); ++i) {
+                        if (ability_ready(game, player, slot, i)) {
+                            out.push_back(Action{ActionKind::UseAbility, pokemon.top(), slot, static_cast<std::uint8_t>(i)});
+                        }
+                    }
+                }
+                const CardIndex stadium = rules::stadium_in_play(game);
+                if (stadium != kNoCard && !game.def(stadium).program.empty() && !game.flags.stadium_used && requirements_met(game, player, stadium)) {
+                    out.push_back(Action{ActionKind::UseStadium, stadium, kActiveSlot, 0});
+                }
+            }
+
+            void use_ability(GameState& game, std::uint8_t player, const Action& action) {
+                const PokemonInPlay& pokemon = pokemon_at(game.player(player), action.target);
+                const EffectContext who{player, pokemon.id(), pokemon.top()};
+                game.flags.abilities_used.push_back(AbilityUse{pokemon.id(), pokemon.top(), action.amount});
+                start_effect(game, who, ProgramRef{pokemon.top(), ProgramKind::Ability, action.amount}, AfterEffect::FinishAbility);
+            }
+
             void play_stadium(GameState& game, std::uint8_t player, CardIndex card) {
                 for (int i = 0; i < kPlayers; ++i) {
                     PlayerState& owner = game.player(i);
@@ -206,6 +252,7 @@ namespace pokebot {
             add_attach_actions(game, player, out);
             add_retreat_actions(game, player, out);
             add_trainer_actions(game, player, out);
+            add_ability_actions(game, player, out);
             add_attack_actions(game, out);
             out.push_back(Action{ActionKind::EndTurn, kNoCard, kActiveSlot, 0});
         }
@@ -242,6 +289,14 @@ namespace pokebot {
                     break;
                 case ActionKind::PlayTrainer:
                     play_trainer(game, player, action.card);
+                    break;
+                case ActionKind::UseAbility:
+                    use_ability(game, player, action);
+                    break;
+                case ActionKind::UseStadium:
+                    game.flags.stadium_used = true;
+                    start_effect(game, EffectContext{player, kNoCard, action.card}, ProgramRef{action.card, ProgramKind::Trainer, 0},
+                                 AfterEffect::FinishAbility);
                     break;
                 case ActionKind::AttachTool: {
                     p.hand.remove(action.card);

@@ -1,1 +1,1 @@
-{"rules": ["ex"], "attacks": {"Night Joker": {"effects": [{"op": "use_attack", "filter": {"name_prefix": "N's"}}]}}}
+{"rules": ["ex"], "attacks": {"Night Joker": {"effects": [{"op": "use_attack", "filter": {"name_prefix": "N's"}}]}}, "abilities": {"Trade": {"requires": [{"hand_besides": 1}], "effects": [{"op": "discard_from_hand"}, {"op": "draw", "count": 2}]}}}

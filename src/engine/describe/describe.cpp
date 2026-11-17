@@ -133,6 +133,10 @@ namespace pokebot {
             }
             case ActionKind::PlayTrainer:
                 return "play " + card();
+            case ActionKind::UseAbility:
+                return "use " + game.def(action.card).abilities[action.amount].name + " (" + slot_name(game, player, action.target) + ")";
+            case ActionKind::UseStadium:
+                return "use " + card();
             case ActionKind::AttachTool:
                 return "attach " + card() + " to " + slot_name(game, player, action.target);
             case ActionKind::EndTurn:

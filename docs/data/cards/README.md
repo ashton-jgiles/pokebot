@@ -160,6 +160,13 @@ list instead:
 With passive effects so far: Air Balloon, Hero's Cape and Binding Mochi (Tools), N's Castle
 (Stadium), and Latias ex's Skyliner and Lillie's Clefairy ex's Fairy Zone (Abilities).
 
+An Ability you choose to use has `effects`, optional `requires`, and `active_only`, `one_per_name`
+or `once_per_turn` (see [Abilities](../../src/engine/actions/abilities.md)). So far: N's Zoroark ex
+(Trade), Mega Kangaskhan ex (Run Errand), Fezandipiti ex (Flip the Script), Pecharunt ex
+(Subjugating Chains), Dudunsparce (Run Away Draw), Drakloak (Recon Directive), Teal Mask Ogerpon ex
+(Teal Dance), Munkidori (Adrena-Brain) and Mega Greninja ex (Mortal Shuriken), plus Surfing Beach's
+switch. Adrena-Brain always moves as many counters as it can, up to 3.
+
 
 An Item or Supporter has a top-level `effects` list, and optionally `requires`: the
 [conditions](../../src/cards/effects/program.md#conditions) that must hold before it can be played.

@@ -1,0 +1,1 @@
+{"requires": [{"active_is": {"kind": "pokemon", "type": "water"}}, {"bench_has": {"kind": "pokemon", "type": "water"}}], "effects": [{"op": "switch_active", "filter": {"kind": "pokemon", "type": "water"}}]}

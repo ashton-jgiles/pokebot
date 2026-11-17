@@ -80,8 +80,10 @@ returns `nullptr` once it has left play.
 
 ## `TurnFlags`
 
-`energy_attached`, `supporter_played`, `stadium_played`, `retreated`: the once-per-turn limits.
-`attacks_used` counts attacks this turn (Festival Lead allows two). They're reset at the start of every turn.
+`energy_attached`, `supporter_played`, `stadium_played`, `stadium_used`, `retreated`: the
+once-per-turn limits. `attacks_used` counts attacks this turn (Festival Lead allows two), and
+`abilities_used` lists the [Abilities used](../actions/abilities.md) as `AbilityUse{pokemon, card, index}`.
+They're reset at the start of every turn.
 
 ## `AttackRef` and `EffectContext`
 

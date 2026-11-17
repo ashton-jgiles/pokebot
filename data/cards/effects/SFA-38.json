@@ -1,1 +1,1 @@
-{"rules": ["ex"], "attacks": {"Cruel Arrow": {"effects": [{"op": "damage_to", "amount": 100}]}}}
+{"rules": ["ex"], "attacks": {"Cruel Arrow": {"effects": [{"op": "damage_to", "amount": 100}]}}, "abilities": {"Flip the Script": {"one_per_name": true, "requires": [{"knocked_out_last_turn": true}], "effects": [{"op": "draw", "count": 3}]}}}

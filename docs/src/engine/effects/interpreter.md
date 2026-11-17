@@ -12,8 +12,8 @@ player's choice, it pushes a decision and stops; the answer resumes it.
 | Field | Meaning |
 |---|---|
 | `who` | The `EffectContext`: whose effect it is and which Pokémon is "this Pokémon" |
-| `program` | A `ProgramRef` to the compiled program: card, kind (`Attack` or `Trainer`), index |
-| `then` | What to do when it finishes: `FinishAttack` for an attack, `DiscardTrainer` for an Item or Supporter |
+| `program` | A `ProgramRef` to the compiled program: card, kind (`Attack`, `Trainer` or `Ability`), index |
+| `then` | What to do when it finishes: `FinishAttack` for an attack, `DiscardTrainer` for an Item or Supporter, `FinishAbility` for an [Ability](../actions/abilities.md) or Stadium action (resolve Knock Outs at once) |
 | `pc` | The next step |
 | `chosen`, `chosen_pokemon` | Choices made so far |
 | `damage` | The attack's damage so far: the printed damage, changed by `set_damage` / `add_damage` |
