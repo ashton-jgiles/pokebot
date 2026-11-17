@@ -143,7 +143,10 @@ Dunsparce's Trading Places, Mega Froslass ex's Absolute Snow (Asleep) and Munkid
 (Powerful Rage), N's Darmanitan (Back Draft), Lillie's Clefairy ex (Full Moon Rondo), Pecharunt ex
 (Irritated Outburst), Teal Mask Ogerpon ex (Myriad Leaf Shower), Koraidon ex (Orichalcum Fang),
 Enamorus (Love Resonance), Mega Greninja ex (Ninja Spinner), Mega Kangaskhan ex (Rapid-Fire Combo)
-and Raging Bolt ex (Bellowing Thunder).
+and Raging Bolt ex (Bellowing Thunder). With targets and copying: Dragapult ex (Phantom Dive),
+N's Darmanitan (Flamebody Cannon), Wellspring Mask Ogerpon ex (Torrential Pump), Greninja ex
+(Mirage Barrage, Stealthy Slash), Fezandipiti ex (Cruel Arrow), Meowth ex (Tuck Tail) and N's
+Zoroark ex (Night Joker).
 
 Koraidon ex's text says Knocked Out "by damage from an attack"; for now any Knock Out counts.
 
@@ -162,7 +165,8 @@ An Item or Supporter has a top-level `effects` list, and optionally `requires`: 
 
 Trainers with effects so far: Switch, Boss's Orders, Ultra Ball, Night Stretcher, Energy
 Retrieval, Poké Pad (ASC and POR), Cyrano, Lillie's Determination, Judge, Unfair Stamp, Hilda, Dawn,
-Secret Box, Buddy-Buddy Poffin, Lana's Aid, Special Red Card and Ciphermaniac's Codebreaking.
+Secret Box, Buddy-Buddy Poffin, Lana's Aid, Special Red Card, Ciphermaniac's Codebreaking and
+Crushing Hammer.
 
 ## `raw/`
 

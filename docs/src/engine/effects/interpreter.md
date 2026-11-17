@@ -17,6 +17,8 @@ player's choice, it pushes a decision and stops; the answer resumes it.
 | `pc` | The next step |
 | `chosen`, `chosen_pokemon` | Choices made so far |
 | `damage` | The attack's damage so far: the printed damage, changed by `set_damage` / `add_damage` |
+| `targets` | Ids of the Pokémon chosen by the last `ChooseTargets` |
+| `chosen_attack` | The attack a copy attack chose |
 | `value` | The latest result: heads flipped, or cards moved by the last `MoveChosen` or `HandToDeckBottom`. Counts (`"heads"`, `"moved"`) and conditions (`heads_at_least`, `moved_at_least`) read it |
 
 Because this lives in `GameState`, **a game copied in the middle of an effect carries on exactly
@@ -40,7 +42,8 @@ When a run's last step is done, it's removed and its `then` runs.
 | Decision | Actions | Notes |
 |---|---|---|
 | `ChooseCards` | `ChooseCard` (one per different matching card), `ChooseDone` | `decision.amount` is the most still allowed and `decision.target` the fewest. Both are capped by how many cards match; with none, the step is skipped. Reaching the most ends the choice on its own; `ChooseDone` is offered once the fewest are chosen |
-| `ChoosePokemon` | `ChoosePokemon` with a Bench slot | The step's side's Bench (Boss's Orders chooses from the opponent's). Skipped if it's empty |
+| `ChoosePokemon` | `ChoosePokemon` with a slot (0 is the Active) | Depends on the step. **Switching**: a Benched Pokémon of the step's side. **Targets**: up to `decision.amount` different Pokémon, `ChooseDone` once `decision.target` are chosen. **Damage counters**: one per counter, each in a slot no lower than the last, so each spread of counters is offered once (6 counters on 5 Pokémon: 210 choices, not 15,625). Skipped when there's nothing to choose |
+| `ChooseAttack` | `ChooseAttack` with the card, Bench slot and attack index | Each attack of each matching Benched Pokémon, identical ones merged; copy attacks left out |
 | `ChooseYesNo` | `AnswerYes`, `AnswerNo` | No jumps past the `may` block |
 
 The player answering is `who.player`. Choosing from the deck shows the chooser their whole deck;
@@ -62,10 +65,13 @@ the extra-attack check and the end of the turn happen in `finish_attack`, **afte
 effect. Until then a Pokémon can sit at 0 HP while its owner's opponent is still choosing cards; the
 [invariant checker](../invariants/invariants.md) allows that while an effect is running.
 
-## Not yet
+## Copy attacks
 
-Starting an effect from inside another (a copy attack's chosen attack) needs the outer run to
-step past itself first. That arrives with copy attacks in step 3.5.
+`UseChosenAttack` moves the outer run past itself, then pushes the copied attack's program as a new
+run with the **same `who`**. The loop runs the copied attack next. When it finishes, the outer
+attack carries on. The copied text sees the copier as "this Pokémon", so its type, Energy and
+Weakness count, and the copied attack's own cost is never paid. The effect stack holds 4 runs, and
+copy attacks can't copy other copy attacks.
 
 ## Tests
 

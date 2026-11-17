@@ -21,11 +21,12 @@ These are the formal model's *Legal* and *δ* (transition) functions.
 | Setup: coin flip, opening hands, mulligans with bonus draws, Active/Bench, 6 Prize cards | What Stadiums and Tools do (they can be played, but have no effect yet) |
 | Trainers: Items, Supporters, Stadiums, Tools, their limits and `"requires"`; 16 with effects | Trainers whose effects aren't written yet (they can't be played) |
 | Turn loop: draw, main phase, end of turn, Pokémon Checkup step | Abilities |
-| Benching, evolving, attaching Energy, retreating | Damage formulas, Bench damage and most other attack effects |
-| Attacks: Energy costs, Weakness, Resistance, damage, and [effects](effects/interpreter.md) (draw, search, switch, "you may"…) | Damage formulas and Bench damage (step 3.5) |
+| Benching, evolving, attaching Energy, retreating | Lasting effects ("during your opponent's next turn"), step 3.6 |
+| Attacks: Energy costs, Weakness, Resistance, damage, and [effects](effects/interpreter.md): draw, search, switch, "you may", damage formulas, Bench damage, damage counters, copy attacks | |
 | [Special Conditions](actions/conditions.md) and the full Pokémon Checkup | |
 | Knock Outs, Prize cards (1 / 2 ex / 3 Mega ex), new Active | Special Energy: it can be attached but provides nothing |
-| Winning: Prize cards, no Pokémon left, deck-out, both at once | Tera bench protection, damage modifiers from effects |
+| Winning: Prize cards, no Pokémon left, deck-out, both at once | Damage modifiers from Abilities, Tools and Stadiums |
+| Tera Bench protection | |
 
 ## Key ideas
 
@@ -59,6 +60,7 @@ the decision being made now.
 | `ChooseCards` | Whoever the effect belongs to | a matching card, or done | [interpreter](effects/interpreter.md) |
 | `ChoosePokemon` | Whoever the effect belongs to | a Benched Pokémon | [interpreter](effects/interpreter.md) |
 | `ChooseYesNo` | Whoever the effect belongs to | yes / no | [interpreter](effects/interpreter.md) |
+| `ChooseAttack` | Whoever the effect belongs to | a Benched Pokémon's attack to copy | [interpreter](effects/interpreter.md) |
 
 A decision can belong to the player whose turn it *isn't*. After a Knock Out, the opponent
 chooses their new Active.

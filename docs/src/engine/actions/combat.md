@@ -53,8 +53,8 @@ Pokémon whose id is in `decision.target` only, plus `EndTurn`.
 ## Using an attack's text: `perform_attack(game, who, attack)`
 
 Runs the effect program of the attack `attack` names, with `who.self` as the attacker. It doesn't
-check or pay a cost: a copy attack will call it with another card's `AttackRef`, which is why the
-copied attack's own cost is never paid.
+check or pay a cost. Copy attacks work the same way inside the interpreter (see
+[copy attacks](../effects/interpreter.md#copy-attacks)).
 
 `deal_attack_damage(game, who, base)` is the `Damage` step: `base` damage (the attack's working
 damage) to the opponent's Active, through the damage pipeline, with `who.self` as the attacker,
@@ -70,10 +70,10 @@ Runs after every attack and after every Pokémon Checkup (rulebook p. 14):
 2. The opponent takes `rules::prize_value` Prize cards: **1**, **2** for Pokémon ex, **3** for Mega Evolution Pokémon ex,
    or as many as remain. Prize cards are face down, so which ones are taken is random.
 3. **Check for a winner** (below). If the game is over, stop.
-4. Each player who lost their Active gets a `PromoteActive` decision. The opponent of the current
-   player chooses first.
+4. Each player whose Active Spot is empty gets a `PromoteActive` decision: after a Knock Out, or after
+   an effect like Tuck Tail took the Active out of play. The opponent of the current player chooses first.
 
-Bench Pokémon are checked too, although nothing damages the Bench until Milestone 3.
+Bench Pokémon are checked too, since attacks can damage them and put damage counters on them.
 
 ## Winning
 

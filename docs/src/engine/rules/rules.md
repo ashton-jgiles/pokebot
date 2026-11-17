@@ -41,6 +41,7 @@ bend; this file is where they live.
 | `attacks_per_turn(game, pokemon)` | 1 | Dipplin, Goldeen, Seaking (Festival Lead with Festival Grounds) |
 | `can_evolve(game, pokemon)` | Not on either player's first turn, not on the turn it was played, stack not full | Forest of Vitality |
 | `evolves_into(game, pokemon, card)` | The card's "evolves from" names the top card | Rare Candy, Eevee ex |
+| `damage_prevented(game, attacker, defender)` | A Benched Tera Pokémon takes no damage from attacks | Mist Energy, Battle Cage |
 | `attack_damage(game, attacker, defender, base)` | See below. `base` is the attack's damage after its own formula | Maximum Belt, Full Metal Lab |
 
 `EnergyList` is a `FixedVector<EnergyType, 8>`: answers come back by value with no heap use,
@@ -54,6 +55,9 @@ can hook the right one:
 ```
 base (printed damage, after the attack's formula) → attacker-side effects → × Weakness → − Resistance → defender-side effects → never below 0
 ```
+
+Prevented damage is 0. **Weakness and Resistance apply only when the defender is Active**; damage to
+a Benched Pokémon skips them, as the rulebook says.
 
 The attacker-side and defender-side stages do nothing yet. An attack with no printed damage does
 none.

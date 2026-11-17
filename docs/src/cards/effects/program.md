@@ -28,6 +28,12 @@ Each block is a JSON object with an `"op"`:
 | `flip_coins` | `count` (1) | Flip coins; the number of heads can be counted (`"heads"`) or tested (`heads_at_least`) | `FlipCoins` |
 | `flip_until_tails` | — | Flip until tails; the number of heads is kept the same way | `FlipUntilTails` |
 | `hand_to_deck_bottom` | `player` | Shuffle that player's hand and put it on the bottom of their deck (Special Red Card) | `HandToDeckBottom` |
+| `damage_to` | `targets` (1), `on` (`"any"`), `player` (`"opponent"`), `up_to`, `amount`, `per`, `for_each` | Choose that many different Pokémon (`"on": "bench"` for the Bench only) and do `amount` + `per` × the count to each. Weakness and Resistance apply only to an Active target; a Benched Tera Pokémon takes none. Attacks only | `ChooseTargets`, `DamageTargets` |
+| `place_counters` | `count` (1), `on` (`"any"`), `player` (`"opponent"`) | Put damage counters on that player's Pokémon "in any way you like", one choice per counter. Counters aren't damage, so Tera doesn't stop them | `PlaceCounters` |
+| `discard_all_attached_energy` | — | Discard every Energy attached to this Pokémon | `DiscardAllEnergy` |
+| `return_self_to_hand` | — | Put this Pokémon and everything attached to it into your hand (Tuck Tail). If it was Active, you choose a new one after the attack | `ReturnSelfToHand` |
+| `discard_target_energy` | `count` (1), `on`, `player` (`"opponent"`), `filter` | Choose 1 Pokémon that has Energy, then discard `count` of its Energy (Crushing Hammer) | `ChooseTargets`, `ChooseCards`, `MoveChosen` |
+| `use_attack` | `filter` | Choose an attack of one of your matching Benched Pokémon and use it as this attack (Night Joker). Copy attacks can't be copied. Attacks only | `ChooseAttack`, `UseChosenAttack` |
 | `search_to_top` | `count` (1), `filter` | Search your deck for up to `count` cards, shuffle, then put them on top; the last one chosen is the top card (Ciphermaniac's Codebreaking) | `ChooseCards`, `ShuffleDeck`, `MoveChosen` |
 | `special_condition` | `condition`, `player` (`"opponent"`), `count` (1) | Give that player's Active Pokémon a [Special Condition](../../engine/actions/conditions.md): `"asleep"`, `"burned"`, `"confused"`, `"paralyzed"` or `"poisoned"`. **Defaults to the opponent**, since cards almost always say "your opponent's Active Pokémon is now …". `count` is the Poison damage counters per Checkup | `ApplySpecialCondition` |
 | `switch_self` | — | Switch this Pokémon with 1 of your Benched Pokémon | `ChooseBenched`, `SwitchWithChosen` |
@@ -35,6 +41,8 @@ Each block is a JSON object with an `"op"`:
 | `may` | `effects` (a list) | "You may …": ask first, and skip the list on no | `AskYesNo`, then the list |
 | `if` | `condition`, `then`, `else` (optional) | Do `then` if the [condition](#conditions) holds when the step runs, otherwise `else` | `JumpUnless`, `then`, `Jump`, `else` |
 
+- Cards moved to a hand, deck or discard pile always go to **their owner's**, even when the effect is
+  the opponent's (Crushing Hammer's Energy goes to its owner's discard pile).
 - `to` can be `"hand"`, `"discard"`, `"deck"` or `"bench"`. Cards put on the Bench become new
   Pokémon in play, and no more are chosen than the Bench has room for.
 - `player` can be `"you"` (the default), `"opponent"` or `"each"` (you first, then your opponent).
@@ -63,6 +71,7 @@ applied afterwards, in the [damage pipeline](../../engine/rules/rules.md#the-dam
 | `"prizes_taken"` | Prize cards taken (6 minus those left) |
 | `"active_energy"` | Energy cards attached to the Active Pokémon |
 | `"damage_counters"` | Damage counters on this Pokémon |
+| `"target_damage_counters"` | Damage counters on the target being damaged (only in `damage_to`) |
 | `"heads"`, `"moved"` | The heads from the last flip, or the cards moved by the last choice (both read the same working number) |
 
 ```json
@@ -81,6 +90,7 @@ applied afterwards, in the [damage pipeline](../../engine/rules/rules.md#the-dam
 | `rule_box` | `true` / `false`: has a Rule Box or not (in Standard, that means Pokémon ex) |
 | `max_hp` | A Pokémon with at most this much HP |
 | `name` | That exact card name |
+| `name_prefix` | A name starting with this ("N's") |
 | `any_of` | A list of filters; at least one must match ("a Pokémon or a Basic Energy card") |
 
 Every field given must match; `{}` (or no filter) matches any card.
@@ -102,6 +112,7 @@ Each is an object with one key, from the point of view of the player the card be
 | `{"heads_at_least": N}`, `{"moved_at_least": N}` | The last flip gave at least N heads, or the last choice moved at least N cards ("if you do") |
 | `{"opponent_prizes_at_most": N}` | Your opponent has at most N Prize cards left |
 | `{"shares_type": true}` | One of your Pokémon in play shares a type with one of your opponent's |
+| `{"self_energy_at_least": N}` | This Pokémon has at least N Energy attached (only inside an effect) |
 
 Anything the compiler doesn't recognise (an unknown op, filter field or destination, a bad count,
 a value of the wrong JSON type) throws `CardDataError`.
@@ -126,6 +137,12 @@ a value of the wrong JSON type) throws `CardDataError`.
 | `FlipCoins` | `max` | Flips `max` coins; the heads become the working value |
 | `FlipUntilTails` | — | Flips until tails; the heads become the working value |
 | `HandToDeckBottom` | `side` | As named; the number of cards moved becomes the working value |
+| `ChooseTargets` | `side`, `from` (`Bench` or `InPlay`), `min`, `max`, `needs_energy` | The player chooses different Pokémon on that side |
+| `DamageTargets` | `amount`, `per`, `count` | Damage to each target through the damage pipeline |
+| `PlaceCounters` | `side`, `from`, `max` | One choice per counter |
+| `DiscardAllEnergy`, `ReturnSelfToHand` | — | As named, for "this Pokémon" |
+| `ChooseAttack` | `filter` | The player chooses a Benched Pokémon's attack |
+| `UseChosenAttack` | — | Runs the chosen attack's program, then carries on |
 
 `Draw` uses `side` too. `Side` is `You`, `Opponent` or `Each`.
 
