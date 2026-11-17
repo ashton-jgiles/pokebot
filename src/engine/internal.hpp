@@ -58,7 +58,7 @@ namespace pokebot::detail {
     void perform_attack(GameState& game, const EffectContext& who, AttackRef attack);
     void deal_attack_damage(GameState& game, const EffectContext& who, int base);
     void finish_attack(GameState& game, const EffectContext& who);
-    void handle_knockouts(GameState& game);
+    void handle_knockouts(GameState& game, bool after_attack = false);
     void add_promote_actions(const GameState& game, std::vector<Action>& out);
     void add_extra_attack_actions(const GameState& game, std::vector<Action>& out);
     void apply_promote(GameState& game, const Action& action);
@@ -68,6 +68,11 @@ namespace pokebot::detail {
     void clear_special_conditions(PokemonInPlay& pokemon);
     void special_conditions_checkup(GameState& game);
     bool confusion_stops_attack(GameState& game, PokemonInPlay& attacker);
+
+    // lasting.cpp
+    void add_lasting(GameState& game, const EffectRun& run, const Step& step);
+    void end_effects_on(GameState& game, CardIndex pokemon); // it moved to the Bench, evolved or left play
+    void expire_lasting(GameState& game);
 
     // effects/interpreter.cpp
     bool is_effect_decision(DecisionKind kind);

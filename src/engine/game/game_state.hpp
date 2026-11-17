@@ -172,9 +172,23 @@ namespace pokebot {
         bool operator==(const EffectRun&) const = default;
     };
 
+    // An effect that lasts for a turn. It applies only while `turn` is the current turn, and is removed after.
+    struct LastingEffect {
+        LastingKind kind = LastingKind::CantAttack;
+        std::uint8_t player = 0;     // the player it affects
+        CardIndex pokemon = kNoCard; // the Pokemon it's on, or kNoCard for the whole player
+        AttackRef attack;            // CantUseAttack: which attack
+        std::int16_t amount = 0;     // DamageBonus: how much
+        bool only_ex = false;        // DamageBonus: only against Pokemon ex
+        std::uint16_t turn = 0;
+
+        bool operator==(const LastingEffect&) const = default;
+    };
+
     struct TurnRecord {
         std::uint8_t player = 0;
         std::array<std::uint8_t, kPlayers> knocked_out{};
+        std::array<std::uint8_t, kPlayers> knocked_out_by_attack{};
         CardIndex attacker = kNoCard;
         AttackRef attack;
 
@@ -217,6 +231,7 @@ namespace pokebot {
         GameHistory history;
         FixedVector<Decision, 8> pending;
         FixedVector<EffectRun, 4> effects;
+        FixedVector<LastingEffect, 8> lasting;
         Rng rng;
         GameResult result = GameResult::Ongoing;
 

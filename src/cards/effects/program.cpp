@@ -67,6 +67,53 @@ namespace pokebot {
             return block.contains("player") ? side_of(block) : Side::Opponent;
         }
 
+        LastingSpec lasting_of(const json& block) {
+            LastingSpec spec;
+            const std::string effect = block.at("effect").get<std::string>();
+            if (effect == "cant_attack") {
+                spec.kind = LastingKind::CantAttack;
+            } else if (effect == "cant_use_attack") {
+                spec.kind = LastingKind::CantUseAttack;
+            } else if (effect == "cant_retreat") {
+                spec.kind = LastingKind::CantRetreat;
+            } else if (effect == "no_items") {
+                spec.kind = LastingKind::NoItems;
+            } else if (effect == "damage_bonus") {
+                spec.kind = LastingKind::DamageBonus;
+            } else {
+                throw CardDataError("unknown lasting effect '" + effect + "'");
+            }
+
+            const std::string until = block.at("until").get<std::string>();
+            if (until == "this_turn") {
+                spec.until = Until::ThisTurn;
+            } else if (until == "opponents_next_turn") {
+                spec.until = Until::OpponentsNextTurn;
+            } else if (until == "your_next_turn") {
+                spec.until = Until::YourNextTurn;
+            } else {
+                throw CardDataError("unknown \"until\" '" + until + "'");
+            }
+
+            const std::string on = block.value("on", "self");
+            if (on == "self") {
+                spec.on = LastingOn::Self;
+            } else if (on == "defending") {
+                spec.on = LastingOn::Defending;
+            } else if (on == "player") {
+                spec.on = LastingOn::Player;
+            } else {
+                throw CardDataError("lasting effects are \"on\" \"self\", \"defending\" or \"player\", not '" + on + "'");
+            }
+
+            const bool on_player = spec.kind == LastingKind::NoItems || spec.kind == LastingKind::DamageBonus;
+            if (on_player != (spec.on == LastingOn::Player)) {
+                throw CardDataError("'" + effect + "' doesn't go \"on\" \"" + on + "\"");
+            }
+            spec.only_ex = block.value("only_ex", false);
+            return spec;
+        }
+
         StageFilter stage_of(const std::string& stage) {
             if (stage == "basic") {
                 return StageFilter::Basic;
@@ -195,6 +242,8 @@ namespace pokebot {
                 condition.value = value.get<int>();
             } else if (key == "knocked_out_last_turn") {
                 condition.kind = ConditionKind::KnockedOutLastTurn;
+            } else if (key == "knocked_out_by_attack_last_turn") {
+                condition.kind = ConditionKind::KnockedOutByAttackLastTurn;
             } else if (key == "has_benched") {
                 condition.kind = ConditionKind::HasBenched;
             } else if (key == "opponent_has_benched") {
@@ -471,6 +520,19 @@ namespace pokebot {
                     choose.filter = parse_filter(block);
                     add(choose);
                     add(Op::UseChosenAttack);
+                } else if (op == "lasting") {
+                    Step step;
+                    step.op = Op::AddLasting;
+                    step.lasting = lasting_of(block);
+                    step.side = side_of(block);
+                    step.amount = static_cast<std::int16_t>(block.value("amount", 0));
+                    if (step.lasting.on != LastingOn::Player) {
+                        attack_only(op);
+                    }
+                    if (step.side == Side::Each) {
+                        throw CardDataError("a lasting effect is on \"you\" or \"opponent\"");
+                    }
+                    add(step);
                 } else if (op == "may") {
                     const std::size_t ask = program.size();
                     add(Op::AskYesNo);
@@ -653,6 +715,8 @@ namespace pokebot {
                 return "choose an attack";
             case Op::UseChosenAttack:
                 return "use the chosen attack";
+            case Op::AddLasting:
+                return "add a lasting effect";
         }
         return "unknown op";
     }

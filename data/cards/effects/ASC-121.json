@@ -1,1 +1,1 @@
-{"rules": ["ex", "tera"], "attacks": {"Orichalcum Fang": {"effects": [{"op": "if", "condition": {"knocked_out_last_turn": true}, "then": [{"op": "add_damage", "amount": 120}]}, {"op": "damage"}]}}}
+{"rules": ["ex", "tera"], "attacks": {"Orichalcum Fang": {"effects": [{"op": "if", "condition": {"knocked_out_by_attack_last_turn": true}, "then": [{"op": "add_damage", "amount": 120}]}, {"op": "damage"}]}, "Impact Blow": {"effects": [{"op": "lasting", "effect": "cant_use_attack", "until": "your_next_turn"}]}}}

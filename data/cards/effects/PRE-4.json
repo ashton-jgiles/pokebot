@@ -1,0 +1,1 @@
+{"attacks": {"Itchy Pollen": {"effects": [{"op": "lasting", "effect": "no_items", "on": "player", "player": "opponent", "until": "opponents_next_turn"}]}}}

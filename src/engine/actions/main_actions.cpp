@@ -100,6 +100,7 @@ namespace pokebot {
                 const CardIndex retreated = p.active->id();
                 std::swap(*p.active, pokemon_at(p, target));
                 clear_special_conditions(pokemon_at(p, target));
+                end_effects_on(game, pokemon_at(p, target).id());
                 const auto owner = static_cast<std::uint8_t>(player);
                 raise(game, Event{EventKind::Retreated, owner, retreated, kNoCard});
                 raise(game, Event{EventKind::MovedToBench, owner, retreated, kNoCard});
@@ -224,6 +225,7 @@ namespace pokebot {
                     pokemon.stack.push_back(action.card);
                     pokemon.turn_played = game.turn;
                     clear_special_conditions(pokemon);
+                    end_effects_on(game, pokemon.id());
                     raise(game, Event{EventKind::Evolved, player, pokemon.id(), action.card});
                     break;
                 }

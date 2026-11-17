@@ -72,9 +72,13 @@ namespace pokebot {
                 }
             }
 
-            void knockout(GameState& game, int owner, const PokemonInPlay& pokemon) {
+            void knockout(GameState& game, int owner, const PokemonInPlay& pokemon, bool by_attack) {
                 raise(game, Event{EventKind::KnockedOut, static_cast<std::uint8_t>(owner), pokemon.id(), kNoCard});
                 ++game.history.this_turn().knocked_out[static_cast<std::size_t>(owner)];
+                if (by_attack) {
+                    ++game.history.this_turn().knocked_out_by_attack[static_cast<std::size_t>(owner)];
+                }
+                end_effects_on(game, pokemon.id());
                 const int prizes = rules::prize_value(game, pokemon);
                 discard_pokemon(game, pokemon);
                 take_prizes(game, opponent_of(owner), prizes);
@@ -119,7 +123,7 @@ namespace pokebot {
             const PlayerState& p = game.player(game.current_player);
             const auto& attacks = game.def(p.active->top()).attacks;
             for (std::size_t i = 0; i < attacks.size(); ++i) {
-                if (can_pay_cost(game, *p.active, rules::attack_cost(game, *p.active, i))) {
+                if (rules::can_use_attack(game, *p.active, i) && can_pay_cost(game, *p.active, rules::attack_cost(game, *p.active, i))) {
                     out.push_back(Action{ActionKind::Attack, kNoCard, kActiveSlot, static_cast<std::uint8_t>(i)});
                 }
             }
@@ -152,7 +156,7 @@ namespace pokebot {
             } else {
                 game.phase = TurnPhase::AfterMain;
             }
-            handle_knockouts(game);
+            handle_knockouts(game, true);
             continue_game(game);
         }
 
@@ -174,18 +178,18 @@ namespace pokebot {
             }
         }
 
-        void handle_knockouts(GameState& game) {
+        void handle_knockouts(GameState& game, bool after_attack) {
             std::array<bool, kPlayers> needs_new_active{};
             for (int p = 0; p < kPlayers; ++p) {
                 PlayerState& player = game.player(p);
                 if (player.active && rules::is_knocked_out(game, *player.active)) {
-                    knockout(game, p, *player.active);
+                    knockout(game, p, *player.active, after_attack);
                     player.active.reset();
                     needs_new_active[static_cast<std::size_t>(p)] = true;
                 }
                 for (std::size_t i = player.bench.size(); i-- > 0;) {
                     if (rules::is_knocked_out(game, player.bench[i])) {
-                        knockout(game, p, player.bench[i]);
+                        knockout(game, p, player.bench[i], after_attack);
                         player.bench.erase_at(i);
                     }
                 }

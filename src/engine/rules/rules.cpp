@@ -18,7 +18,26 @@ namespace pokebot::rules {
             return types(game, attacker).contains(type);
         }
 
-        int attacker_side(const GameState&, const PokemonInPlay&, const PokemonInPlay&, int damage) {
+        // A lasting effect of this kind on this player (and this Pokemon, unless it's player-wide) this turn.
+        bool lasting_applies(const GameState& game, LastingKind kind, int player, CardIndex pokemon) {
+            for (const LastingEffect& effect : game.lasting) {
+                if (effect.kind == kind && effect.turn == game.turn && effect.player == player &&
+                    (effect.pokemon == kNoCard || effect.pokemon == pokemon)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        int attacker_side(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, int damage) {
+            const int player = owner_of(attacker.id());
+            const bool defender_ex = game.def(defender.top()).rules.ex;
+            for (const LastingEffect& effect : game.lasting) {
+                if (effect.kind == LastingKind::DamageBonus && effect.turn == game.turn && effect.player == player &&
+                    is_active(game, defender) && (!effect.only_ex || defender_ex)) {
+                    damage += effect.amount;
+                }
+            }
             return damage;
         }
 
@@ -119,16 +138,28 @@ namespace pokebot::rules {
 
     bool can_retreat(const GameState& game, int player) {
         const PlayerState& p = game.player(player);
-        return !game.flags.retreated && p.active && !p.bench.empty() && !p.active->special.asleep && !p.active->special.paralyzed;
+        return !game.flags.retreated && p.active && !p.bench.empty() && !p.active->special.asleep && !p.active->special.paralyzed &&
+               !lasting_applies(game, LastingKind::CantRetreat, player, p.active->id());
     }
 
     bool can_attack(const GameState& game, int player) {
         const PlayerState& p = game.player(player);
-        return game.turn != 1 && game.player(player).active.has_value() && !p.active->special.asleep && !p.active->special.paralyzed;
+        return game.turn != 1 && game.player(player).active.has_value() && !p.active->special.asleep && !p.active->special.paralyzed &&
+               !lasting_applies(game, LastingKind::CantAttack, player, p.active->id());
     }
 
-    bool can_play_item(const GameState&, int) {
+    bool can_use_attack(const GameState& game, const PokemonInPlay& pokemon, std::size_t attack) {
+        const AttackRef ref{pokemon.top(), static_cast<std::uint8_t>(attack)};
+        for (const LastingEffect& effect : game.lasting) {
+            if (effect.kind == LastingKind::CantUseAttack && effect.turn == game.turn && effect.pokemon == pokemon.id() && effect.attack == ref) {
+                return false;
+            }
+        }
         return true;
+    }
+
+    bool can_play_item(const GameState& game, int player) {
+        return !lasting_applies(game, LastingKind::NoItems, player, kNoCard);
     }
 
     bool can_play_supporter(const GameState& game, int) {

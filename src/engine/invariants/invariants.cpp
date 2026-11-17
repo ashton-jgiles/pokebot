@@ -26,6 +26,11 @@ namespace pokebot {
                 if (game_.player(0).stadium != kNoCard && game_.player(1).stadium != kNoCard) {
                     fail("two Stadiums are in play");
                 }
+                for (const LastingEffect& effect : game_.lasting) {
+                    if (effect.turn < game_.turn) {
+                        fail("a lasting effect for turn " + std::to_string(effect.turn) + " is still there on turn " + std::to_string(game_.turn));
+                    }
+                }
                 return std::move(problems_);
             }
 

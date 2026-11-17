@@ -57,6 +57,7 @@ namespace pokebot {
         ReturnSelfToHand,
         ChooseAttack,
         UseChosenAttack,
+        AddLasting,
     };
 
     enum class StageFilter : std::uint8_t {
@@ -92,6 +93,7 @@ namespace pokebot {
         OpponentPrizesAtMost,
         SharesType,
         SelfEnergyAtLeast,
+        KnockedOutByAttackLastTurn,
     };
 
     struct Condition {
@@ -118,6 +120,33 @@ namespace pokebot {
         CardFilter filter;
     };
 
+    enum class LastingKind : std::uint8_t {
+        CantAttack,
+        CantUseAttack,
+        CantRetreat,
+        NoItems,
+        DamageBonus,
+    };
+
+    enum class Until : std::uint8_t {
+        ThisTurn,
+        OpponentsNextTurn,
+        YourNextTurn,
+    };
+
+    enum class LastingOn : std::uint8_t {
+        Self,
+        Defending,
+        Player,
+    };
+
+    struct LastingSpec {
+        LastingKind kind = LastingKind::CantAttack;
+        Until until = Until::ThisTurn;
+        LastingOn on = LastingOn::Self;
+        bool only_ex = false;
+    };
+
     struct Step {
         Op op = Op::Damage;
         std::uint8_t min = 0;
@@ -132,6 +161,7 @@ namespace pokebot {
         std::int16_t per = 0;
         Count count;
         bool needs_energy = false;
+        LastingSpec lasting;
         std::uint8_t jump = 0;
     };
 

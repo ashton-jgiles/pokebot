@@ -1,3 +1,1 @@
-{
-  "rules": ["ex"]
-}
+{"rules": ["ex"], "attacks": {"Eon Blade": {"effects": [{"op": "lasting", "effect": "cant_attack", "until": "your_next_turn"}]}}}

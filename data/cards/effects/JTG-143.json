@@ -1,0 +1,1 @@
+{"effects": [{"op": "lasting", "effect": "damage_bonus", "on": "player", "amount": 40, "only_ex": true, "until": "this_turn"}]}

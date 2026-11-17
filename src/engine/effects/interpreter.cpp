@@ -241,6 +241,7 @@ namespace pokebot {
                         return;
                     }
                 }
+                end_effects_on(game, pokemon.id());
                 for (const CardIndex card : pokemon.stack) {
                     p.hand.push_back(card);
                 }
@@ -369,6 +370,7 @@ namespace pokebot {
                         const CardIndex leaving = p.active->id();
                         std::swap(*p.active, benched);
                         clear_special_conditions(benched);
+                        end_effects_on(game, benched.id());
                         raise(game, Event{EventKind::MovedToBench, static_cast<std::uint8_t>(player), leaving, kNoCard});
                         return;
                     }
@@ -505,6 +507,9 @@ namespace pokebot {
                         game.effects.push_back(nested); // runs next; this effect carries on after it
                         return true;
                     }
+                    case Op::AddLasting:
+                        add_lasting(game, run, step);
+                        break;
                     case Op::ApplySpecialCondition:
                         for (const int player : players_on(step.side, run.who.player)) {
                             PlayerState& target = game.player(player);
@@ -586,6 +591,8 @@ namespace pokebot {
                     return static_cast<int>(p.prizes.size()) == condition.value;
                 case ConditionKind::KnockedOutLastTurn:
                     return game.history.opponents_last_turn().knocked_out[static_cast<std::size_t>(player)] > 0;
+                case ConditionKind::KnockedOutByAttackLastTurn:
+                    return game.history.opponents_last_turn().knocked_out_by_attack[static_cast<std::size_t>(player)] > 0;
                 case ConditionKind::HasBenched:
                     return !p.bench.empty();
                 case ConditionKind::OpponentHasBenched:

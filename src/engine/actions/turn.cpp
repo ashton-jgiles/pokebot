@@ -18,6 +18,7 @@ namespace pokebot {
             ++game.turn;
             game.flags = TurnFlags{};
             game.history.start_turn(game.current_player);
+            expire_lasting(game);
             game.phase = TurnPhase::Main;
 
             if (game.player(player).deck.empty()) {
