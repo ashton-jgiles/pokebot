@@ -44,7 +44,6 @@ namespace pokebot {
 
     namespace detail {
 
-        // Abilities, Tools, Stadiums and Special Energy that react to events get queued here in step 3.7.
         void raise(GameState& game, const Event& event) {
             if (event_hook != nullptr) {
                 event_hook(game, event);
