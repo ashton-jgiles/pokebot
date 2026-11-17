@@ -40,6 +40,7 @@ namespace pokebot {
         ChoosePokemon,
         AnswerYes,
         AnswerNo,
+        ChooseAttack,
     };
 
     struct Action {

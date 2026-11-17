@@ -1,3 +1,1 @@
-{
-  "rules": ["ex"]
-}
+{"rules": ["ex"], "attacks": {"Stealthy Slash": {"effects": [{"op": "damage_to", "per": 30, "for_each": {"of": "target_damage_counters"}}]}}}

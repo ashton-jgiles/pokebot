@@ -1,1 +1,1 @@
-{"attacks": {"Back Draft": {"effects": [{"op": "set_damage", "per": 30, "for_each": {"of": "discard", "player": "opponent", "filter": {"kind": "energy", "basic": true}}}, {"op": "damage"}]}}}
+{"attacks": {"Back Draft": {"effects": [{"op": "set_damage", "per": 30, "for_each": {"of": "discard", "player": "opponent", "filter": {"kind": "energy", "basic": true}}}, {"op": "damage"}]}, "Flamebody Cannon": {"effects": [{"op": "discard_all_attached_energy"}, {"op": "damage_to", "on": "bench", "amount": 90}]}}}

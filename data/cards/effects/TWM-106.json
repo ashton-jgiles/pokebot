@@ -1,4 +1,1 @@
-{
-  "rules": ["ex", "tera"],
-  "attacks": { "Shinobi Blade": { "effects": [{ "op": "may", "effects": [{ "op": "search_deck", "count": 1 }] }] } }
-}
+{"rules": ["ex", "tera"], "attacks": {"Shinobi Blade": {"effects": [{"op": "may", "effects": [{"op": "search_deck", "count": 1}]}]}, "Mirage Barrage": {"effects": [{"op": "move_attached_energy", "count": 2, "to": "discard"}, {"op": "damage_to", "targets": 2, "amount": 120}]}}}

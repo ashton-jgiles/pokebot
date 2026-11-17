@@ -44,6 +44,7 @@ namespace pokebot::rules {
     bool evolves_into(const GameState& game, const PokemonInPlay& pokemon, CardIndex evolution);
 
     // base damage -> attacker effects -> Weakness -> Resistance -> defender effects
+    bool damage_prevented(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender);
     int attack_damage(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, int base);
 
 } // namespace pokebot::rules

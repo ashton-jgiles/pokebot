@@ -1,3 +1,1 @@
-{
-  "rules": ["ex"]
-}
+{"rules": ["ex"], "attacks": {"Night Joker": {"effects": [{"op": "use_attack", "filter": {"name_prefix": "N's"}}]}}}

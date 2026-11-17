@@ -150,7 +150,7 @@ namespace pokebot {
                     }
                 }
                 const Decision& decision = game_.decision();
-                const bool effect_decision = decision.kind == DecisionKind::ChooseCards || decision.kind == DecisionKind::ChoosePokemon || decision.kind == DecisionKind::ChooseYesNo;
+                const bool effect_decision = decision.kind == DecisionKind::ChooseCards || decision.kind == DecisionKind::ChoosePokemon || decision.kind == DecisionKind::ChooseYesNo || decision.kind == DecisionKind::ChooseAttack;
                 if (effect_decision && game_.effects.empty()) {
                     fail("an effect's decision is pending but no effect is running");
                 }

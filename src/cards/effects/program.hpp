@@ -21,6 +21,8 @@ namespace pokebot {
         Bench,
         YourAttachedEnergy,
         DeckTop,
+        InPlay,       // the Active Pokemon and the Bench
+        TargetEnergy, // Energy attached to the first chosen target
     };
 
     enum class Side : std::uint8_t {
@@ -48,6 +50,13 @@ namespace pokebot {
         FlipCoins,
         FlipUntilTails,
         HandToDeckBottom,
+        ChooseTargets,
+        DamageTargets,
+        PlaceCounters,
+        DiscardAllEnergy,
+        ReturnSelfToHand,
+        ChooseAttack,
+        UseChosenAttack,
     };
 
     enum class StageFilter : std::uint8_t {
@@ -67,6 +76,7 @@ namespace pokebot {
         std::optional<bool> rule_box;
         int max_hp = 0;
         std::string name;
+        std::string name_prefix;
         std::vector<CardFilter> any_of;
     };
 
@@ -81,6 +91,7 @@ namespace pokebot {
         ValueAtLeast,
         OpponentPrizesAtMost,
         SharesType,
+        SelfEnergyAtLeast,
     };
 
     struct Condition {
@@ -98,6 +109,7 @@ namespace pokebot {
         PrizesTaken,
         ActiveEnergy,
         DamageCountersOnSelf,
+        TargetDamageCounters,
     };
 
     struct Count {
@@ -119,6 +131,7 @@ namespace pokebot {
         std::int16_t amount = 0;
         std::int16_t per = 0;
         Count count;
+        bool needs_energy = false;
         std::uint8_t jump = 0;
     };
 

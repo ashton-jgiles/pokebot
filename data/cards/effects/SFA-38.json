@@ -1,3 +1,1 @@
-{
-  "rules": ["ex"]
-}
+{"rules": ["ex"], "attacks": {"Cruel Arrow": {"effects": [{"op": "damage_to", "amount": 100}]}}}

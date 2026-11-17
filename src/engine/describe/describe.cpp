@@ -73,6 +73,8 @@ namespace pokebot {
                     return "choose a Pokemon for an effect";
                 case DecisionKind::ChooseYesNo:
                     return "decide whether to use an effect";
+                case DecisionKind::ChooseAttack:
+                    return "choose an attack to use";
             }
             return "unknown decision";
         }
@@ -149,6 +151,8 @@ namespace pokebot {
                 return "yes";
             case ActionKind::AnswerNo:
                 return "no";
+            case ActionKind::ChooseAttack:
+                return "use " + game.def(action.card).attacks[action.amount].name + " from " + card();
         }
         return "unknown action";
     }

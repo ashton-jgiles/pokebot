@@ -167,14 +167,20 @@ namespace pokebot::rules {
                def.evolves_from == game.def(pokemon.top()).name;
     }
 
+    bool damage_prevented(const GameState& game, const PokemonInPlay&, const PokemonInPlay& defender) {
+        return game.def(defender.top()).rules.tera && !is_active(game, defender);
+    }
+
     int attack_damage(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, int base) {
-        if (base <= 0) {
+        if (base <= 0 || damage_prevented(game, attacker, defender)) {
             return 0;
         }
         int damage = base;
         damage = attacker_side(game, attacker, defender, damage);
-        damage = apply_weakness(game, attacker, defender, damage);
-        damage = apply_resistance(game, attacker, defender, damage);
+        if (is_active(game, defender)) {
+            damage = apply_weakness(game, attacker, defender, damage);
+            damage = apply_resistance(game, attacker, defender, damage);
+        }
         damage = defender_side(game, attacker, defender, damage);
         return std::max(damage, 0);
     }

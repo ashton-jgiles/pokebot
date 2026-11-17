@@ -52,6 +52,21 @@ namespace pokebot {
             throw CardDataError("unknown player '" + player + "'");
         }
 
+        Zone where_on(const json& block) {
+            const std::string on = block.value("on", "any");
+            if (on == "any") {
+                return Zone::InPlay;
+            }
+            if (on == "bench") {
+                return Zone::Bench;
+            }
+            throw CardDataError("\"on\" is \"any\" or \"bench\", not '" + on + "'");
+        }
+
+        Side opponent_unless_said(const json& block) {
+            return block.contains("player") ? side_of(block) : Side::Opponent;
+        }
+
         StageFilter stage_of(const std::string& stage) {
             if (stage == "basic") {
                 return StageFilter::Basic;
@@ -122,6 +137,8 @@ namespace pokebot {
                     filter.max_hp = value.get<int>();
                 } else if (key == "name") {
                     filter.name = value.get<std::string>();
+                } else if (key == "name_prefix") {
+                    filter.name_prefix = value.get<std::string>();
                 } else if (key == "any_of") {
                     for (const auto& option : value) {
                         filter.any_of.push_back(parse_filter_fields(option));
@@ -154,6 +171,8 @@ namespace pokebot {
                 count.kind = CountKind::ActiveEnergy;
             } else if (of == "damage_counters") {
                 count.kind = CountKind::DamageCountersOnSelf;
+            } else if (of == "target_damage_counters") {
+                count.kind = CountKind::TargetDamageCounters;
             } else {
                 throw CardDataError("unknown thing to count '" + of + "'");
             }
@@ -193,6 +212,9 @@ namespace pokebot {
                 condition.value = value.get<int>();
             } else if (key == "shares_type") {
                 condition.kind = ConditionKind::SharesType;
+            } else if (key == "self_energy_at_least") {
+                condition.kind = ConditionKind::SelfEnergyAtLeast;
+                condition.value = value.get<int>();
             } else {
                 throw CardDataError("unknown condition '" + key + "'");
             }
@@ -280,6 +302,29 @@ namespace pokebot {
                     throw CardDataError("\"per\" needs \"for_each\"");
                 }
                 add(step);
+            }
+
+            void choose_targets(const json& block, bool needs_energy) {
+                Step choose;
+                choose.op = Op::ChooseTargets;
+                choose.side = opponent_unless_said(block);
+                if (choose.side == Side::Each) {
+                    throw CardDataError("targets belong to \"you\" or \"opponent\"");
+                }
+                choose.from = where_on(block);
+                choose.max = static_cast<std::uint8_t>(block.value("targets", 1));
+                choose.min = block.value("up_to", false) ? 0 : choose.max;
+                choose.needs_energy = needs_energy;
+                if (choose.max < 1 || choose.max > 6) {
+                    throw CardDataError("targets must be 1 to 6");
+                }
+                add(choose);
+            }
+
+            void attack_only(const std::string& op) {
+                if (!attack_) {
+                    throw CardDataError("only attacks can use \"" + op + "\"");
+                }
             }
 
             void switch_active(Side side) {
@@ -385,6 +430,47 @@ namespace pokebot {
                     move.from = Zone::Deck;
                     move.to = Zone::DeckTop;
                     add(move);
+                } else if (op == "damage_to") {
+                    attack_only(op);
+                    choose_targets(block, false);
+                    Step hit;
+                    hit.op = Op::DamageTargets;
+                    hit.amount = static_cast<std::int16_t>(block.value("amount", 0));
+                    hit.per = static_cast<std::int16_t>(block.value("per", 0));
+                    if (block.contains("for_each")) {
+                        hit.count = parse_count(block.at("for_each"));
+                    } else if (hit.per != 0) {
+                        throw CardDataError("\"per\" needs \"for_each\"");
+                    }
+                    add(hit);
+                } else if (op == "place_counters") {
+                    Step place;
+                    place.op = Op::PlaceCounters;
+                    place.side = opponent_unless_said(block);
+                    place.from = where_on(block);
+                    place.max = count_of(block, 1);
+                    if (place.side == Side::Each) {
+                        throw CardDataError("damage counters go on \"you\" or \"opponent\"");
+                    }
+                    add(place);
+                } else if (op == "discard_all_attached_energy") {
+                    add(Op::DiscardAllEnergy);
+                } else if (op == "return_self_to_hand") {
+                    add(Op::ReturnSelfToHand);
+                } else if (op == "discard_target_energy") {
+                    choose_targets(block, true);
+                    const std::uint8_t count = count_of(block, 1);
+                    choose_and_move(Zone::TargetEnergy, Zone::Discard, count, count, parse_filter(block));
+                } else if (op == "use_attack") {
+                    attack_only(op);
+                    if (block.value("from", "your_bench") != "your_bench") {
+                        throw CardDataError("use_attack is from \"your_bench\"");
+                    }
+                    Step choose;
+                    choose.op = Op::ChooseAttack;
+                    choose.filter = parse_filter(block);
+                    add(choose);
+                    add(Op::UseChosenAttack);
                 } else if (op == "may") {
                     const std::size_t ask = program.size();
                     add(Op::AskYesNo);
@@ -458,6 +544,9 @@ namespace pokebot {
             return false;
         }
         if (!filter.name.empty() && card.name != filter.name) {
+            return false;
+        }
+        if (!filter.name_prefix.empty() && card.name.rfind(filter.name_prefix, 0) != 0) {
             return false;
         }
         if (!stage_matches(filter.stage, card)) {
@@ -550,6 +639,20 @@ namespace pokebot {
                 return "flip until tails";
             case Op::HandToDeckBottom:
                 return "hand to bottom of deck";
+            case Op::ChooseTargets:
+                return "choose targets";
+            case Op::DamageTargets:
+                return "damage targets";
+            case Op::PlaceCounters:
+                return "place damage counters";
+            case Op::DiscardAllEnergy:
+                return "discard all Energy";
+            case Op::ReturnSelfToHand:
+                return "return to hand";
+            case Op::ChooseAttack:
+                return "choose an attack";
+            case Op::UseChosenAttack:
+                return "use the chosen attack";
         }
         return "unknown op";
     }

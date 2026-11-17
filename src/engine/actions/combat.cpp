@@ -198,7 +198,7 @@ namespace pokebot {
 
             const int current = game.current_player;
             for (const int p : {current, opponent_of(current)}) {
-                if (needs_new_active[static_cast<std::size_t>(p)]) {
+                if (needs_new_active[static_cast<std::size_t>(p)] || !game.player(p).active) {
                     game.pending.push_back(Decision{DecisionKind::PromoteActive, static_cast<std::uint8_t>(p), 0, 0});
                 }
             }

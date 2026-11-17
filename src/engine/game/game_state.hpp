@@ -111,6 +111,7 @@ namespace pokebot {
         ChooseCards,
         ChoosePokemon,
         ChooseYesNo,
+        ChooseAttack,
     };
 
     struct Decision {
@@ -163,8 +164,10 @@ namespace pokebot {
         std::uint8_t pc = 0;
         FixedVector<CardIndex, kDeckSize> chosen;
         CardIndex chosen_pokemon = kNoCard;
-        std::int16_t damage = 0; // the attack's damage so far
-        std::int16_t value = 0;  // heads flipped, or cards just moved
+        std::int16_t damage = 0;           // the attack's damage so far
+        std::int16_t value = 0;            // heads flipped, or cards just moved
+        FixedVector<CardIndex, 6> targets; // ids of the Pokemon chosen as targets
+        AttackRef chosen_attack;
 
         bool operator==(const EffectRun&) const = default;
     };

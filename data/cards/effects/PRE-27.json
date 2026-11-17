@@ -1,3 +1,1 @@
-{
-  "rules": ["ex", "tera"]
-}
+{"rules": ["ex", "tera"], "attacks": {"Torrential Pump": {"effects": [{"op": "if", "condition": {"self_energy_at_least": 3}, "then": [{"op": "may", "effects": [{"op": "move_attached_energy", "count": 3, "to": "deck"}, {"op": "shuffle_deck"}, {"op": "damage_to", "on": "bench", "amount": 120}]}]}]}}}
