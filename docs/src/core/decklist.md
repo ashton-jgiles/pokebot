@@ -76,7 +76,7 @@ Derives from `std::runtime_error`. The message starts with `line N:`, and `line(
 | Counts don't add up to `Total Cards` | 59 cards with `Total Cards: 60` |
 
 The parser checks the **format** only. Deck-building rules (exactly 60 cards, at most 4 copies,
-ACE SPEC limit) are checked by the [deck validator](../cards/deck_validator.md).
+ACE SPEC limit) are checked by the [deck validator](../cards/validator/deck_validator.md).
 
 ## Tests
 

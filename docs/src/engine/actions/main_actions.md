@@ -1,6 +1,6 @@
-# `src/engine/main_actions.cpp` — what you can do on your turn
+# `src/engine/actions/main_actions.cpp` — what you can do on your turn
 
-**File:** [`src/engine/main_actions.cpp`](../../../src/engine/main_actions.cpp) · **Namespace:** `pokebot::detail`
+**File:** [`src/engine/actions/main_actions.cpp`](../../../../src/engine/actions/main_actions.cpp) · **Namespace:** `pokebot::detail`
 
 The main-phase choices, plus the retreat-discard decision.
 
@@ -54,7 +54,7 @@ position.
 
 ## Tests
 
-[`tests/test_engine_actions.cpp`](../../../tests/test_engine_actions.cpp), tag `[actions]`:
+[`tests/test_engine_actions.cpp`](../../../../tests/test_engine_actions.cpp), tag `[actions]`:
 - benching to the limit, one Energy per turn;
 - the evolution timing rules;
 - retreating with and without a real choice, free retreat, and when retreat isn't allowed;

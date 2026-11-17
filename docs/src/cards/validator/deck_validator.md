@@ -1,6 +1,6 @@
-# `src/cards/deck_validator` — deck-building rules
+# `src/cards/validator/deck_validator` — deck-building rules
 
-**Files:** [`src/cards/deck_validator.hpp`](../../../src/cards/deck_validator.hpp), [`src/cards/deck_validator.cpp`](../../../src/cards/deck_validator.cpp)
+**Files:** [`src/cards/validator/deck_validator.hpp`](../../../../src/cards/validator/deck_validator.hpp), [`src/cards/validator/deck_validator.cpp`](../../../../src/cards/validator/deck_validator.cpp)
 **Library:** `pokebot_lib` · **Namespace:** `pokebot`
 
 Checks a `Decklist` against the deck-building rules, using the card database for each card's real
@@ -47,7 +47,7 @@ legal in the Standard format, and the card format doesn't represent them.
 
 ## Tests
 
-[`tests/test_deck_validator.cpp`](../../../tests/test_deck_validator.cpp), tag `[deck_validator]`.
+[`tests/test_deck_validator.cpp`](../../../../tests/test_deck_validator.cpp), tag `[deck_validator]`.
 It uses a small made-up card database, with one test per rule and one with several problems
 at once. The last test validates every deck in `data/decks/` against the real card data, and is
 **skipped** if `data/cards/generated/` doesn't exist yet.

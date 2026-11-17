@@ -1,6 +1,6 @@
-# `src/engine/invariants` — consistency checker
+# `src/engine/invariants/invariants` — consistency checker
 
-**Files:** [`src/engine/invariants.hpp`](../../../src/engine/invariants.hpp), [`src/engine/invariants.cpp`](../../../src/engine/invariants.cpp)
+**Files:** [`src/engine/invariants/invariants.hpp`](../../../../src/engine/invariants/invariants.hpp), [`src/engine/invariants/invariants.cpp`](../../../../src/engine/invariants/invariants.cpp)
 **Library:** `pokebot_lib` · **Namespace:** `pokebot`
 
 ```cpp
@@ -8,7 +8,7 @@ std::vector<std::string> check_invariants(const GameState& game);
 ```
 
 Checks rules that must hold at **every** decision point. It returns a description of each broken
-one; an empty list means the state is consistent. [`play_game`](../harness/match.md) runs it after
+one; an empty list means the state is consistent. [`play_game`](../../harness/match.md) runs it after
 every action by default, which is how the 100,000-game stress test finds bugs nobody wrote a test
 for.
 
@@ -30,7 +30,7 @@ for.
 
 ## Tests
 
-[`tests/test_invariants.cpp`](../../../tests/test_invariants.cpp), tag `[invariants]`. Each test
+[`tests/test_invariants.cpp`](../../../../tests/test_invariants.cpp), tag `[invariants]`. Each test
 corrupts a real game state on purpose and checks that the problem is reported: a duplicated card,
 a missing card, a card in the wrong player's zone, a missed Knock Out, a non-Energy attached as
 Energy, a wrong evolution, and a missing Active.

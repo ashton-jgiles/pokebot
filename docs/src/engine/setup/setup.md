@@ -1,6 +1,6 @@
-# `src/engine/setup.cpp` — starting a game
+# `src/engine/setup/setup.cpp` — starting a game
 
-**File:** [`src/engine/setup.cpp`](../../../src/engine/setup.cpp) · **Namespace:** `pokebot`
+**File:** [`src/engine/setup/setup.cpp`](../../../../src/engine/setup/setup.cpp) · **Namespace:** `pokebot`
 
 `new_game` and the setup decisions, following the rulebook (pp. 8, 18).
 
@@ -50,7 +50,7 @@ stack is empty, setup finishes.
 
 ## Tests
 
-[`tests/test_engine_setup.cpp`](../../../tests/test_engine_setup.cpp), tag `[setup]`:
+[`tests/test_engine_setup.cpp`](../../../../tests/test_engine_setup.cpp), tag `[setup]`:
 - opening hands, determinism, choosing to go second;
 - 6 Prize cards and turn 1 starting, choices merged and the Bench limit;
 - bonus draws and equal mulligans;

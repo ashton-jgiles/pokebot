@@ -1,6 +1,6 @@
 # pokebot documentation
 
-These docs mirror the repository: the documentation for `src/cards/card.cpp` lives at
+These docs mirror the repository: the documentation for `src/cards/card/card.cpp` lives at
 `docs/src/cards/card.md`, and so on. Start with the [roadmap](roadmap.md) for where the project stands.
 
 ## How the pieces fit today
@@ -31,20 +31,20 @@ see the engine through `legal_actions` and `apply`.
 |---|---|---|
 | Project | [roadmap.md](roadmap.md) | Milestones and current status |
 | `src/core` | [decklist.md](src/core/decklist.md) | Decklist parser |
-| `src/cards` | [card.md](src/cards/card.md) | `CardDef`, enums, card JSON |
-| | [card_db.md](src/cards/card_db.md) | Card database, effects-file merging |
-| | [deck_validator.md](src/cards/deck_validator.md) | Deck-building rules |
+| `src/cards` | [card.md](src/cards/card/card.md) | `CardDef`, enums, card JSON |
+| | [card_db.md](src/cards/db/card_db.md) | Card database, effects-file merging |
+| | [deck_validator.md](src/cards/validator/deck_validator.md) | Deck-building rules |
 | `src/engine` | [README.md](src/engine/README.md) | **Start here for the engine:** how it works, decisions, turn phases |
-| | [game_state.md](src/engine/game_state.md) | `GameState`, `CardTable`, Pokémon in play, decisions |
-| | [action.md](src/engine/action.md) | `Action` and every action kind |
+| | [game_state.md](src/engine/game/game_state.md) | `GameState`, `CardTable`, Pokémon in play, decisions |
+| | [action.md](src/engine/actions/action.md) | `Action` and every action kind |
 | | [engine.md](src/engine/engine.md) | `new_game`, `legal_actions`, `apply`, shared helpers |
-| | [setup.md](src/engine/setup.md) | Opening hands, mulligans, setup decisions |
-| | [turn.md](src/engine/turn.md) | Turn flow, `continue_game`, Pokémon Checkup |
-| | [main_actions.md](src/engine/main_actions.md) | Bench, evolve, attach, retreat |
-| | [combat.md](src/engine/combat.md) | Attacks, damage, Knock Outs, Prize cards, winning |
-| | [invariants.md](src/engine/invariants.md) | Consistency checker |
-| | [describe.md](src/engine/describe.md) | States and actions as text |
-| | [fixed_vector.md](src/engine/fixed_vector.md), [rng.md](src/engine/rng.md) | Fixed-capacity list, seeded RNG |
+| | [setup.md](src/engine/setup/setup.md) | Opening hands, mulligans, setup decisions |
+| | [turn.md](src/engine/actions/turn.md) | Turn flow, `continue_game`, Pokémon Checkup |
+| | [main_actions.md](src/engine/actions/main_actions.md) | Bench, evolve, attach, retreat |
+| | [combat.md](src/engine/actions/combat.md) | Attacks, damage, Knock Outs, Prize cards, winning |
+| | [invariants.md](src/engine/invariants/invariants.md) | Consistency checker |
+| | [describe.md](src/engine/describe/describe.md) | States and actions as text |
+| | [fixed_vector.md](src/engine/shared/fixed_vector.md), [rng.md](src/engine/shared/rng.md) | Fixed-capacity list, seeded RNG |
 | `src/agents` | [agent.md](src/agents/agent.md) | The `Agent` interface |
 | | [random_agent.md](src/agents/random_agent.md) | Random and biased random agents |
 | `src/harness` | [match.md](src/harness/match.md) | `play_game`, how games end |

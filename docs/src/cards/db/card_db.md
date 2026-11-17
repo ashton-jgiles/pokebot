@@ -1,6 +1,6 @@
-# `src/cards/card_db` — card database
+# `src/cards/db/card_db` — card database
 
-**Files:** [`src/cards/card_db.hpp`](../../../src/cards/card_db.hpp), [`src/cards/card_db.cpp`](../../../src/cards/card_db.cpp)
+**Files:** [`src/cards/db/card_db.hpp`](../../../../src/cards/db/card_db.hpp), [`src/cards/db/card_db.cpp`](../../../../src/cards/db/card_db.cpp)
 **Library:** `pokebot_lib` · **Namespace:** `pokebot`
 
 Loads every card the project knows about and looks cards up by id. When loading, it merges each
@@ -68,4 +68,4 @@ Cards are stored in a `std::map` with `std::less<>`, so lookups work directly wi
 
 ## Tests
 
-[`tests/test_card_db.cpp`](../../../tests/test_card_db.cpp), tag `[card_db]`.
+[`tests/test_card_db.cpp`](../../../../tests/test_card_db.cpp), tag `[card_db]`.

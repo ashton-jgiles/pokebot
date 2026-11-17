@@ -1,6 +1,6 @@
-# `src/engine/fixed_vector.hpp` — fixed-capacity list
+# `src/engine/shared/fixed_vector.hpp` — fixed-capacity list
 
-**File:** [`src/engine/fixed_vector.hpp`](../../../src/engine/fixed_vector.hpp) (header-only) · **Namespace:** `pokebot`
+**File:** [`src/engine/shared/fixed_vector.hpp`](../../../../src/engine/shared/fixed_vector.hpp) (header-only) · **Namespace:** `pokebot`
 
 ```cpp
 template <class T, std::size_t N>
@@ -35,4 +35,4 @@ sixth Pokémon on the Bench, that's a rules bug, and the stress tests surface it
 
 ## Tests
 
-[`tests/test_engine_state.cpp`](../../../tests/test_engine_state.cpp), tag `[engine]`.
+[`tests/test_engine_state.cpp`](../../../../tests/test_engine_state.cpp), tag `[engine]`.

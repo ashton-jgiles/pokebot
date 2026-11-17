@@ -3,7 +3,7 @@
 **Files:** [`tools/import/convert.hpp`](../../../tools/import/convert.hpp), [`tools/import/convert.cpp`](../../../tools/import/convert.cpp)
 **Library:** `pokebot_import_lib` · **Namespace:** `pokebot::import`
 
-Turns a card object from TCGdex into our [`CardDef`](../../src/cards/card.md). This is the only
+Turns a card object from TCGdex into our [`CardDef`](../../src/cards/card/card.md). This is the only
 code that knows TCGdex's field names. The rest of the project only sees `CardDef`.
 
 ## Function

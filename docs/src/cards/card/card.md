@@ -1,11 +1,11 @@
-# `src/cards/card` — card definitions
+# `src/cards/card/card` — card definitions
 
-**Files:** [`src/cards/card.hpp`](../../../src/cards/card.hpp), [`src/cards/card.cpp`](../../../src/cards/card.cpp)
+**Files:** [`src/cards/card/card.hpp`](../../../../src/cards/card/card.hpp), [`src/cards/card/card.cpp`](../../../../src/cards/card/card.cpp)
 **Library:** `pokebot_lib` · **Namespace:** `pokebot`
 
 `CardDef` is the engine's description of one printed card: its stats, attacks, abilities and
 rule-box flags. This file also defines how a `CardDef` is saved to and loaded from our card JSON
-format (see [`docs/data/cards`](../../data/cards/README.md)).
+format (see [`docs/data/cards`](../../../data/cards/README.md)).
 
 A `CardDef` never changes during a game. Card *instances* in play (damage, attached Energy and
 so on) will be part of the engine's game state in Milestone 2.
@@ -103,5 +103,5 @@ Unknown enum strings are **errors**, never silently mapped to a default. A typo 
 
 ## Tests
 
-Covered by [`tests/test_card_db.cpp`](../../../tests/test_card_db.cpp) (round trips, bad data) and
-[`tests/test_convert.cpp`](../../../tests/test_convert.cpp) (save and reload of damage modifiers).
+Covered by [`tests/test_card_db.cpp`](../../../../tests/test_card_db.cpp) (round trips, bad data) and
+[`tests/test_convert.cpp`](../../../../tests/test_convert.cpp) (save and reload of damage modifiers).

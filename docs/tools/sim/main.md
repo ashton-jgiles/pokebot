@@ -60,7 +60,7 @@ cmake --build --preset release
 ```
 
 This plays the first two decks against each other and prints the board at the start of every turn,
-then each action, using [`describe`](../../src/engine/describe.md):
+then each action, using [`describe`](../../src/engine/describe/describe.md):
 
 ```
 Turn 1, player 1's turn - waiting on player 1: main phase

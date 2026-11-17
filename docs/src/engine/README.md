@@ -29,12 +29,12 @@ These are the formal model's *Legal* and *δ* (transition) functions.
 
 ### A game is a plain value
 
-[`GameState`](game_state.md) contains no pointers to things that change and no heap
-allocations. Zones are [`FixedVector`](fixed_vector.md)s, and cards are small numbers
+[`GameState`](game/game_state.md) contains no pointers to things that change and no heap
+allocations. Zones are [`FixedVector`](shared/fixed_vector.md)s, and cards are small numbers
 (`CardIndex` 0–119). Copying a game is one ~1.5 KB memory copy, which is what lets search explore
 millions of positions. A `static_assert` stops the build if anyone breaks this.
 
-The only pointer is `GameState::cards`, to the [`CardTable`](game_state.md#cardtable) that maps
+The only pointer is `GameState::cards`, to the [`CardTable`](game/game_state.md#cardtable) that maps
 card numbers to card definitions. It never changes during a game, so every copy shares it.
 **Lifetime rule:** the `CardDB` must outlive the `CardTable`, which must outlive every game using it.
 
@@ -46,13 +46,13 @@ the decision being made now.
 
 | Decision | Who decides | Legal actions | Defined in |
 |---|---|---|---|
-| `ChooseTurnOrder` | Coin-flip winner | go first / go second | [setup](setup.md) |
-| `SetupActive` | Each player | a Basic Pokémon from hand | [setup](setup.md) |
-| `SetupBench` | Each player | a Basic to bench, or done | [setup](setup.md) |
-| `MulliganDraws` | Opponent of whoever mulliganed more | draw 0..N extra cards | [setup](setup.md) |
-| `MainPhase` | Current player | bench, evolve, attach, retreat, attack, end turn | [main actions](main_actions.md) |
-| `RetreatDiscard` | Current player | which Energy to discard for a Retreat Cost | [main actions](main_actions.md) |
-| `PromoteActive` | Player whose Active was Knocked Out | a Benched Pokémon | [combat](combat.md) |
+| `ChooseTurnOrder` | Coin-flip winner | go first / go second | [setup](setup/setup.md) |
+| `SetupActive` | Each player | a Basic Pokémon from hand | [setup](setup/setup.md) |
+| `SetupBench` | Each player | a Basic to bench, or done | [setup](setup/setup.md) |
+| `MulliganDraws` | Opponent of whoever mulliganed more | draw 0..N extra cards | [setup](setup/setup.md) |
+| `MainPhase` | Current player | bench, evolve, attach, retreat, attack, end turn | [main actions](actions/main_actions.md) |
+| `RetreatDiscard` | Current player | which Energy to discard for a Retreat Cost | [main actions](actions/main_actions.md) |
+| `PromoteActive` | Player whose Active was Knocked Out | a Benched Pokémon | [combat](actions/combat.md) |
 
 A decision can belong to the player whose turn it *isn't*. After a Knock Out, the opponent
 chooses their new Active.
@@ -75,7 +75,7 @@ Main ──(Attack or EndTurn)──► AfterMain ──► Checkup ──► be
                      Knock Outs → promote   Knock Outs → promote
 ```
 
-[`continue_game`](turn.md#continue_game) runs this forward whenever no decision is pending.
+[`continue_game`](actions/turn.md#continue_game) runs this forward whenever no decision is pending.
 
 ### Slots
 
@@ -84,7 +84,7 @@ A `Slot` names a place in play: **0 is the Active Spot, 1–5 are Bench position
 
 ### Randomness is seeded
 
-Every random event (shuffles, coin flips, which Prize card is taken) uses the [`Rng`](rng.md)
+Every random event (shuffles, coin flips, which Prize card is taken) uses the [`Rng`](shared/rng.md)
 inside the game state. **The same seed and the same choices always give the same game**, so any
 bug can be replayed exactly.
 
@@ -92,17 +92,17 @@ bug can be replayed exactly.
 
 | File | Doc | Contents |
 |---|---|---|
-| `fixed_vector.hpp` | [fixed_vector.md](fixed_vector.md) | Fixed-capacity list with no heap use |
-| `rng.hpp` | [rng.md](rng.md) | Seeded random number generator |
-| `game_state.hpp/.cpp` | [game_state.md](game_state.md) | `CardTable`, `PokemonInPlay`, `PlayerState`, `GameState`, decisions |
-| `action.hpp` | [action.md](action.md) | `Action`, `ActionKind`, slots |
+| `shared/fixed_vector.hpp` | [fixed_vector.md](shared/fixed_vector.md) | Fixed-capacity list with no heap use |
+| `shared/rng.hpp` | [rng.md](shared/rng.md) | Seeded random number generator |
+| `game/game_state.hpp/.cpp` | [game_state.md](game/game_state.md) | `CardTable`, `PokemonInPlay`, `PlayerState`, `GameState`, decisions |
+| `actions/action.hpp` | [action.md](actions/action.md) | `Action`, `ActionKind`, slots |
 | `engine.hpp/.cpp`, `internal.hpp` | [engine.md](engine.md) | Public interface, dispatch, shared helpers |
-| `setup.cpp` | [setup.md](setup.md) | `new_game`, mulligans, setup decisions |
-| `turn.cpp` | [turn.md](turn.md) | Starting and ending turns, `continue_game` |
-| `main_actions.cpp` | [main_actions.md](main_actions.md) | Bench, evolve, attach, retreat |
-| `combat.cpp` | [combat.md](combat.md) | Attacks, damage, Knock Outs, Prize cards, winning |
-| `invariants.hpp/.cpp` | [invariants.md](invariants.md) | Consistency checker |
-| `describe.hpp/.cpp` | [describe.md](describe.md) | Text descriptions of states and actions |
+| `setup/setup.cpp` | [setup.md](setup/setup.md) | `new_game`, mulligans, setup decisions |
+| `actions/turn.cpp` | [turn.md](actions/turn.md) | Starting and ending turns, `continue_game` |
+| `actions/main_actions.cpp` | [main_actions.md](actions/main_actions.md) | Bench, evolve, attach, retreat |
+| `actions/combat.cpp` | [combat.md](actions/combat.md) | Attacks, damage, Knock Outs, Prize cards, winning |
+| `invariants/invariants.hpp/.cpp` | [invariants.md](invariants/invariants.md) | Consistency checker |
+| `describe/describe.hpp/.cpp` | [describe.md](describe/describe.md) | Text descriptions of states and actions |
 
 ## Known simplifications
 

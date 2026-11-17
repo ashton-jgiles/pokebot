@@ -1,9 +1,9 @@
-# `src/engine/game_state` — the game in memory
+# `src/engine/game/game_state` — the game in memory
 
-**Files:** [`src/engine/game_state.hpp`](../../../src/engine/game_state.hpp), [`src/engine/game_state.cpp`](../../../src/engine/game_state.cpp)
+**Files:** [`src/engine/game/game_state.hpp`](../../../../src/engine/game/game_state.hpp), [`src/engine/game/game_state.cpp`](../../../../src/engine/game/game_state.cpp)
 **Library:** `pokebot_lib` · **Namespace:** `pokebot`
 
-The data structures of the formal model's world state. See the [engine overview](README.md) for
+The data structures of the formal model's world state. See the [engine overview](../README.md) for
 how they're used.
 
 | Formal model | C++ |
@@ -43,7 +43,7 @@ CardTable(const CardDB& db, const Decklist& deck0, const Decklist& deck1);
 const CardDef& def(CardIndex card) const;
 ```
 
-The constructor runs the [deck validator](../cards/deck_validator.md) on both decks and throws
+The constructor runs the [deck validator](../../cards/validator/deck_validator.md) on both decks and throws
 `std::invalid_argument`, listing every problem, if either is illegal, so a game can never start
 with an illegal deck.
 
@@ -80,13 +80,13 @@ They're reset at the start of every turn.
 ## `TurnPhase`
 
 `Setup`, `Main`, `AfterMain`, `Checkup`. Where the game is within a turn, so the engine knows what
-happens once every pending decision is answered. See [`continue_game`](turn.md#continue_game).
+happens once every pending decision is answered. See [`continue_game`](../actions/turn.md#continue_game).
 
 ## `Decision`
 
 | Field | Meaning |
 |---|---|
-| `kind` | One of the `DecisionKind`s listed in the [engine overview](README.md#every-choice-is-a-decision) |
+| `kind` | One of the `DecisionKind`s listed in the [engine overview](../README.md#every-choice-is-a-decision) |
 | `player` | Who decides |
 | `amount` | Extra number the decision needs: bonus cards allowed, Energy still to discard |
 | `target` | A `Slot`, e.g. the Benched Pokémon a retreat will bring in |
@@ -118,5 +118,5 @@ A whole game is **1,488 bytes**.
 
 ## Tests
 
-[`tests/test_engine_state.cpp`](../../../tests/test_engine_state.cpp), tag `[engine]`: copies are
+[`tests/test_engine_state.cpp`](../../../../tests/test_engine_state.cpp), tag `[engine]`: copies are
 independent and equal, card ownership, `CardTable` numbering, and illegal decks are refused.

@@ -1,6 +1,6 @@
-# `src/engine/combat.cpp` — attacks, Knock Outs and winning
+# `src/engine/actions/combat.cpp` — attacks, Knock Outs and winning
 
-**File:** [`src/engine/combat.cpp`](../../../src/engine/combat.cpp) · **Namespace:** `pokebot::detail`
+**File:** [`src/engine/actions/combat.cpp`](../../../../src/engine/actions/combat.cpp) · **Namespace:** `pokebot::detail`
 
 ## Which attacks are legal
 
@@ -72,7 +72,7 @@ runs `continue_game`, which finishes the turn or waits for the other player's pr
 
 ## Tests
 
-[`tests/test_engine_attacks.cpp`](../../../tests/test_engine_attacks.cpp), tag `[attacks]`:
+[`tests/test_engine_attacks.cpp`](../../../../tests/test_engine_attacks.cpp), tag `[attacks]`:
 - cost matching, no attack on turn 1, damage ending the turn;
 - Weakness and Resistance;
 - Knock Out and promotion, ex and Mega ex Prize counts;

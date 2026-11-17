@@ -37,12 +37,12 @@ Random → Greedy → Planner → Flat MC → IS-MCTS → IS-MCTS + endgame solv
 | Piece | Status | Where |
 |---|---|---|
 | Decklist parser | ✅ | [`src/core/decklist`](src/core/decklist.md) |
-| Card definition format (`CardDef`, JSON) | ✅ | [`src/cards/card`](src/cards/card.md) |
-| Card database + effects-file merging | ✅ | [`src/cards/card_db`](src/cards/card_db.md) |
+| Card definition format (`CardDef`, JSON) | ✅ | [`src/cards/card`](src/cards/card/card.md) |
+| Card database + effects-file merging | ✅ | [`src/cards/card_db`](src/cards/db/card_db.md) |
 | Card importer (TCGdex download, cache, convert) | ✅ | [`tools/import`](tools/import/main.md) |
 | All 80 cards (4 decks) imported and loading | ✅ | `pokebot-import` on all decks |
 | Tera review of every Pokémon ex | ✅ | [`data/cards/effects/`](data/cards/README.md#recording-tera) |
-| Deck validator, run by `pokebot-import` on every deck | ✅ | [`src/cards/deck_validator`](src/cards/deck_validator.md) |
+| Deck validator, run by `pokebot-import` on every deck | ✅ | [`src/cards/deck_validator`](src/cards/validator/deck_validator.md) |
 
 All four decks validate as legal, and deliberately illegal decks are rejected with every problem listed.
 

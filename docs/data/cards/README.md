@@ -28,7 +28,7 @@ Each entry was checked against TCGdex's `abbreviation.official` field. To add a 
 ## `generated/<id>.json` — our card format
 
 One file per card, named by our id: decklist set code + number, e.g. `TWM-130.json`. Written
-by `to_json` in [`card.cpp`](../../src/cards/card.md) and read back by `from_json`.
+by `to_json` in [`card.cpp`](../../src/cards/card/card.md) and read back by `from_json`.
 
 ### Pokémon
 
@@ -96,7 +96,7 @@ Any other value is rejected when the card is loaded.
 ## `effects/<id>.json` — hand-written effects
 
 Optional, one per card, with the same file name as the generated card. It's merged on top of the
-generated card when the card database loads (see [`merge_effects`](../../src/cards/card_db.md)):
+generated card when the card database loads (see [`merge_effects`](../../src/cards/db/card_db.md)):
 
 ```json
 {

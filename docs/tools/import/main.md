@@ -37,9 +37,9 @@ are processed once):
 4. Collect any review notes.
 
 Then it prints the review notes, a summary, loads everything through
-[`CardDB::load`](../../src/cards/card_db.md), exactly as the engine will. That last step checks
+[`CardDB::load`](../../src/cards/db/card_db.md), exactly as the engine will. That last step checks
 that every generated file and every effects file is valid, and counts what still needs effects.
-Finally it checks each decklist with the [deck validator](../../src/cards/deck_validator.md) and
+Finally it checks each decklist with the [deck validator](../../src/cards/validator/deck_validator.md) and
 prints `legal`, or `ILLEGAL` followed by every problem.
 
 ## Output

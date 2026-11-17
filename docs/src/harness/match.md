@@ -13,12 +13,12 @@ GameRecord play_game(const CardTable& cards, std::uint64_t seed, Agent& player0,
 Plays one game from `seed`. At every decision it asks the agent whose decision it is, which may not
 be the current player (e.g. choosing a new Active after a Knock Out).
 
-With `check_invariants` on, it runs [`check_invariants`](../engine/invariants.md) before the first
+With `check_invariants` on, it runs [`check_invariants`](../engine/invariants/invariants.md) before the first
 action and after every action. If anything is inconsistent, it throws `std::logic_error` with:
 - the **seed**, so the game can be replayed;
 - how many actions in it broke;
 - every broken rule;
-- the full [description](../engine/describe.md) of the game state.
+- the full [description](../engine/describe/describe.md) of the game state.
 
 ### `MatchOptions`
 

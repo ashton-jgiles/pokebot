@@ -1,6 +1,6 @@
-# `src/engine/rng.hpp` — random number generator
+# `src/engine/shared/rng.hpp` — random number generator
 
-**File:** [`src/engine/rng.hpp`](../../../src/engine/rng.hpp) (header-only) · **Namespace:** `pokebot`
+**File:** [`src/engine/shared/rng.hpp`](../../../../src/engine/shared/rng.hpp) (header-only) · **Namespace:** `pokebot`
 
 Every random event in a game goes through `Rng`: shuffling, coin flips, and choosing which
 face-down Prize card is taken. It lives inside `GameState`, so **the same seed and the same choices
@@ -26,5 +26,5 @@ game's own random events.
 
 ## Tests
 
-[`tests/test_engine_state.cpp`](../../../tests/test_engine_state.cpp), tag `[engine]`: same seed
+[`tests/test_engine_state.cpp`](../../../../tests/test_engine_state.cpp), tag `[engine]`: same seed
 repeats, `below` covers its range evenly, and shuffles are repeatable permutations.

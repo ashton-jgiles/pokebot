@@ -1,9 +1,9 @@
-# `src/engine/action.hpp` — choices a player can make
+# `src/engine/actions/action.hpp` — choices a player can make
 
-**File:** [`src/engine/action.hpp`](../../../src/engine/action.hpp) (header-only) · **Namespace:** `pokebot`
+**File:** [`src/engine/actions/action.hpp`](../../../../src/engine/actions/action.hpp) (header-only) · **Namespace:** `pokebot`
 
-An `Action` is **one choice**. [`legal_actions`](engine.md) returns a list of them, and
-[`apply`](engine.md) carries one out. It's 4 bytes, so search can store millions.
+An `Action` is **one choice**. [`legal_actions`](../engine.md) returns a list of them, and
+[`apply`](../engine.md) carries one out. It's 4 bytes, so search can store millions.
 
 ```cpp
 struct Action {
@@ -42,4 +42,4 @@ constexpr Slot bench_slot(std::size_t bench_index);  // Bench position 0 -> slot
 
 Actions compare with `==`. `apply` uses this to check that the chosen action is in the legal list.
 
-To turn an action into words, use [`describe(game, action)`](describe.md).
+To turn an action into words, use [`describe(game, action)`](../describe/describe.md).

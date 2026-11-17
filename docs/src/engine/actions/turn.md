@@ -1,6 +1,6 @@
-# `src/engine/turn.cpp` — turn flow
+# `src/engine/actions/turn.cpp` — turn flow
 
-**File:** [`src/engine/turn.cpp`](../../../src/engine/turn.cpp) · **Namespace:** `pokebot::detail`
+**File:** [`src/engine/actions/turn.cpp`](../../../../src/engine/actions/turn.cpp) · **Namespace:** `pokebot::detail`
 
 Starting turns, ending them, and everything that happens between turns.
 
@@ -39,6 +39,6 @@ Milestone 3. `handle_knockouts` runs right after it either way.
 
 ## Tests
 
-[`tests/test_engine_turns.cpp`](../../../tests/test_engine_turns.cpp), tag `[turns]`: ending the
+[`tests/test_engine_turns.cpp`](../../../../tests/test_engine_turns.cpp), tag `[turns]`: ending the
 turn is always offered, the turn passes with a draw, turns alternate, flags reset, and deck-out
 loses.

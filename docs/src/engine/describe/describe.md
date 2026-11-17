@@ -1,6 +1,6 @@
-# `src/engine/describe` — states and actions in words
+# `src/engine/describe/describe` — states and actions in words
 
-**Files:** [`src/engine/describe.hpp`](../../../src/engine/describe.hpp), [`src/engine/describe.cpp`](../../../src/engine/describe.cpp)
+**Files:** [`src/engine/describe/describe.hpp`](../../../../src/engine/describe/describe.hpp), [`src/engine/describe/describe.cpp`](../../../../src/engine/describe/describe.cpp)
 **Library:** `pokebot_lib` · **Namespace:** `pokebot`
 
 Human-readable text for debugging. It shows **everything**, including hidden cards.
@@ -46,10 +46,10 @@ Described from the point of view of the player making the pending decision:
 | `DiscardEnergy` | `discard Fire Energy` |
 | `Promote` | `promote Bench 1 Drakloak` |
 
-`pokebot-sim --print` uses both functions to narrate a whole game; see [`tools/sim`](../../tools/sim/main.md).
+`pokebot-sim --print` uses both functions to narrate a whole game; see [`tools/sim`](../../../tools/sim/main.md).
 
 ## Tests
 
-[`tests/test_stress.cpp`](../../../tests/test_stress.cpp), tag `[describe]`: across 20 full games
+[`tests/test_stress.cpp`](../../../../tests/test_stress.cpp), tag `[describe]`: across 20 full games
 on the real decks, every state and every legal action is described, with no "unknown". A new
 action kind without a description fails this test.
