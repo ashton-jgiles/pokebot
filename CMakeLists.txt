@@ -42,6 +42,7 @@ FetchContent_MakeAvailable(nlohmann_json)
 
 add_subdirectory(src)
 add_subdirectory(tools/import)
+add_subdirectory(tools/sim)
 
 if(POKEBOT_BUILD_TESTS)
   enable_testing()
