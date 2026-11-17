@@ -1,4 +1,1 @@
-{
-  "rules": ["ex"],
-  "attacks": { "Burst Roar": { "effects": [{ "op": "discard_hand" }, { "op": "draw", "count": 6 }] } }
-}
+{"rules": ["ex"], "attacks": {"Burst Roar": {"effects": [{"op": "discard_hand"}, {"op": "draw", "count": 6}]}, "Bellowing Thunder": {"effects": [{"op": "move_attached_energy", "from": "your_pokemon", "count": 60, "up_to": true, "filter": {"kind": "energy", "basic": true}, "to": "discard"}, {"op": "set_damage", "per": 70, "for_each": {"of": "moved"}}, {"op": "damage"}]}}}

@@ -1,3 +1,1 @@
-{
-  "rules": ["ex"]
-}
+{"rules": ["ex"], "attacks": {"Irritated Outburst": {"effects": [{"op": "set_damage", "per": 60, "for_each": {"of": "prizes_taken", "player": "opponent"}}, {"op": "damage"}]}}}

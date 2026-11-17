@@ -1,3 +1,1 @@
-{
-  "rules": ["ex", "tera"]
-}
+{"rules": ["ex", "tera"], "attacks": {"Myriad Leaf Shower": {"effects": [{"op": "add_damage", "per": 30, "for_each": {"of": "active_energy", "player": "each"}}, {"op": "damage"}]}}}

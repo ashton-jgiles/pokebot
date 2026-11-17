@@ -1,1 +1,1 @@
-{"attacks": {"Absolute Snow": {"effects": [{"op": "special_condition", "condition": "asleep"}]}}}
+{"attacks": {"Absolute Snow": {"effects": [{"op": "special_condition", "condition": "asleep"}]}, "Resentful Refrain": {"effects": [{"op": "set_damage", "per": 50, "for_each": {"of": "hand", "player": "opponent"}}, {"op": "damage"}]}}}

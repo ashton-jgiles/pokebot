@@ -1,3 +1,1 @@
-{
-  "rules": ["ex"]
-}
+{"rules": ["ex"], "attacks": {"Full Moon Rondo": {"effects": [{"op": "add_damage", "per": 20, "for_each": {"of": "benched", "player": "each"}}, {"op": "damage"}]}}}
