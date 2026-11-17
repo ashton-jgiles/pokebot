@@ -1,3 +1,4 @@
 {
-  "rules": ["ex"]
+  "rules": ["ex"],
+  "attacks": { "Burst Roar": { "effects": [{ "op": "discard_hand" }, { "op": "draw", "count": 6 }] } }
 }

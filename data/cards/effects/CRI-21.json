@@ -1,0 +1,1 @@
+{ "attacks": { "Summoning Jutsu": { "effects": [{ "op": "search_deck", "count": 3, "filter": { "kind": "pokemon" } }] } } }

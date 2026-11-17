@@ -1,0 +1,1 @@
+{ "attacks": { "Icicle Loop": { "effects": [{ "op": "move_attached_energy", "count": 1, "to": "hand" }] } } }
