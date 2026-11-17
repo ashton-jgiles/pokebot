@@ -81,6 +81,13 @@ namespace pokebot {
     }
 
     void CardDB::add(CardDef card) {
+        for (Attack& attack : card.attacks) {
+            try {
+                attack.program = compile_attack(attack.effects);
+            } catch (const CardDataError& e) {
+                throw CardDataError(card.id + " attack '" + attack.name +"': " + e.what());
+            }
+        }
         const std::string id = card.id;
         cards_.insert_or_assign(id, std::move(card));
     }

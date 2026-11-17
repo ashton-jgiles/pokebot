@@ -1,64 +1,13 @@
 #pragma once
 
-#include <cstdint>
 #include <optional>
-#include <stdexcept>
-#include <string>
 #include <string_view>
-#include <vector>
 
 #include <nlohmann/json.hpp>
+#include "cards/card/card_types.hpp"
+#include "cards/effects/program.hpp"
 
 namespace pokebot {
-
-    enum class EnergyType : std::uint8_t {
-        Grass,
-        Fire,
-        Water,
-        Lightning,
-        Psychic,
-        Fighting,
-        Darkness,
-        Metal,
-        Fairy,
-        Dragon,
-        Colorless
-    };
-
-    enum class CardKind : std::uint8_t {
-        Pokemon,
-        Trainer,
-        Energy
-    };
-    enum class Stage : std::uint8_t {
-        None,
-        Basic,
-        Stage1,
-        Stage2
-    };
-    enum class TrainerKind : std::uint8_t {
-        None,
-        Item,
-        Supporter,
-        Stadium,
-        Tool
-    };
-    enum class EnergyKind : std::uint8_t {
-        None,
-        Basic,
-        Special
-    };
-    enum class DamageMod : std::uint8_t {
-        None,
-        Plus,
-        Minus,
-        Times
-    };
-
-    class CardDataError : public std::runtime_error {
-    public:
-        using std::runtime_error::runtime_error;
-    };
 
     struct Weakness {
         EnergyType type = EnergyType::Colorless;
@@ -83,6 +32,7 @@ namespace pokebot {
         DamageMod damage_mod = DamageMod::None;
         std::string text;
         nlohmann::json effects = nlohmann::json::array();
+        Program program;
     };
 
     struct CardRules {
@@ -122,6 +72,7 @@ namespace pokebot {
 
     std::string_view to_string(EnergyType type);
     EnergyType energy_type_from_string(std::string_view name);
+    CardKind card_card_from_string(std::string_view name);
 
     void to_json(nlohmann::json& j, const CardDef& card);
     void from_json(const nlohmann::json& j, CardDef& card);

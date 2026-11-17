@@ -27,6 +27,7 @@ namespace pokebot {
         void set_winner(GameState& game, int player) {
             game.result = player == 0 ? GameResult::Player0Wins : GameResult::Player1Wins;
             game.pending.clear();
+            game.effects.clear();
         }
 
         PokemonInPlay new_pokemon(CardIndex card, std::uint16_t turn) {
@@ -106,6 +107,8 @@ namespace pokebot {
             detail::add_promote_actions(game, actions);
         } else if (kind == DecisionKind::ExtraAttack) {
             detail::add_extra_attack_actions(game, actions);
+        } else if (detail::is_effect_decision(kind)) {
+            detail::add_effect_choice_actions(game, actions);
         } else {
             throw std::logic_error("unknown decision");
         }
@@ -131,6 +134,8 @@ namespace pokebot {
             detail::apply_retreat_discard(game, action);
         } else if (kind == DecisionKind::PromoteActive) {
             detail::apply_promote(game, action);
+        } else if (detail::is_effect_decision(kind)) {
+            detail::add_effect_choice_actions(game, action);
         } else {
             throw std::logic_error("unknown decision");
         }

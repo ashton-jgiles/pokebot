@@ -68,6 +68,7 @@ namespace pokebot {
                 } else {
                     game.result = GameResult::Draw;
                     game.pending.clear();
+                    game.effects.clear();
                 }
             }
 
@@ -134,9 +135,13 @@ namespace pokebot {
             ++game.flags.attacks_used;
             game.history.this_turn().attacker = who.self;
             game.history.this_turn().attack = attack;
+            start_effect(game, who, ProgramRef{attack.text_from, ProgramKind::Attack, attack.index}, AfterEffect::FinishAttack);
             perform_attack(game, who, attack);
-            raise(game, Event{EventKind::AttackDone, player, who.self, kNoCard});
+        }
 
+        void finish_attack(GameState& game, const EffectContext& who) {
+            const std::uint8_t player = who.player;
+            raise(game, Event{EventKind::AttackDone, player, who.self, kNoCard});
             const PokemonInPlay* still_active = game.player(player).active ? &*game.player(player).active : nullptr;
             if (still_active != nullptr && still_active->id() == who.self &&
                 game.flags.attacks_used < rules::attacks_per_turn(game, *still_active)) {
@@ -149,6 +154,10 @@ namespace pokebot {
         }
 
         void perform_attack(GameState& game, const EffectContext& who, AttackRef attack) {
+            start_effect(game, who, ProgramRef{attack.text_from, ProgramKind::Attack, attack.index}, AfterEffect::Nothing);
+        }
+
+        void deal_attack_damage(GameState& game, const EffectContext& who, AttackRef attack) {
             const PokemonInPlay* attacker = find_pokemon(game, who.self);
             PlayerState& opponent = game.player(opponent_of(who.player));
             if (attacker == nullptr || !opponent.active) {

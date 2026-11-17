@@ -82,7 +82,7 @@ namespace pokebot {
                     }
                 }
                 const CardDef& top = game_.def(pokemon.top());
-                if (rules::is_knocked_out(game_, pokemon)) {
+                if (game_.effects.empty() && rules::is_knocked_out(game_, pokemon)) {
                     fail(where + " (" + top.name + ") has " + std::to_string(pokemon.damage_counters * 10) + " damage on " +
                          std::to_string(rules::max_hp(game_, pokemon)) + " HP and should have been Knocked Out");
                 }
@@ -115,8 +115,8 @@ namespace pokebot {
 
             void check_decisions() {
                 if (game_.is_over()) {
-                    if (!game_.pending.empty()) {
-                        fail("the game is over but a decision is still pending");
+                    if (!game_.pending.empty() || !game_.effects.empty()) {
+                        fail("the game is over but a decision or effect is still pending");
                     }
                     return;
                 }
@@ -130,6 +130,10 @@ namespace pokebot {
                     }
                 }
                 const Decision& decision = game_.decision();
+                const bool effect_decision = decision.kind == DecisionKind::ChooseCards || decision.kind == DecisionKind::ChoosePokemon || decision.kind == DecisionKind::ChooseYesNo;
+                if (effect_decision && game_.effects.empty()) {
+                    fail("an effect's decision is pending but no effect is running");
+                }
                 if ((decision.kind == DecisionKind::MainPhase || decision.kind == DecisionKind::ExtraAttack) &&
                     (decision.player != game_.current_player || game_.phase != TurnPhase::Main)) {
                     fail("a main-phase decision for a player whose turn it isn't, or outside the main phase");

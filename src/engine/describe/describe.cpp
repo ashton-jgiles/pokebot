@@ -60,6 +60,12 @@ namespace pokebot {
                     return "choose a new Active Pokemon";
                 case DecisionKind::ExtraAttack:
                     return "attack again or end the turn";
+                case DecisionKind::ChooseCards:
+                    return "choose cards for an effect";
+                case DecisionKind::ChoosePokemon:
+                    return "choose a Pokemon for an effect";
+                case DecisionKind::ChooseYesNo:
+                    return "decide whether to use an effect";
             }
             return "unknown decision";
         }
@@ -122,6 +128,16 @@ namespace pokebot {
                 return "discard " + card();
             case ActionKind::Promote:
                 return "promote " + slot_name(game, player, action.target);
+            case ActionKind::ChooseCard:
+                return "choose " + card();
+            case ActionKind::ChooseDone:
+                return "stop choosing";
+            case ActionKind::ChoosePokemon:
+                return "choose " + slot_name(game, player, action.target);
+            case ActionKind::AnswerYes:
+                return "yes";
+            case ActionKind::AnswerNo:
+                return "no";
         }
         return "unknown action";
     }

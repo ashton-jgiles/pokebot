@@ -67,6 +67,10 @@ namespace pokebot {
         return parse_enum<EnergyType>(kEnergyTypes, name, "energy type");
     }
 
+    CardKind card_kind_from_string(std::string_view name) {
+        return parse_enum<CardKind>(kCardKinds, name, "card kind");
+    }
+
     int CardDef::prize_value() const {
         if (rules.ex && rules.mega) {
             return 3;

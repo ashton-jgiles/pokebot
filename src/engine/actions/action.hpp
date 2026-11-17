@@ -33,6 +33,11 @@ namespace pokebot {
         // decision answers
         DiscardEnergy,
         Promote,
+        ChooseCard,
+        ChooseDone,
+        ChoosePokemon,
+        AnswerYes,
+        AnswerNo,
     };
 
     struct Action {

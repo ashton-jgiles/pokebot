@@ -92,6 +92,9 @@ namespace pokebot {
         RetreatDiscard,
         PromoteActive,
         ExtraAttack,
+        ChooseCards,
+        ChoosePokemon,
+        ChooseYesNo,
     };
 
     struct Decision {
@@ -116,6 +119,34 @@ namespace pokebot {
         CardIndex source = kNoCard;
 
         bool operator==(const EffectContext&) const = default;
+    };
+
+    enum class ProgramKind : std::uint8_t {
+        Attack,
+    };
+
+    struct ProgramRef {
+        CardIndex card = kNoCard;
+        ProgramKind kind = ProgramKind::Attack;
+        std::uint8_t index = 0;
+
+        bool operator==(const ProgramRef&) const = default;
+    };
+
+    enum class AfterEffect : std::uint8_t {
+        Nothing,
+        FinishAttack,
+    };
+
+    struct EffectRun {
+        EffectContext who;
+        ProgramRef program;
+        AfterEffect then = AfterEffect::Nothing;
+        std::uint8_t pc = 0;
+        FixedVector<CardIndex, kDeckSize> chosen;
+        CardIndex chosen_pokemon = kNoCard;
+
+        bool operator==(const EffectRun&) const = default;
     };
 
     struct TurnRecord {
@@ -162,6 +193,7 @@ namespace pokebot {
         TurnFlags flags;
         GameHistory history;
         FixedVector<Decision, 8> pending;
+        FixedVector<EffectRun, 4> effects;
         Rng rng;
         GameResult result = GameResult::Ongoing;
 
