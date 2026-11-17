@@ -84,6 +84,25 @@ namespace pokebot {
             throw CardDataError("unknown Trainer kind '" + kind + "'");
         }
 
+        SpecialCondition special_condition_of(const std::string& name) {
+            if (name == "asleep") {
+                return SpecialCondition::Asleep;
+            }
+            if (name == "burned") {
+                return SpecialCondition::Burned;
+            }
+            if (name == "confused") {
+                return SpecialCondition::Confused;
+            }
+            if (name == "paralyzed") {
+                return SpecialCondition::Paralyzed;
+            }
+            if (name == "poisoned") {
+                return SpecialCondition::Poisoned;
+            }
+            throw CardDataError("unknown Special Condition '" + name + "'");
+        }
+
         CardFilter parse_filter_fields(const json& fields) {
             CardFilter filter;
             for (const auto& [key, value] : fields.items()) {
@@ -274,6 +293,13 @@ namespace pokebot {
                         throw CardDataError("switch_active is for \"you\" or \"opponent\"");
                     }
                     switch_active(side);
+                } else if (op == "special_condition") {
+                    Step apply;
+                    apply.op = Op::ApplySpecialCondition;
+                    apply.special = special_condition_of(block.at("condition").get<std::string>());
+                    apply.side = block.contains("player") ? side_of(block) : Side::Opponent;
+                    apply.max = count_of(block, 1);
+                    add(apply);
                 } else if (op == "may") {
                     const std::size_t ask = program.size();
                     add(Op::AskYesNo);
@@ -423,6 +449,8 @@ namespace pokebot {
                 return "jump unless";
             case Op::Jump:
                 return "jump";
+            case Op::ApplySpecialCondition:
+                return "apply Special Condition";
         }
         return "unknown op";
     }

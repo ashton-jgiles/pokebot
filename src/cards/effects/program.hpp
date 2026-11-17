@@ -40,6 +40,7 @@ namespace pokebot {
         AskYesNo,
         JumpUnless,
         Jump,
+        ApplySpecialCondition,
     };
 
     enum class StageFilter : std::uint8_t {
@@ -87,6 +88,7 @@ namespace pokebot {
         Side side = Side::You;
         CardFilter filter;
         Condition condition;
+        SpecialCondition special = SpecialCondition::Poisoned;
         std::uint8_t jump = 0;
     };
 

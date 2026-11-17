@@ -29,6 +29,13 @@ namespace pokebot {
             if (!pokemon.energy.empty()) {
                 text += " [" + card_list(game, pokemon.energy) + "]";
             }
+            const SpecialConditions& special = pokemon.special;
+            const std::pair<bool, const char*> names[] = {{special.asleep, "Asleep"}, {special.burned, "Burned"}, {special.confused, "Confused"}, {special.paralyzed, "Paralyzed"}, {special.poison > 0, "Poisoned"}};
+            for (const auto& [has, name] : names) {
+                if (has) {
+                    text += std::string(" (") + name + ")";
+                }
+            }
             return text;
         }
 

@@ -1,0 +1,1 @@
+{"attacks": {"Mind Bend": {"effects": [{"op": "special_condition", "condition": "confused"}]}}}

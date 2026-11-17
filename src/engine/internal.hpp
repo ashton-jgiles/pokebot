@@ -63,6 +63,12 @@ namespace pokebot::detail {
     void add_extra_attack_actions(const GameState& game, std::vector<Action>& out);
     void apply_promote(GameState& game, const Action& action);
 
+    // conditions.cpp
+    void apply_special_condition(GameState& game, PokemonInPlay& pokemon, SpecialCondition condition, int poison_counters);
+    void clear_special_conditions(PokemonInPlay& pokemon);
+    void special_conditions_checkup(GameState& game);
+    bool confusion_stops_attack(GameState& game, PokemonInPlay& attacker);
+
     // effects/interpreter.cpp
     bool is_effect_decision(DecisionKind kind);
     bool condition_holds(const GameState& game, int player, const Condition& condition, CardIndex playing);

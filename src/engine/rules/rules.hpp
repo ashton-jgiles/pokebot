@@ -23,6 +23,10 @@ namespace pokebot::rules {
     EnergyList attack_cost(const GameState& game, const PokemonInPlay& pokemon, std::size_t attack);
     EnergyList energy_provided(const GameState& game, const PokemonInPlay& pokemon, CardIndex energy);
     int prize_value(const GameState& game, const PokemonInPlay& pokemon);
+    bool is_active(const GameState& game, const PokemonInPlay& pokemon);
+    bool can_get_special_condition(const GameState& game, const PokemonInPlay& pokemon, SpecialCondition condition);
+    int poison_counters(const GameState& game, const PokemonInPlay& pokemon);
+    int burn_counters(const GameState& game, const PokemonInPlay& pokemon);
 
     // What a player may do this turn. Turn 1 is the first player's first turn, turn 2 the second player's
     bool is_first_turn(const GameState& game);

@@ -127,7 +127,7 @@ namespace pokebot {
 
         void apply_attack(GameState& game, const Action& action) {
             const auto player = static_cast<std::uint8_t>(game.current_player);
-            const PokemonInPlay& attacker = *game.player(player).active;
+            PokemonInPlay& attacker = *game.player(player).active;
             const EffectContext who{player, attacker.id(), attacker.top()};
             const AttackRef attack{attacker.top(), action.amount};
 
@@ -135,6 +135,10 @@ namespace pokebot {
             ++game.flags.attacks_used;
             game.history.this_turn().attacker = who.self;
             game.history.this_turn().attack = attack;
+            if (confusion_stops_attack(game, attacker)) {
+                finish_attack(game, who);
+                return;
+            }
             start_effect(game, who, ProgramRef{attack.text_from, ProgramKind::Attack, attack.index}, AfterEffect::FinishAttack);
         }
 

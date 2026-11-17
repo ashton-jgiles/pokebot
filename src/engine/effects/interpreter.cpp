@@ -130,6 +130,7 @@ namespace pokebot {
                     if (benched.id() == run.chosen_pokemon) {
                         const CardIndex leaving = p.active->id();
                         std::swap(*p.active, benched);
+                        clear_special_conditions(benched);
                         raise(game, Event{EventKind::MovedToBench, static_cast<std::uint8_t>(player), leaving, kNoCard});
                         return;
                     }
@@ -194,6 +195,14 @@ namespace pokebot {
                     case Op::Jump:
                         run.pc = step.jump;
                         return true;
+                    case Op::ApplySpecialCondition:
+                        for (const int player : players_on(step.side, run.who.player)) {
+                            PlayerState& target = game.player(player);
+                            if (target.active) {
+                                apply_special_condition(game, *target.active, step.special, step.max);
+                            }
+                        }
+                        break;
                 }
                 ++run.pc;
                 return true;

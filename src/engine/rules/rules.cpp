@@ -88,6 +88,23 @@ namespace pokebot::rules {
         return game.def(pokemon.top()).prize_value();
     }
 
+    bool is_active(const GameState& game, const PokemonInPlay& pokemon) {
+        const PlayerState& p = game.player(owner_of(pokemon.id()));
+        return p.active && p.active->id() == pokemon.id();
+    }
+
+    bool can_get_special_condition(const GameState& game, const PokemonInPlay& pokemon, SpecialCondition) {
+        return is_active(game, pokemon);
+    }
+
+    int poison_counters(const GameState&, const PokemonInPlay& pokemon) {
+        return pokemon.special.poison;
+    }
+
+    int burn_counters(const GameState&, const PokemonInPlay&) {
+        return 2;
+    }
+
     bool is_first_turn(const GameState& game) {
         return game.turn <= 2;
     }
@@ -102,11 +119,12 @@ namespace pokebot::rules {
 
     bool can_retreat(const GameState& game, int player) {
         const PlayerState& p = game.player(player);
-        return !game.flags.retreated && p.active && !p.bench.empty();
+        return !game.flags.retreated && p.active && !p.bench.empty() && !p.active->special.asleep && !p.active->special.paralyzed;
     }
 
     bool can_attack(const GameState& game, int player) {
-        return game.turn != 1 && game.player(player).active.has_value();
+        const PlayerState& p = game.player(player);
+        return game.turn != 1 && game.player(player).active.has_value() && !p.active->special.asleep && !p.active->special.paralyzed;
     }
 
     bool can_play_item(const GameState&, int) {

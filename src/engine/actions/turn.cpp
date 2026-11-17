@@ -8,6 +8,7 @@ namespace pokebot {
 
             void pokemon_checkup(GameState& game) {
                 raise(game, Event{EventKind::Checkup, game.current_player, kNoCard, kNoCard});
+                special_conditions_checkup(game);
             }
 
         } // namespace

@@ -110,9 +110,16 @@ namespace pokebot {
                     fail(who + "card is still being played but no effect is running");
                 }
                 if (player.active) {
+                    const SpecialConditions& special = player.active->special;
+                    if (special.asleep + special.confused + special.paralyzed > 1) {
+                        fail(who + "Active Pokemon has more than one of Asleep, Confused and Paralyzed");
+                    }
                     check_pokemon(*player.active, p, who + "Active Pokemon");
                 }
                 for (std::size_t i = 0; i < player.bench.size(); ++i) {
+                    if (player.bench[i].special.any()) {
+                        fail(who + "Bench " + std::to_string(i + 1) + " has a Special Condition, but only the Active Pokemon can");
+                    }
                     check_pokemon(player.bench[i], p, who + "Bench " + std::to_string(i + 1));
                 }
             }

@@ -24,6 +24,7 @@ add_executable(pokebot_tests
   test_effect_program.cpp
   test_engine_effects.cpp
   test_engine_trainers.cpp
+  test_engine_conditions.cpp
   test_invariants.cpp
   test_agents.cpp
   test_stress.cpp

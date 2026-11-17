@@ -42,6 +42,15 @@ namespace pokebot {
         Basic,
         Special
     };
+
+    enum class SpecialCondition : std::uint8_t {
+        Asleep,
+        Burned,
+        Confused,
+        Paralyzed,
+        Poisoned,
+    };
+
     enum class DamageMod : std::uint8_t {
         None,
         Plus,

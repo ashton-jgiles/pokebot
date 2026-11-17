@@ -15,6 +15,7 @@ add_library(pokebot_lib
   engine/actions/turn.cpp
   engine/actions/main_actions.cpp
   engine/actions/combat.cpp
+  engine/actions/conditions.cpp
   engine/invariants/invariants.cpp
   engine/describe/describe.cpp
   agents/random_agent.cpp

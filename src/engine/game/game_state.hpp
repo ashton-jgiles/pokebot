@@ -41,12 +41,26 @@ namespace pokebot {
         std::array<const CardDef*, kMaxCards> defs_{};
     };
 
+    struct SpecialConditions {
+        bool asleep = false;
+        bool paralyzed = false;
+        bool burned = false;
+        bool confused = false;
+        std::uint8_t poison = 0;
+        std::uint16_t paralyzed_turn = 0;
+
+        bool any() const { return asleep || paralyzed || burned || confused || poison > 0; }
+
+        bool operator==(const SpecialConditions&) const = default;
+    };
+
     struct PokemonInPlay {
         FixedVector<CardIndex, kMaxEvolutionStack> stack;
         FixedVector<CardIndex, kDeckSize> energy;
         CardIndex tool = kNoCard;
         std::uint16_t damage_counters = 0;
         std::uint16_t turn_played = 0;
+        SpecialConditions special;
 
         CardIndex id() const { return stack.front(); }
         CardIndex top() const { return stack.back(); }

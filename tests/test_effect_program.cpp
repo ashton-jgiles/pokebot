@@ -185,3 +185,16 @@ TEST_CASE("filters match Trainer kind, stage, Rule Box, HP and any of several", 
     CHECK(matches(pokemon_or_energy, energy));
     CHECK_FALSE(matches(pokemon_or_energy, item));
 }
+
+TEST_CASE("special_condition targets the opponent unless told otherwise", "[effects]") {
+    const auto program = compile_attack(json::parse(
+        R"([{"op": "special_condition", "condition": "asleep"}, {"op": "special_condition", "condition": "poisoned", "count": 4, "player": "you"}])"));
+    REQUIRE(ops(program) == std::vector<Op>{Op::Damage, Op::ApplySpecialCondition, Op::ApplySpecialCondition});
+    CHECK(program[1].special == pokebot::SpecialCondition::Asleep);
+    CHECK(program[1].side == pokebot::Side::Opponent);
+    CHECK(program[2].special == pokebot::SpecialCondition::Poisoned);
+    CHECK(program[2].max == 4);
+    CHECK(program[2].side == pokebot::Side::You);
+    CHECK_THROWS_AS(compile_attack(json::parse(R"([{"op": "special_condition", "condition": "sleepy"}])")), CardDataError);
+    CHECK_THROWS_AS(compile_attack(json::parse(R"([{"op": "special_condition"}])")), CardDataError);
+}
