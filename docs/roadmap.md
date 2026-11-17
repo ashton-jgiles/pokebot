@@ -7,8 +7,8 @@ The milestone plan from the project proposal, with the current status of each.
 |---|---|---|
 | M0 | Project setup | ✅ Done |
 | M1 | Card data, decklist parser, deck validator | ✅ Done |
-| M2 | Basic engine | ⬜ Next |
-| M3 | Effects system and all cards in both decks | ⬜ Not started |
+| M2 | Basic engine | ✅ Done |
+| M3 | Effects system and all cards in both decks | ⬜ Next |
 | M4 | Observation layer, command-line client, replays | ⬜ Not started |
 | M5 | Greedy agent, match harness, profiling | ⬜ Not started |
 | M6 | Model 1: turn planner (or-tree and and-tree modes) | ⬜ Not started |
@@ -46,11 +46,27 @@ Random → Greedy → Planner → Flat MC → IS-MCTS → IS-MCTS + endgame solv
 
 All four decks validate as legal, and deliberately illegal decks are rejected with every problem listed.
 
-## M2 — Basic engine ⬜
+## M2 — Basic engine ✅
 
-Setup and mulligans, turn structure, benching, Energy attachment, evolution, retreat, attacks
-that only deal damage, Knock Outs and Prize cards, and win conditions.
 **Done when:** 100,000 random-vs-random games run with no crashes or broken invariants.
+
+The core rules engine (`src/engine`): setup and mulligans, the turn loop, benching, evolving,
+attaching Energy, retreating, attacks with Weakness and Resistance, Knock Outs, Prize cards (1 / 2 for ex /
+3 for Mega ex), promoting a new Active, and every way to win, including both players winning at once.
+Card *effects* are not included: attacks deal their printed damage only, and Trainers can't be played yet.
+
+**Sign-off run (2026-11-16):** `pokebot-sim --games 100000 --agent biased` on all four decks, with the
+invariant checker after every action (about 10 million actions): **no problems found, every game finished.**
+
+| Measure | Result |
+|---|---|
+| How games ended (biased random agents) | Prize cards 38.7%, no Pokémon left 19.6%, deck-out 41.6%, draws 0 |
+| Speed, release build, no checks | about 10,000 games/s, 1 million actions/s |
+| Speed, release build, checking every action | about 4,100 games/s |
+| Player who went first won | 31.6% of decided games (they can't attack on turn 1) |
+
+Tools added: `pokebot-sim` (run many games, or `--print` one game move by move), random and biased random
+agents, the invariant checker, and text descriptions of any state or action.
 
 ## M3 — Effects system ⬜
 

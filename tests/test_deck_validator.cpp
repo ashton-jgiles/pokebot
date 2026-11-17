@@ -60,13 +60,6 @@ namespace {
         db.add(item("TST-5", "Other Box", true));
         db.add(basic_energy("TST-6", "Darkness Energy"));
         db.add(pokemon("TST-7", "Testmon", Stage::Basic));
-
-        CardDef radiant_a = pokemon("TST-8", "Radiant Alpha", Stage::Basic);
-        radiant_a.rules.radiant = true;
-        db.add(radiant_a);
-        CardDef radiant_b = pokemon("TST-9", "Radiant Beta", Stage::Basic);
-        radiant_b.rules.radiant = true;
-        db.add(radiant_b);
         return db;
     }
 
@@ -133,16 +126,6 @@ TEST_CASE("at most one ACE SPEC card", "[deck_validator]") {
     const auto v = validate_deck(deck, sample_db());
     REQUIRE(v.problems.size() == 1);
     CHECK(mentions(v, "2 ACE SPEC cards (Test Box, Other Box)"));
-}
-
-TEST_CASE("at most one Radiant Pokemon", "[deck_validator]") {
-    auto deck = legal_deck();
-    deck.entries.push_back(entry(1, 8));
-    deck.entries.push_back(entry(1, 9));
-    deck.entries[4].count = 45;
-    const auto v = validate_deck(deck, sample_db());
-    REQUIRE(v.problems.size() == 1);
-    CHECK(mentions(v, "2 Radiant Pokemon"));
 }
 
 TEST_CASE("unknown cards are reported with a hint", "[deck_validator]") {

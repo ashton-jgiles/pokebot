@@ -37,7 +37,6 @@ Conversion convert_card(const nlohmann::json& tcgdex, const std::string& our_id)
 | `attacks[].effect` | `text` | |
 | `suffix: "ex"` | `rules.ex` | |
 | name starts with `Mega ` (and ex) | `rules.mega` | 3 Prize cards |
-| name starts with `Radiant ` | `rules.radiant` | |
 | `trainerType` | `trainer_kind` | `Item`, `Supporter`, `Stadium`, `Tool` |
 | `rarity: "ACE SPEC Rare"` | `rules.ace_spec` | Trainers and Special Energy |
 | `energyType: "Normal"`, no `effect` text | `energy_kind = Basic` | type from the name: `"Darkness Energy"` → Darkness |

@@ -30,7 +30,9 @@ single run reports **all** of them.
 | At most 4 cards with the same **name**, except Basic Energy | p. 21–22 | `5 cards named "Ultra Ball"; at most 4 are allowed` |
 | At least 1 Basic Pokémon | p. 22 | `no Basic Pokemon; a deck needs at least 1` |
 | At most 1 ACE SPEC card in total | p. 26 | `2 ACE SPEC cards (Unfair Stamp, Secret Box); at most 1 is allowed` |
-| At most 1 Radiant Pokémon | p. 29 | `2 Radiant Pokemon (Radiant Alpha, Radiant Beta); at most 1 is allowed` |
+
+The rulebook's limit of 1 Radiant Pokémon (p. 29) isn't checked: Radiant Pokémon are no longer
+legal in the Standard format, and the card format doesn't represent them.
 
 ## Details
 

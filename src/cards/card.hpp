@@ -90,7 +90,6 @@ namespace pokebot {
         bool mega = false;
         bool tera = false;
         bool ace_spec = false;
-        bool radiant = false;
     };
 
     struct CardDef {

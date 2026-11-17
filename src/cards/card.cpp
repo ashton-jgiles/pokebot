@@ -90,9 +90,6 @@ namespace pokebot {
         if (c.rules.ace_spec) {
             rules.push_back("ace_spec");
         }
-        if (c.rules.radiant) {
-            rules.push_back("radiant");
-        }
         j["rules"] = rules;
 
         if (c.kind == CardKind::Pokemon) {
@@ -154,8 +151,6 @@ namespace pokebot {
                     c.rules.tera = true;
                 } else if (rule == "ace_spec") {
                     c.rules.ace_spec = true;
-                } else if (rule == "radiant") {
-                    c.rules.radiant = true;
                 } else {
                     throw CardDataError("unknown rule '" + rule + "'");
                 }
