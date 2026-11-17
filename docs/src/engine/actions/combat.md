@@ -37,8 +37,9 @@ counts until their effects are written (Milestone 3).
 
 1. Removes the `MainPhase` (or `ExtraAttack`) decision and counts the attack in `flags.attacks_used`.
 2. Records the attacker and attack in [history](../game/game_state.md#gamehistory).
-3. Calls `perform_attack`, then raises `AttackDone`.
-4. If the same Pokémon is still Active and `rules::attacks_per_turn` allows another attack, pushes an
+3. Starts the attack's [effect program](../effects/interpreter.md) with `then = FinishAttack`. Its
+   `Damage` step calls `deal_attack_damage`. The program may stop for choices.
+4. **`finish_attack`**, once the whole effect is done: raises `AttackDone`. If the same Pokémon is still Active and `rules::attacks_per_turn` allows another attack, pushes an
    `ExtraAttack` decision. Otherwise **the turn ends**: the phase becomes `AfterMain`.
 5. Resolves Knock Outs and runs [`continue_game`](turn.md#continue_game).
 
@@ -49,10 +50,12 @@ Pokémon whose id is in `decision.target` only, plus `EndTurn`.
 
 ## Using an attack's text: `perform_attack(game, who, attack)`
 
-Deals the damage of `rules::attack_text(game, attack)` with `who.self` as the attacker, and raises
-`DamagedByAttack` when the damage is above 0. It doesn't check or pay a cost. `apply_attack` calls it
-for an ordinary attack; a copy attack's effect will call it with another card's `AttackRef`, which
-is why the copied attack's own cost is never paid. Attack effects will run here too.
+Runs the effect program of the attack `attack` names, with `who.self` as the attacker. It doesn't
+check or pay a cost: a copy attack will call it with another card's `AttackRef`, which is why the
+copied attack's own cost is never paid.
+
+`deal_attack_damage(game, who, attack)` is the `Damage` step: the attack's damage to the opponent's
+Active, with `who.self` as the attacker, raising `DamagedByAttack` when it's above 0.
 
 ## Knock Outs: `handle_knockouts(game)`
 

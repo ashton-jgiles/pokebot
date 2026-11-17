@@ -58,6 +58,7 @@ TEST_CASE("mistakes in an effects list are rejected", "[effects]") {
     CHECK_THROWS_AS(compile_attack(json::parse(R"([{"op": "search_deck", "filter": {"colour": "red"}}])")), CardDataError);
     CHECK_THROWS_AS(compile_attack(json::parse(R"([{"op": "draw", "count": 99}])")), CardDataError);
     CHECK_THROWS_AS(compile_attack(json::parse(R"({"op": "draw"})")), CardDataError);
+    CHECK_THROWS_AS(compile_attack(json::parse(R"([{"op": "draw", "count": "three"}])")), CardDataError);
 }
 
 TEST_CASE("filters match kind, type, Basic and name", "[effects]") {

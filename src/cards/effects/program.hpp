@@ -54,5 +54,5 @@ namespace pokebot {
     bool matches(const CardFilter& filter, const CardDef& card);
     Program compile_attack(const nlohmann::json& effects);
     const char* to_string(Op op);
-    
-} //namespace pokebot
+
+} // namespace pokebot

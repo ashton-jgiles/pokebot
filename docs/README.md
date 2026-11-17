@@ -33,6 +33,7 @@ see the engine through `legal_actions` and `apply`.
 | `src/core` | [decklist.md](src/core/decklist.md) | Decklist parser |
 | `src/cards` | [card.md](src/cards/card/card.md) | `CardDef`, enums, card JSON |
 | | [card_db.md](src/cards/db/card_db.md) | Card database, effects-file merging |
+| | [program.md](src/cards/effects/program.md) | The effect language: building blocks, filters, steps |
 | | [deck_validator.md](src/cards/validator/deck_validator.md) | Deck-building rules |
 | `src/engine` | [README.md](src/engine/README.md) | **Start here for the engine:** how it works, decisions, turn phases |
 | | [game_state.md](src/engine/game/game_state.md) | `GameState`, `CardTable`, Pokémon in play, decisions |
@@ -44,6 +45,7 @@ see the engine through `legal_actions` and `apply`.
 | | [combat.md](src/engine/actions/combat.md) | Attacks, damage, Knock Outs, Prize cards, winning |
 | | [rules.md](src/engine/rules/rules.md) | The questions cards can change: HP, costs, damage, turn limits |
 | | [events.md](src/engine/events/events.md) | Moments cards react to, the event hook |
+| | [interpreter.md](src/engine/effects/interpreter.md) | Running effects and their choices |
 | | [invariants.md](src/engine/invariants/invariants.md) | Consistency checker |
 | | [describe.md](src/engine/describe/describe.md) | States and actions as text |
 | | [fixed_vector.md](src/engine/shared/fixed_vector.md), [rng.md](src/engine/shared/rng.md) | Fixed-capacity list, seeded RNG |

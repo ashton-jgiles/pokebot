@@ -22,9 +22,10 @@ for.
 | Its bottom card is a Basic Pokémon | `player 1's Active Pokemon doesn't start with a Basic Pokemon: …` |
 | Each evolution matches the card below it by name | `…: Testmon doesn't evolve from Testmon` |
 | Only Energy cards are attached as Energy | `… has a non-Energy card attached as Energy: …` |
-| No Pokémon has damage ≥ its HP (it should have been Knocked Out) | `… has 990 damage on 60 HP and should have been Knocked Out` |
+| No Pokémon has damage ≥ its HP (it should have been Knocked Out), except while an effect is still running | `… has 990 damage on 60 HP and should have been Knocked Out` |
 | A game in progress has a decision pending, for player 0 or 1 | `the game isn't over but no decision is pending` |
-| A finished game has no pending decisions | `the game is over but a decision is still pending` |
+| A finished game has no pending decisions or effects | `the game is over but a decision or effect is still pending` |
+| An effect's decision has an effect running | `an effect's decision is pending but no effect is running` |
 | A main-phase decision is the current player's, during the main phase | |
 | After setup, each player has an Active, unless they're choosing a new one | `player 0 has no Active Pokemon and isn't choosing one` |
 

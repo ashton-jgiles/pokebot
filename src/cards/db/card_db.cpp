@@ -85,7 +85,7 @@ namespace pokebot {
             try {
                 attack.program = compile_attack(attack.effects);
             } catch (const CardDataError& e) {
-                throw CardDataError(card.id + " attack '" + attack.name +"': " + e.what());
+                throw CardDataError(card.id + " attack '" + attack.name + "': " + e.what());
             }
         }
         const std::string id = card.id;

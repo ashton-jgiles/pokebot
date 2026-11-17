@@ -136,7 +136,6 @@ namespace pokebot {
             game.history.this_turn().attacker = who.self;
             game.history.this_turn().attack = attack;
             start_effect(game, who, ProgramRef{attack.text_from, ProgramKind::Attack, attack.index}, AfterEffect::FinishAttack);
-            perform_attack(game, who, attack);
         }
 
         void finish_attack(GameState& game, const EffectContext& who) {
@@ -157,15 +156,14 @@ namespace pokebot {
             start_effect(game, who, ProgramRef{attack.text_from, ProgramKind::Attack, attack.index}, AfterEffect::Nothing);
         }
 
-        void deal_attack_damage(GameState& game, const EffectContext& who, AttackRef attack) {
+        void deal_attack_damage(GameState& game, const EffectContext& who, const Attack& attack) {
             const PokemonInPlay* attacker = find_pokemon(game, who.self);
             PlayerState& opponent = game.player(opponent_of(who.player));
             if (attacker == nullptr || !opponent.active) {
                 return;
             }
-            const Attack& text = rules::attack_text(game, attack);
             PokemonInPlay& defender = *opponent.active;
-            const int damage = rules::attack_damage(game, *attacker, defender, text);
+            const int damage = rules::attack_damage(game, *attacker, defender, attack);
             defender.damage_counters = static_cast<std::uint16_t>(defender.damage_counters + damage / 10);
             if (damage > 0) {
                 raise(game, Event{EventKind::DamagedByAttack, static_cast<std::uint8_t>(opponent_of(who.player)), defender.id(), who.self});

@@ -135,7 +135,7 @@ namespace pokebot {
         } else if (kind == DecisionKind::PromoteActive) {
             detail::apply_promote(game, action);
         } else if (detail::is_effect_decision(kind)) {
-            detail::add_effect_choice_actions(game, action);
+            detail::apply_effect_choice(game, action);
         } else {
             throw std::logic_error("unknown decision");
         }

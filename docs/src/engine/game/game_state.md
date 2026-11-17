@@ -92,6 +92,13 @@ Special Conditions will be added in Milestone 3.
 A copied attack (N's Zoroark ex, Mew ex, Slowking) runs the other card's text with the copier as
 `self`, so the copier's type, Energy and Weakness interactions apply.
 
+## `EffectRun`
+
+An effect part way through: who it's for (`EffectContext`), which compiled program (`ProgramRef`:
+card, `ProgramKind`, index), what to do when it finishes (`AfterEffect`), the next step (`pc`), and
+the choices made so far (`chosen`, `chosen_pokemon`). `GameState::effects` stacks up to 4. See the
+[interpreter](../effects/interpreter.md).
+
 ## `GameHistory`
 
 Cards look back at earlier turns ("if any of your Pokémon were Knocked Out during your opponent's
@@ -138,6 +145,7 @@ same number of win conditions. The rulebook's tiebreaker game isn't modeled.
 | `flags` | `TurnFlags` for the current turn |
 | `history` | `GameHistory`: this turn and the two before |
 | `pending` | Stack of up to 8 open decisions; `back()` is decided first |
+| `effects` | Stack of up to 4 running effects ([`EffectRun`](#effectrun)) |
 | `rng` | The game's random number generator |
 | `result` | `GameResult` |
 
@@ -145,7 +153,7 @@ Helpers: `player(p)`, `def(card)`, `decision()` (the top of `pending`), `is_over
 
 A `static_assert` requires `GameState` to be **trivially copyable**. Adding a `std::vector` or
 `std::string` to it stops the build, because copying the state is how search explores the game.
-A whole game is **1,528 bytes**.
+A whole game is **1,816 bytes**.
 
 ## Tests
 

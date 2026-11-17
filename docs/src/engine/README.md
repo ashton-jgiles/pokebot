@@ -20,8 +20,8 @@ These are the formal model's *Legal* and *δ* (transition) functions.
 |---|---|
 | Setup: coin flip, opening hands, mulligans with bonus draws, Active/Bench, 6 Prize cards | Trainer cards (they stay in hand) |
 | Turn loop: draw, main phase, end of turn, Pokémon Checkup step | Abilities |
-| Benching, evolving, attaching Energy, retreating | Attack effects: attacks deal their printed damage only |
-| Attacks: Energy costs, Weakness, Resistance, damage | Special Conditions (Checkup runs, but does nothing yet) |
+| Benching, evolving, attaching Energy, retreating | Damage formulas, Bench damage and most other attack effects |
+| Attacks: Energy costs, Weakness, Resistance, damage, and [effects](effects/interpreter.md) (draw, search, switch, "you may"…) | Special Conditions (Checkup runs, but does nothing yet) |
 | Knock Outs, Prize cards (1 / 2 ex / 3 Mega ex), new Active | Special Energy: it can be attached but provides nothing |
 | Winning: Prize cards, no Pokémon left, deck-out, both at once | Tera bench protection, damage modifiers from effects |
 
@@ -54,6 +54,9 @@ the decision being made now.
 | `RetreatDiscard` | Current player | which Energy to discard for a Retreat Cost | [main actions](actions/main_actions.md) |
 | `PromoteActive` | Player whose Active was Knocked Out | a Benched Pokémon | [combat](actions/combat.md) |
 | `ExtraAttack` | Current player, after an attack when more are allowed | that Pokémon's attacks, or end the turn | [combat](actions/combat.md) |
+| `ChooseCards` | Whoever the effect belongs to | a matching card, or done | [interpreter](effects/interpreter.md) |
+| `ChoosePokemon` | Whoever the effect belongs to | a Benched Pokémon | [interpreter](effects/interpreter.md) |
+| `ChooseYesNo` | Whoever the effect belongs to | yes / no | [interpreter](effects/interpreter.md) |
 
 A decision can belong to the player whose turn it *isn't*. After a Knock Out, the opponent
 chooses their new Active.
@@ -106,6 +109,7 @@ bug can be replayed exactly.
 | `engine.hpp/.cpp`, `internal.hpp` | [engine.md](engine.md) | Public interface, dispatch, shared helpers |
 | `rules/rules.hpp/.cpp` | [rules.md](rules/rules.md) | Every rule a card can change, asked as a question |
 | `events/events.hpp/.cpp` | [events.md](events/events.md) | Moments cards react to, and the event hook |
+| `effects/interpreter.cpp` | [interpreter.md](effects/interpreter.md) | Runs effect programs, pausing for choices |
 | `setup/setup.cpp` | [setup.md](setup/setup.md) | `new_game`, mulligans, setup decisions |
 | `actions/turn.cpp` | [turn.md](actions/turn.md) | Starting and ending turns, `continue_game` |
 | `actions/main_actions.cpp` | [main_actions.md](actions/main_actions.md) | Bench, evolve, attach, retreat |

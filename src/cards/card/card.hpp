@@ -4,6 +4,7 @@
 #include <string_view>
 
 #include <nlohmann/json.hpp>
+
 #include "cards/card/card_types.hpp"
 #include "cards/effects/program.hpp"
 
@@ -72,7 +73,7 @@ namespace pokebot {
 
     std::string_view to_string(EnergyType type);
     EnergyType energy_type_from_string(std::string_view name);
-    CardKind card_card_from_string(std::string_view name);
+    CardKind card_kind_from_string(std::string_view name);
 
     void to_json(nlohmann::json& j, const CardDef& card);
     void from_json(const nlohmann::json& j, CardDef& card);

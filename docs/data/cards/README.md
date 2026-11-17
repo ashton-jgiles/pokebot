@@ -102,10 +102,8 @@ generated card when the card database loads (see [`merge_effects`](../../src/car
 {
   "rules": ["ex", "tera"],
   "attacks": {
-    "Phantom Dive": {
-      "effects": [
-        { "op": "place_damage_counters", "count": 6, "targets": "opponent_bench", "split": "any" }
-      ]
+    "Shinobi Blade": {
+      "effects": [{ "op": "may", "effects": [{ "op": "search_deck", "count": 1 }] }]
     }
   }
 }
@@ -133,8 +131,14 @@ TWM-130 Dragapult ex, TWM-106 Greninja ex, TWM-25 Teal Mask Ogerpon ex, PRE-27 W
 Ogerpon ex and ASC-121 Koraidon ex.
 - An effects file with no matching generated card is an error, which catches typos in file names.
 
-The `effects` contents aren't interpreted yet. The effect format gets designed in Milestone 3;
-until then, the importer reports how many attacks, abilities and cards still have none.
+Attack `effects` are lists of building blocks (`draw`, `search_deck`, `may`, …), listed with
+their fields in [the effect language](../../src/cards/effects/program.md). They're compiled when
+the cards load, so a typo is an error naming the card and attack. Ability, Trainer and Energy
+effects come in later Milestone 3 steps; the importer reports how many still have none.
+
+Attacks with effects so far: Froakie's Collect, Frogadier's Summoning Jutsu, Purrloin's Invite
+Evil, Greninja ex's Shinobi Blade, Raging Bolt ex's Burst Roar, Chien-Pao's Icicle Loop and
+Dunsparce's Trading Places.
 
 ## `raw/`
 

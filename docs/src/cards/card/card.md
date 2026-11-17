@@ -12,6 +12,10 @@ so on) will be part of the engine's game state in Milestone 2.
 
 ## Enums
 
+The enums and `CardDataError` are in [`card_types.hpp`](../../../../src/cards/card/card_types.hpp),
+which `card.hpp` includes. They're separate so the [effect language](../effects/program.md) can use
+them without including `card.hpp`.
+
 | Enum | Values | JSON spelling |
 |---|---|---|
 | `EnergyType` | Grass, Fire, Water, Lightning, Psychic, Fighting, Darkness, Metal, Fairy, Dragon, Colorless | lowercase, e.g. `"darkness"` |
@@ -53,7 +57,8 @@ attack text says how the final damage is worked out.
 | `damage` | Printed base damage (0 if none) |
 | `damage_mod` | `+`, `-` or `×` after the damage, if any |
 | `text` | Printed text, reference only |
-| `effects` | Engine-readable effects, hand-written in Milestone 3 |
+| `effects` | Engine-readable effects (JSON), from the effects file |
+| `program` | `effects` compiled into [steps](../effects/program.md), filled in by `CardDB::add` |
 
 ### `CardRules`
 
@@ -88,6 +93,7 @@ Derives from `std::runtime_error`. Thrown for any missing, misspelled or wrongly
 |---|---|
 | `std::string_view to_string(EnergyType)` | `EnergyType::Darkness` → `"darkness"` |
 | `EnergyType energy_type_from_string(std::string_view)` | `"darkness"` → `EnergyType::Darkness`. Throws `CardDataError` for unknown names |
+| `CardKind card_kind_from_string(std::string_view)` | `"pokemon"` → `CardKind::Pokemon`, likewise |
 | `void to_json(nlohmann::json&, const CardDef&)` | Writes our card JSON. Pokémon get the Pokémon fields; Trainers and Energy get `text` and `effects` |
 | `void from_json(const nlohmann::json&, CardDef&)` | Reads our card JSON. Throws `CardDataError` on missing required fields, unknown enum names or wrong types (e.g. `"hp": "200"`) |
 
