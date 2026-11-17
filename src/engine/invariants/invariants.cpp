@@ -103,7 +103,7 @@ namespace pokebot {
                 if (player.stadium != kNoCard) {
                     note(player.stadium, p, who + "stadium");
                     if (game_.def(player.stadium).trainer_kind != TrainerKind::Stadium) {
-                        fail(who + "Stadium in play isnt a stadium card");
+                        fail(who + "Stadium in play isn't a stadium card");
                     }
                 }
                 if (!game_.is_over() && !player.resolving.empty() && game_.effects.empty()) {

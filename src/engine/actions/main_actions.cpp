@@ -130,7 +130,7 @@ namespace pokebot {
                 finish_retreat(game, player, target);
             }
 
-                        bool effects_written(const CardDef& def) {
+            bool effects_written(const CardDef& def) {
                 return def.text.empty() || !def.effects.empty();
             }
 

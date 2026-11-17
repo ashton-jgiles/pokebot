@@ -113,7 +113,7 @@ namespace pokebot::rules {
         return true;
     }
 
-    bool can_player_supporter(const GameState& game, int) {
+    bool can_play_supporter(const GameState& game, int) {
         return !game.flags.supporter_played && game.turn != 1;
     }
 
@@ -122,7 +122,7 @@ namespace pokebot::rules {
         return !game.flags.stadium_played && (in_play == kNoCard || game.def(in_play).name != game.def(stadium).name);
     }
 
-    bool can_attach_tool(const GameState& game, const PokemonInPlay& pokemon) {
+    bool can_attach_tool(const GameState&, const PokemonInPlay& pokemon) {
         return pokemon.tool == kNoCard;
     }
 
@@ -134,7 +134,7 @@ namespace pokebot::rules {
         }
         return kNoCard;
     }
-    
+
     int attacks_per_turn(const GameState&, const PokemonInPlay&) {
         return 1;
     }

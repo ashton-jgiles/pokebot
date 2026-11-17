@@ -22,7 +22,7 @@ namespace pokebot {
     };
 
     enum class Side : std::uint8_t {
-        You, 
+        You,
         Opponent,
         Each,
     };
