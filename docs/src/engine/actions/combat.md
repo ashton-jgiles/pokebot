@@ -4,14 +4,14 @@
 
 ## Which attacks are legal
 
-`add_attack_actions` offers each attack of the Active Pokémon whose cost can be paid, except on
-**turn 1**: the player who goes first can't attack on their first turn (rulebook p. 13).
+`add_attack_actions` offers each attack of the Active Pokémon whose cost (`rules::attack_cost`) can
+be paid, as long as `rules::can_attack` allows it. The rulebook answer is no on **turn 1**: the player who goes first can't attack on their first turn (rulebook p. 13).
 
 ### `can_pay_cost(game, pokemon, cost)`
 
 - Each typed symbol needs an Energy of that type.
 - Each Colorless symbol takes any Energy left over.
-- Each Basic Energy provides one Energy of its type. Special Energy provides nothing until
+- Each Energy provides what `rules::energy_provided` says; a Basic Energy provides one of its type. Special Energy provides nothing until
   Milestone 3.
 
 Typed symbols are paid first, then the remainder must cover the Colorless ones. That greedy method
@@ -19,6 +19,8 @@ is exact while each Energy provides a single type; Energy that provides a choice
 need a proper matching.
 
 ## Damage: `attack_damage(game, attacker, defender, attack)`
+
+A thin wrapper over [`rules::attack_damage`](../rules/rules.md#the-damage-pipeline), which runs the stages below.
 
 Rulebook p. 20:
 
@@ -41,9 +43,9 @@ counts until their effects are written (Milestone 3).
 
 Runs after every attack and after every Pokémon Checkup (rulebook p. 14):
 
-1. Every Pokémon with damage ≥ its HP is **Knocked Out**: it and every attached card go to its
+1. Every Pokémon `rules::is_knocked_out` says is (damage ≥ its HP) is **Knocked Out**: it and every attached card go to its
    owner's discard pile.
-2. The opponent takes Prize cards: **1**, **2** for Pokémon ex, **3** for Mega Evolution Pokémon ex,
+2. The opponent takes `rules::prize_value` Prize cards: **1**, **2** for Pokémon ex, **3** for Mega Evolution Pokémon ex,
    or as many as remain. Prize cards are face down, so which ones are taken is random.
 3. **Check for a winner** (below). If the game is over, stop.
 4. Each player who lost their Active gets a `PromoteActive` decision. The opponent of the current

@@ -2,6 +2,8 @@
 
 #include <sstream>
 
+#include "engine/rules/rules.hpp"
+
 namespace pokebot {
 
     namespace {
@@ -23,7 +25,7 @@ namespace pokebot {
 
         std::string pokemon_summary(const GameState& game, const PokemonInPlay& pokemon) {
             const CardDef& def = game.def(pokemon.top());
-            std::string text = def.name + " " + std::to_string(def.hp - 10 * pokemon.damage_counters) + "/" + std::to_string(def.hp) + " HP";
+            std::string text = def.name + " " + std::to_string(rules::remaining_hp(game, pokemon)) + "/" + std::to_string(rules::max_hp(game, pokemon)) + " HP";
             if (!pokemon.energy.empty()) {
                 text += " [" + card_list(game, pokemon.energy) + "]";
             }

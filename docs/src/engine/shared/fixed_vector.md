@@ -17,6 +17,7 @@ Works like a small `std::vector`:
 
 | Member | Behavior |
 |---|---|
+| `FixedVector{a, b, c}` | Builds one from a list; throws `std::length_error` if it has more than `N` items |
 | `size()`, `empty()`, `full()`, `capacity()` | Sizes; `capacity()` is `N` |
 | `operator[]`, `front()`, `back()` | Element access (unchecked, like `std::vector`) |
 | `begin()`, `end()` | Range-for support |

@@ -4,14 +4,12 @@
 
 #include "engine/actions/action.hpp"
 #include "engine/game/game_state.hpp"
+#include "engine/rules/rules.hpp"
 
 namespace pokebot::detail {
 
     // check is basic pokemon
     bool is_basic_pokemon(const GameState& game, CardIndex card);
-
-    // turn 1 is the first players turn and turn 2 is the second players turn
-    bool is_first_turn(const GameState& game);
 
     // a pokemon put into play on turn 0 during setup
     PokemonInPlay new_pokemon(CardIndex card, std::uint16_t turn);
@@ -45,7 +43,7 @@ namespace pokebot::detail {
     void apply_retreat_discard(GameState& game, const Action& action);
 
     // combat.cpp
-    bool can_pay_cost(const GameState& game, const PokemonInPlay& pokemon, const std::vector<EnergyType>& cost);
+    bool can_pay_cost(const GameState& game, const PokemonInPlay& pokemon, const rules::EnergyList& cost);
     int attack_damage(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, const Attack& attack);
     void add_attack_actions(const GameState& game, std::vector<Action>& out);
     void apply_attack(GameState& game, const Action& action);

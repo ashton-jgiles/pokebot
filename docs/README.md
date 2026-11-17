@@ -42,6 +42,7 @@ see the engine through `legal_actions` and `apply`.
 | | [turn.md](src/engine/actions/turn.md) | Turn flow, `continue_game`, Pokémon Checkup |
 | | [main_actions.md](src/engine/actions/main_actions.md) | Bench, evolve, attach, retreat |
 | | [combat.md](src/engine/actions/combat.md) | Attacks, damage, Knock Outs, Prize cards, winning |
+| | [rules.md](src/engine/rules/rules.md) | The questions cards can change: HP, costs, damage, turn limits |
 | | [invariants.md](src/engine/invariants/invariants.md) | Consistency checker |
 | | [describe.md](src/engine/describe/describe.md) | States and actions as text |
 | | [fixed_vector.md](src/engine/shared/fixed_vector.md), [rng.md](src/engine/shared/rng.md) | Fixed-capacity list, seeded RNG |

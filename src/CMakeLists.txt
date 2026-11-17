@@ -7,6 +7,7 @@ add_library(pokebot_lib
   cards/validator/deck_validator.cpp
   engine/game/game_state.cpp
   engine/engine.cpp
+  engine/rules/rules.cpp
   engine/setup/setup.cpp
   engine/actions/turn.cpp
   engine/actions/main_actions.cpp

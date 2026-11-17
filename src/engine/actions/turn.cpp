@@ -45,7 +45,6 @@ namespace pokebot {
                         break;
                     default:
                         throw std::logic_error("continue_game: no decision is pending, but the turn isn't over");
-
                 }
             }
         }

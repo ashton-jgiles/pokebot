@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "engine/internal.hpp"
+#include "engine/rules/rules.hpp"
 
 namespace pokebot {
 
@@ -13,14 +14,6 @@ namespace pokebot {
         namespace {
 
             constexpr std::size_t kEnergyTypeCount = 11;
-
-            bool has_type(const std::vector<EnergyType>& types, EnergyType type) {
-                return std::find(types.begin(), types.end(), type) != types.end();
-            }
-
-            bool is_knocked_out(const GameState& game, const PokemonInPlay& pokemon) {
-                return static_cast<int>(pokemon.damage_counters) * 10 >= game.def(pokemon.top()).hp;
-            }
 
             bool has_pokemon_in_play(const PlayerState& player) {
                 return player.active.has_value() || !player.bench.empty();
@@ -79,18 +72,18 @@ namespace pokebot {
             }
 
             void knockout(GameState& game, int owner, const PokemonInPlay& pokemon) {
-                const int prizes = game.def(pokemon.top()).prize_value();
+                const int prizes = rules::prize_value(game, pokemon);
                 discard_pokemon(game, pokemon);
                 take_prizes(game, opponent_of(owner), prizes);
             }
 
         } // namespace
 
-        bool can_pay_cost(const GameState& game, const PokemonInPlay& pokemon, const std::vector<EnergyType>& cost) {
+        bool can_pay_cost(const GameState& game, const PokemonInPlay& pokemon, const rules::EnergyList& cost) {
             std::array<int, kEnergyTypeCount> available{};
             int total = 0;
             for (const CardIndex card : pokemon.energy) {
-                for (const EnergyType type : game.def(card).provides) {
+                for (const EnergyType type : rules::energy_provided(game, pokemon, card)) {
                     ++available[static_cast<std::size_t>(type)];
                     ++total;
                 }
@@ -113,32 +106,17 @@ namespace pokebot {
         }
 
         int attack_damage(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, const Attack& attack) {
-            if (attack.damage <= 0) {
-                return 0;
-            }
-            const CardDef& attacker_def = game.def(attacker.top());
-            const CardDef& defender_def = game.def(defender.top());
-            int damage = attack.damage;
-            if (defender_def.weakness && has_type(attacker_def.types, defender_def.weakness->type)) {
-                damage *= defender_def.weakness->multiplier;
-            }
-            if (defender_def.resistance && has_type(attacker_def.types, defender_def.resistance->type)) {
-                damage -= defender_def.resistance->amount;
-            }
-            return std::max(damage, 0);
+            return rules::attack_damage(game, attacker, defender, attack);
         }
 
         void add_attack_actions(const GameState& game, std::vector<Action>& out) {
-            if (game.turn == 1) {
+            if (!rules::can_attack(game, game.current_player)) {
                 return;
             }
             const PlayerState& p = game.player(game.current_player);
-            if (!p.active) {
-                return;
-            }
             const auto& attacks = game.def(p.active->top()).attacks;
             for (std::size_t i = 0; i < attacks.size(); ++i) {
-                if (can_pay_cost(game, *p.active, attacks[i].cost)) {
+                if (can_pay_cost(game, *p.active, rules::attack_cost(game, *p.active, i))) {
                     out.push_back(Action{ActionKind::Attack, kNoCard, kActiveSlot, static_cast<std::uint8_t>(i)});
                 }
             }
@@ -163,13 +141,13 @@ namespace pokebot {
             std::array<bool, kPlayers> needs_new_active{};
             for (int p = 0; p < kPlayers; ++p) {
                 PlayerState& player = game.player(p);
-                if (player.active && is_knocked_out(game, *player.active)) {
+                if (player.active && rules::is_knocked_out(game, *player.active)) {
                     knockout(game, p, *player.active);
                     player.active.reset();
                     needs_new_active[static_cast<std::size_t>(p)] = true;
                 }
                 for (std::size_t i = player.bench.size(); i-- > 0;) {
-                    if (is_knocked_out(game, player.bench[i])) {
+                    if (rules::is_knocked_out(game, player.bench[i])) {
                         knockout(game, p, player.bench[i]);
                         player.bench.erase_at(i);
                     }

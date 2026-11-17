@@ -26,18 +26,13 @@ namespace pokebot {
                 return game.def(card).kind == CardKind::Energy;
             }
 
-            bool can_evolve_into(const GameState& game, CardIndex evolution, const PokemonInPlay& pokemon) {
-                const CardDef& def = game.def(evolution);
-                return def.kind == CardKind::Pokemon && def.stage != Stage::Basic && !def.evolves_from.empty() && def.evolves_from == game.def(pokemon.top()).name;
-            }
-
             std::size_t retreat_cost(const GameState& game, const PokemonInPlay& pokemon) {
-                return static_cast<std::size_t>(game.def(pokemon.top()).retreat);
+                return static_cast<std::size_t>(rules::retreat_cost(game, pokemon));
             }
 
             void add_play_basic_actions(const GameState& game, int player, std::vector<Action>& out) {
                 const PlayerState& p = game.player(player);
-                if (p.bench.full()) {
+                if (p.bench.size() >= rules::bench_size(game, player)) {
                     return;
                 }
                 std::vector<Choice> seen;
@@ -49,18 +44,15 @@ namespace pokebot {
             }
 
             void add_evolve_actions(const GameState& game, int player, std::vector<Action>& out) {
-                if (is_first_turn(game)) {
-                    return;
-                }
                 const PlayerState& p = game.player(player);
                 std::vector<Choice> seen;
                 for (const Slot slot : in_play_slots(p)) {
                     const PokemonInPlay& pokemon = pokemon_at(p, slot);
-                    if (pokemon.turn_played == game.turn || pokemon.stack.full()) {
+                    if (!rules::can_evolve(game, pokemon)) {
                         continue;
                     }
                     for (const CardIndex card : p.hand) {
-                        if (can_evolve_into(game, card, pokemon) && first_time(seen, &game.def(card), slot)) {
+                        if (rules::evolves_into(game, pokemon, card) && first_time(seen, &game.def(card), slot)) {
                             out.push_back(Action{ActionKind::Evolve, card, slot, 0});
                         }
                     }
@@ -68,7 +60,7 @@ namespace pokebot {
             }
 
             void add_attach_actions(const GameState& game, int player, std::vector<Action>& out) {
-                if (game.flags.energy_attached) {
+                if (!rules::can_attach_energy(game, player)) {
                     return;
                 }
                 const PlayerState& p = game.player(player);
@@ -87,7 +79,7 @@ namespace pokebot {
 
             void add_retreat_actions(const GameState& game, int player, std::vector<Action>& out) {
                 const PlayerState& p = game.player(player);
-                if (game.flags.retreated || !p.active || p.bench.empty()) {
+                if (!rules::can_retreat(game, player)) {
                     return;
                 }
                 if (p.active->energy.size() < retreat_cost(game, *p.active)) {

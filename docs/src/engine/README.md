@@ -57,6 +57,12 @@ the decision being made now.
 A decision can belong to the player whose turn it *isn't*. After a Knock Out, the opponent
 chooses their new Active.
 
+### Rules are questions, not field reads
+
+HP, Retreat Cost, attack costs, Energy provided, Weakness, Resistance, Prize cards, Bench size and
+the turn limits are all asked through [`rules`](rules/rules.md) (`rules::max_hp(game, pokemon)` and
+so on), never read straight off a card. Cards that bend a rule will change the answer there.
+
 ### Duplicate choices are merged
 
 Three Dreepy in hand give **one** "put Dreepy on the Bench" action, not three, because the copies
@@ -97,6 +103,7 @@ bug can be replayed exactly.
 | `game/game_state.hpp/.cpp` | [game_state.md](game/game_state.md) | `CardTable`, `PokemonInPlay`, `PlayerState`, `GameState`, decisions |
 | `actions/action.hpp` | [action.md](actions/action.md) | `Action`, `ActionKind`, slots |
 | `engine.hpp/.cpp`, `internal.hpp` | [engine.md](engine.md) | Public interface, dispatch, shared helpers |
+| `rules/rules.hpp/.cpp` | [rules.md](rules/rules.md) | Every rule a card can change, asked as a question |
 | `setup/setup.cpp` | [setup.md](setup/setup.md) | `new_game`, mulligans, setup decisions |
 | `actions/turn.cpp` | [turn.md](actions/turn.md) | Starting and ending turns, `continue_game` |
 | `actions/main_actions.cpp` | [main_actions.md](actions/main_actions.md) | Bench, evolve, attach, retreat |

@@ -1,8 +1,9 @@
 #include "engine/engine.hpp"
-#include "engine/internal.hpp"
 
 #include <algorithm>
 #include <stdexcept>
+
+#include "engine/internal.hpp"
 
 namespace pokebot {
 
@@ -26,10 +27,6 @@ namespace pokebot {
         void set_winner(GameState& game, int player) {
             game.result = player == 0 ? GameResult::Player0Wins : GameResult::Player1Wins;
             game.pending.clear();
-        }
-
-        bool is_first_turn(const GameState& game) {
-            return game.turn <= 2;
         }
 
         PokemonInPlay new_pokemon(CardIndex card, std::uint16_t turn) {

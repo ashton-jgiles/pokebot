@@ -44,7 +44,6 @@ use them to set up positions.
 | Helper | Behavior |
 |---|---|
 | `is_basic_pokemon(game, card)` | A Pokémon card at the Basic stage |
-| `is_first_turn(game)` | `turn <= 2`: the current player's first turn |
 | `new_pokemon(card, turn)` | A fresh `PokemonInPlay` with `turn_played = turn` |
 | `pokemon_at(player, slot)` | The Pokémon in a slot (must be occupied) |
 | `in_play_slots(player)` | Every occupied slot, Active first |
@@ -52,3 +51,5 @@ use them to set up positions.
 | `set_winner(game, player)` | Ends the game and clears pending decisions |
 | `begin_turn`, `end_turn`, `continue_game` | Turn flow; see [turn](actions/turn.md) |
 | `can_pay_cost`, `attack_damage`, `handle_knockouts` | Combat; see [combat](actions/combat.md) |
+
+`is_first_turn` moved to [`rules`](rules/rules.md), since cards check it too.

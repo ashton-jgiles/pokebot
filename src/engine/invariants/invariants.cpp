@@ -3,6 +3,8 @@
 #include <array>
 #include <string>
 
+#include "engine/rules/rules.hpp"
+
 namespace pokebot {
 
     namespace {
@@ -80,9 +82,9 @@ namespace pokebot {
                     }
                 }
                 const CardDef& top = game_.def(pokemon.top());
-                if (static_cast<int>(pokemon.damage_counters) * 10 >= top.hp) {
+                if (rules::is_knocked_out(game_, pokemon)) {
                     fail(where + " (" + top.name + ") has " + std::to_string(pokemon.damage_counters * 10) + " damage on " +
-                         std::to_string(top.hp) + " HP and should have been Knocked Out");
+                         std::to_string(rules::max_hp(game_, pokemon)) + " HP and should have been Knocked Out");
                 }
             }
 

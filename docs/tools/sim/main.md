@@ -45,7 +45,9 @@ If an invariant breaks, it stops with the seed, the broken rules and the game st
 [`play_game`](../../src/harness/match.md)).
 
 **Speed:** use the release build for real numbers. On the reference machine it ran about
-10,000 games/s (1 million actions/s) with `--no-check`, and about 4,100 games/s with checks.
+10,000 games/s (1 million actions/s) with `--no-check`, and about 4,100 games/s with checks. The
+release preset uses link-time optimization; without it the [rules](../../src/engine/rules/rules.md)
+questions cost about 15%.
 
 ```bash
 cmake --preset release

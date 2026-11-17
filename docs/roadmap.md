@@ -93,7 +93,7 @@ The 88 texts come in five shapes:
 
 | Step | Builds | Status |
 |---|---|---|
-| 3.1 | Effect format, loader and compiler, the step interpreter, new decisions (choose cards / Pokémon / yes-no), first building blocks run through attack effects. **Plus the foundations from the [Standard scan](research/standard-scan.md):** every rule cards can bend becomes a question with the rulebook's default answer, an event dispatcher, and game-history fields | ⬜ |
+| 3.1 | Effect format, loader and compiler, the step interpreter, new decisions (choose cards / Pokémon / yes-no), first building blocks run through attack effects. **Plus the foundations from the [Standard scan](research/standard-scan.md):** every rule cards can bend becomes a question with the rulebook's default answer, an event dispatcher, and game-history fields. *3.1a done: the [rules questions](src/engine/rules/rules.md) with rulebook defaults* | 🟨 |
 | 3.2 | Trainer rules (Item, Supporter, Stadium, Tool, play conditions) and the simple Trainers | ⬜ |
 | 3.3 | Special Conditions and the full Pokémon Checkup | ⬜ |
 | 3.4 | Attack effects: damage formulas, damage to Benched Pokémon, damage counters, Tera bench protection | ⬜ |
