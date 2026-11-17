@@ -60,7 +60,10 @@ check or pay a cost. Copy attacks work the same way inside the interpreter (see
 damage) to the opponent's Active, through the damage pipeline, with `who.self` as the attacker,
 raising `DamagedByAttack` when it's above 0.
 
-## Knock Outs: `handle_knockouts(game)`
+## Knock Outs: `handle_knockouts(game, after_attack)`
+
+`after_attack` is `true` when `finish_attack` calls it: those Knock Outs also count in history as
+Knocked Out by an attack. Each Knock Out ends the [lasting effects](lasting.md) on that Pokémon.
 
 Runs after every attack and after every Pokémon Checkup (rulebook p. 14):
 

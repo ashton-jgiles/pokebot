@@ -7,7 +7,8 @@ Starting turns, ending them, and everything that happens between turns.
 ## `begin_turn(game, player)`
 
 1. `player` becomes the current player, `turn` goes up by 1, the once-per-turn flags reset, the
-   [history](../game/game_state.md#gamehistory) moves along one turn, and the phase becomes `Main`.
+   [history](../game/game_state.md#gamehistory) moves along one turn, [lasting effects](lasting.md) whose
+   turn has passed are removed, and the phase becomes `Main`.
 2. **If the deck is empty, `player` loses** (rulebook p. 8). Drawing because a *card* says so never
    loses; only this start-of-turn draw does.
 3. Draw 1 card and push the `MainPhase` decision.

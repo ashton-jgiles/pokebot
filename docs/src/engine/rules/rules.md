@@ -31,9 +31,10 @@ bend; this file is where they live.
 | `bench_size(game, player)` | 5 | Area Zero Underdepths |
 | `is_first_turn(game)` | Turns 1 and 2 | (used by other questions) |
 | `can_attach_energy(game, player)` | Not yet this turn | Emboar, Iono's Bellibolt ex |
-| `can_retreat(game, player)` | Not yet this turn, with a Benched Pokémon to switch in, and the Active isn't Asleep or Paralyzed | Clutch |
-| `can_attack(game, player)` | Not on turn 1, only with an Active, and not while it's Asleep or Paralyzed | Item/attack locks |
-| `can_play_item(game, player)` | Yes | Budew, Tyranitar (Item locks) |
+| `can_retreat(game, player)` | Not yet this turn, with a Benched Pokémon to switch in, the Active isn't Asleep or Paralyzed, and no [lasting](../actions/lasting.md) "can't retreat" | Clutch, Sob |
+| `can_attack(game, player)` | Not on turn 1, only with an Active, not while it's Asleep or Paralyzed, and no lasting "can't attack" | Eon Blade, Prism Edge |
+| `can_use_attack(game, pokemon, attack)` | Yes, unless a lasting "can't use this attack" is on it | Impact Blow |
+| `can_play_item(game, player)` | Yes, unless a lasting Item lock is on the player | Budew, Tyranitar (Item locks) |
 | `can_play_supporter(game, player)` | Not yet this turn, and not on turn 1 | |
 | `can_play_stadium(game, player, card)` | Not yet this turn, and not the same name as the one in play | Copperajah |
 | `can_attach_tool(game, pokemon)` | It has no Tool | Rotom ex's Multi Adapter |
@@ -59,8 +60,8 @@ base (printed damage, after the attack's formula) → attacker-side effects → 
 Prevented damage is 0. **Weakness and Resistance apply only when the defender is Active**; damage to
 a Benched Pokémon skips them, as the rulebook says.
 
-The attacker-side and defender-side stages do nothing yet. An attack with no printed damage does
-none.
+The attacker-side stage adds lasting damage bonuses (Black Belt's Training) when the defender is
+Active. The defender-side stage does nothing yet. An attack with no damage does none.
 
 ## Speed
 

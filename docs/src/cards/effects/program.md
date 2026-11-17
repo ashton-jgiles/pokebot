@@ -39,6 +39,7 @@ Each block is a JSON object with an `"op"`:
 | `switch_self` | — | Switch this Pokémon with 1 of your Benched Pokémon | `ChooseBenched`, `SwitchWithChosen` |
 | `switch_active` | `player` (`"you"` or `"opponent"`) | Switch that player's Active with 1 of their Benched Pokémon, chosen by you (Switch, Boss's Orders) | `ChooseBenched`, `SwitchWithChosen` |
 | `may` | `effects` (a list) | "You may …": ask first, and skip the list on no | `AskYesNo`, then the list |
+| `lasting` | `effect`, `until`, `on` (`"self"`), `player`, `amount`, `only_ex` | A [lasting effect](../../engine/actions/lasting.md). `effect`: `"cant_attack"`, `"cant_use_attack"` (this attack), `"cant_retreat"`, `"no_items"`, `"damage_bonus"`. `until`: `"this_turn"`, `"opponents_next_turn"`, `"your_next_turn"`. `on`: `"self"` or `"defending"` for the first three (attacks only), `"player"` (with `player`) for the last two | `AddLasting` |
 | `if` | `condition`, `then`, `else` (optional) | Do `then` if the [condition](#conditions) holds when the step runs, otherwise `else` | `JumpUnless`, `then`, `Jump`, `else` |
 
 - Cards moved to a hand, deck or discard pile always go to **their owner's**, even when the effect is
@@ -105,6 +106,7 @@ Each is an object with one key, from the point of view of the player the card be
 | `{"hand_besides": N}` | At least N cards in hand besides the card being played |
 | `{"prizes_exactly": N}` | Exactly N Prize cards left |
 | `{"knocked_out_last_turn": true}` | Any of your Pokémon were Knocked Out during your opponent's last turn |
+| `{"knocked_out_by_attack_last_turn": true}` | The same, but only Knock Outs by an attack (not at Pokémon Checkup) |
 | `{"has_benched": true}` | You have a Benched Pokémon |
 | `{"opponent_has_benched": true}` | Your opponent has a Benched Pokémon |
 | `{"bench_not_full": true}` | Your Bench has room |
@@ -143,6 +145,7 @@ a value of the wrong JSON type) throws `CardDataError`.
 | `DiscardAllEnergy`, `ReturnSelfToHand` | — | As named, for "this Pokémon" |
 | `ChooseAttack` | `filter` | The player chooses a Benched Pokémon's attack |
 | `UseChosenAttack` | — | Runs the chosen attack's program, then carries on |
+| `AddLasting` | `lasting`, `side`, `amount` | Adds a lasting effect |
 
 `Draw` uses `side` too. `Side` is `You`, `Opponent` or `Each`.
 

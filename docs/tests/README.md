@@ -45,11 +45,12 @@ List every test:
 | [`test_engine_conditions.cpp`](../../tests/test_engine_conditions.cpp) | `[conditions]` | 11 | Asleep and Paralyzed blocking attacks and retreats, an attack applying Asleep, which conditions replace or stack, Active only, retreating and evolving clearing them, Poison and Burn counters, a Poison Knock Out, recovering on heads, Paralysis timing, confusion failing on tails |
 | [`test_engine_damage.cpp`](../../tests/test_engine_damage.cpp) | `[damage]` | 11 | Damage formulas: × per card in hand, + per Benched Pokémon, flip until tails, an "if you do" bonus, discarding Energy from several Pokémon, × per damage counter; Red Card; Cipher's deck order; the compile rules for formulas |
 | [`test_engine_targets.cpp`](../../tests/test_engine_targets.cpp) | `[targets]` | 10 | Weakness on the Active but not the Bench, Tera Bench protection, two different targets, the damage-counter spread order, damage by the target's counters, Flamebody Cannon, Tuck Tail and promoting, copying an N's attack (and with nothing to copy), Crushing Hammer into the owner's discard pile |
+| [`test_engine_lasting.cpp`](../../tests/test_engine_lasting.cpp) | `[lasting]` | 9 | "Can't use that attack" and "can't attack" next turn, retreating ending an effect, "can't retreat" for one turn, the Item lock, a damage bonus only against an Active ex, this-turn effects ending, attack Knock Outs versus Checkup ones in history, the compile checks |
 | [`test_invariants.cpp`](../../tests/test_invariants.cpp) | `[invariants]` | 5 | The checker catches duplicated, missing and misplaced cards, missed Knock Outs, bad evolutions and Energy, and a missing Active |
 | [`test_agents.cpp`](../../tests/test_agents.cpp) | `[agents]` | 3 | Random choices stay legal and cover every option, the biased agent attacks, seeds repeat |
 | [`test_stress.cpp`](../../tests/test_stress.cpp) | `[stress]` | 3 | 1,000 biased and 1,000 uniform random real-deck games with invariant checks, and every state and action can be described. More than 300 of the biased games must end by Knock Out (random players burn through their decks with draw and search Trainers, so deck-outs are common) |
 
-**160 tests in total.** Tests that need the real card data skip themselves if `data/cards/generated/`
+**169 tests in total.** Tests that need the real card data skip themselves if `data/cards/generated/`
 doesn't exist yet; run `pokebot-import` first.
 
 ## Helpers worth knowing

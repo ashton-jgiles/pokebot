@@ -21,7 +21,8 @@ These are the formal model's *Legal* and *δ* (transition) functions.
 | Setup: coin flip, opening hands, mulligans with bonus draws, Active/Bench, 6 Prize cards | What Stadiums and Tools do (they can be played, but have no effect yet) |
 | Trainers: Items, Supporters, Stadiums, Tools, their limits and `"requires"`; 16 with effects | Trainers whose effects aren't written yet (they can't be played) |
 | Turn loop: draw, main phase, end of turn, Pokémon Checkup step | Abilities |
-| Benching, evolving, attaching Energy, retreating | Lasting effects ("during your opponent's next turn"), step 3.6 |
+| Benching, evolving, attaching Energy, retreating | Abilities, and what Tools and Stadiums do (step 3.7) |
+| [Lasting effects](actions/lasting.md): can't attack, can't use an attack, can't retreat, Item lock, damage bonus | |
 | Attacks: Energy costs, Weakness, Resistance, damage, and [effects](effects/interpreter.md): draw, search, switch, "you may", damage formulas, Bench damage, damage counters, copy attacks | |
 | [Special Conditions](actions/conditions.md) and the full Pokémon Checkup | |
 | Knock Outs, Prize cards (1 / 2 ex / 3 Mega ex), new Active | Special Energy: it can be attached but provides nothing |
@@ -119,6 +120,7 @@ bug can be replayed exactly.
 | `actions/main_actions.cpp` | [main_actions.md](actions/main_actions.md) | Bench, evolve, attach, retreat |
 | `actions/combat.cpp` | [combat.md](actions/combat.md) | Attacks, damage, Knock Outs, Prize cards, winning |
 | `actions/conditions.cpp` | [conditions.md](actions/conditions.md) | Special Conditions and what Pokémon Checkup does with them |
+| `actions/lasting.cpp` | [lasting.md](actions/lasting.md) | Effects that last past the card that made them |
 | `invariants/invariants.hpp/.cpp` | [invariants.md](invariants/invariants.md) | Consistency checker |
 | `describe/describe.hpp/.cpp` | [describe.md](describe/describe.md) | Text descriptions of states and actions |
 

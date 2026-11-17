@@ -102,6 +102,13 @@ the choices made so far (`chosen`, `chosen_pokemon`), and two working numbers: t
 `chosen_attack`. `GameState::effects` stacks up to 4. See the
 [interpreter](../effects/interpreter.md).
 
+## `LastingEffect`
+
+An effect that lasts for a turn: `kind`, the `player` it affects, the `pokemon` it's on (or
+`kNoCard` for the whole player), an `attack` (for "can't use this attack"), `amount` and `only_ex`
+(for a damage bonus), and the `turn` it applies during. `GameState::lasting` holds up to 8. See
+[lasting effects](../actions/lasting.md).
+
 ## `GameHistory`
 
 Cards look back at earlier turns ("if any of your Pokémon were Knocked Out during your opponent's
@@ -113,8 +120,10 @@ last turn"). `history.turns` keeps three `TurnRecord`s:
 | `opponents_last_turn()` | The turn just before |
 | `your_last_turn()` | The current player's previous turn |
 
-A `TurnRecord` holds whose turn it was, how many of each player's Pokémon were Knocked Out, and the
-attack used (`attacker` id and `AttackRef`; `kNoCard` if none). `begin_turn` shifts them along.
+A `TurnRecord` holds whose turn it was, how many of each player's Pokémon were Knocked Out
+(`knocked_out`) and how many of those were by an attack (`knocked_out_by_attack`, not counting
+Pokémon Checkup), and the attack used (`attacker` id and `AttackRef`; `kNoCard` if none).
+`begin_turn` shifts them along.
 More facts (cards played, once-per-game effects) join as the cards that need them arrive.
 
 ## `TurnPhase`
@@ -149,6 +158,7 @@ same number of win conditions. The rulebook's tiebreaker game isn't modeled.
 | `history` | `GameHistory`: this turn and the two before |
 | `pending` | Stack of up to 8 open decisions; `back()` is decided first |
 | `effects` | Stack of up to 4 running effects ([`EffectRun`](#effectrun)) |
+| `lasting` | Up to 8 [lasting effects](#lastingeffect) |
 | `rng` | The game's random number generator |
 | `result` | `GameResult` |
 
