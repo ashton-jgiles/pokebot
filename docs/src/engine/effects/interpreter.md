@@ -16,6 +16,8 @@ player's choice, it pushes a decision and stops; the answer resumes it.
 | `then` | What to do when it finishes: `FinishAttack` for an attack, `DiscardTrainer` for an Item or Supporter |
 | `pc` | The next step |
 | `chosen`, `chosen_pokemon` | Choices made so far |
+| `damage` | The attack's damage so far: the printed damage, changed by `set_damage` / `add_damage` |
+| `value` | The latest result: heads flipped, or cards moved by the last `MoveChosen` or `HandToDeckBottom`. Counts (`"heads"`, `"moved"`) and conditions (`heads_at_least`, `moved_at_least`) read it |
 
 Because this lives in `GameState`, **a game copied in the middle of an effect carries on exactly
 like the original.** Search can explore a half-finished Ultra Ball like any other position.

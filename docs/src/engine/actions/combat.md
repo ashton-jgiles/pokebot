@@ -56,8 +56,9 @@ Runs the effect program of the attack `attack` names, with `who.self` as the att
 check or pay a cost: a copy attack will call it with another card's `AttackRef`, which is why the
 copied attack's own cost is never paid.
 
-`deal_attack_damage(game, who, attack)` is the `Damage` step: the attack's damage to the opponent's
-Active, with `who.self` as the attacker, raising `DamagedByAttack` when it's above 0.
+`deal_attack_damage(game, who, base)` is the `Damage` step: `base` damage (the attack's working
+damage) to the opponent's Active, through the damage pipeline, with `who.self` as the attacker,
+raising `DamagedByAttack` when it's above 0.
 
 ## Knock Outs: `handle_knockouts(game)`
 

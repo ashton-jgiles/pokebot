@@ -22,7 +22,13 @@ Each block is a JSON object with an `"op"`:
 | `search_deck` | `count` (1), `filter`, `to` (`"hand"`), `shuffle` (`true`) | Search your deck for **up to** `count` matching cards, then shuffle (unless `"shuffle": false`, for a card that searches several times and shuffles once) | `ChooseCards`, `MoveChosen`, `ShuffleDeck` |
 | `discard_from_hand` | `count` (1), `filter` | Discard exactly `count` cards from your hand | `ChooseCards`, `MoveChosen` |
 | `from_discard` | `count` (1), `filter`, `to` (`"hand"`), `up_to` (`false`) | Take exactly `count` matching cards from your discard pile, or up to `count` with `"up_to": true` | `ChooseCards`, `MoveChosen` |
-| `move_attached_energy` | `count` (1), `filter`, `to` (`"hand"`) | Move exactly `count` Energy attached to this Pokémon (fewer if it has fewer) | `ChooseCards`, `MoveChosen` |
+| `move_attached_energy` | `count` (1), `filter`, `to` (`"hand"`), `from` (`"self"`), `up_to` (`false`) | Move exactly `count` Energy attached to this Pokémon (fewer if it has fewer), or up to `count` with `"up_to": true`. `"from": "your_pokemon"` takes it from any of your Pokémon | `ChooseCards`, `MoveChosen` |
+| `set_damage` | `amount`, `per`, `for_each` | The attack's damage becomes `amount` + `per` × the [count](#counting). For "×" attacks | `SetDamage` |
+| `add_damage` | `amount`, `per`, `for_each` | The attack's damage goes up by `amount` + `per` × the count. For "+" attacks and "this attack does N more damage" | `AddDamage` |
+| `flip_coins` | `count` (1) | Flip coins; the number of heads can be counted (`"heads"`) or tested (`heads_at_least`) | `FlipCoins` |
+| `flip_until_tails` | — | Flip until tails; the number of heads is kept the same way | `FlipUntilTails` |
+| `hand_to_deck_bottom` | `player` | Shuffle that player's hand and put it on the bottom of their deck (Special Red Card) | `HandToDeckBottom` |
+| `search_to_top` | `count` (1), `filter` | Search your deck for up to `count` cards, shuffle, then put them on top; the last one chosen is the top card (Ciphermaniac's Codebreaking) | `ChooseCards`, `ShuffleDeck`, `MoveChosen` |
 | `special_condition` | `condition`, `player` (`"opponent"`), `count` (1) | Give that player's Active Pokémon a [Special Condition](../../engine/actions/conditions.md): `"asleep"`, `"burned"`, `"confused"`, `"paralyzed"` or `"poisoned"`. **Defaults to the opponent**, since cards almost always say "your opponent's Active Pokémon is now …". `count` is the Poison damage counters per Checkup | `ApplySpecialCondition` |
 | `switch_self` | — | Switch this Pokémon with 1 of your Benched Pokémon | `ChooseBenched`, `SwitchWithChosen` |
 | `switch_active` | `player` (`"you"` or `"opponent"`) | Switch that player's Active with 1 of their Benched Pokémon, chosen by you (Switch, Boss's Orders) | `ChooseBenched`, `SwitchWithChosen` |
@@ -37,7 +43,31 @@ Each block is a JSON object with an `"op"`:
 
 **Damage comes first** unless the list places a `damage` block itself, since most attack text
 describes what happens after the damage. A list that needs a different order (discard Energy, then
-do damage) puts `damage` where it belongs.
+do damage) puts `damage` where it belongs. **An attack that uses `set_damage` or `add_damage` must
+place `damage` itself**: the compiler refuses to guess whether a bonus comes before or after it.
+
+The attack's damage is a working number on the running effect. It starts at the printed damage, and
+`set_damage` / `add_damage` change it before the `damage` step uses it. Weakness and Resistance are
+applied afterwards, in the [damage pipeline](../../engine/rules/rules.md#the-damage-pipeline).
+
+### Counting
+
+`for_each` counts something. Its `"of"` field says what, and `player` (`"you"`, `"opponent"`,
+`"each"`) says whose:
+
+| `"of"` | Counts |
+|---|---|
+| `"hand"` | Cards in hand |
+| `"discard"` | Cards in the discard pile matching `filter` |
+| `"benched"` | Benched Pokémon |
+| `"prizes_taken"` | Prize cards taken (6 minus those left) |
+| `"active_energy"` | Energy cards attached to the Active Pokémon |
+| `"damage_counters"` | Damage counters on this Pokémon |
+| `"heads"`, `"moved"` | The heads from the last flip, or the cards moved by the last choice (both read the same working number) |
+
+```json
+{ "op": "set_damage", "per": 50, "for_each": { "of": "hand", "player": "opponent" } }
+```
 
 ### Filters
 
@@ -69,6 +99,9 @@ Each is an object with one key, from the point of view of the player the card be
 | `{"opponent_has_benched": true}` | Your opponent has a Benched Pokémon |
 | `{"bench_not_full": true}` | Your Bench has room |
 | `{"discard_has": filter}` | Your discard pile has a card matching the filter |
+| `{"heads_at_least": N}`, `{"moved_at_least": N}` | The last flip gave at least N heads, or the last choice moved at least N cards ("if you do") |
+| `{"opponent_prizes_at_most": N}` | Your opponent has at most N Prize cards left |
+| `{"shares_type": true}` | One of your Pokémon in play shares a type with one of your opponent's |
 
 Anything the compiler doesn't recognise (an unknown op, filter field or destination, a bad count,
 a value of the wrong JSON type) throws `CardDataError`.
@@ -77,7 +110,7 @@ a value of the wrong JSON type) throws `CardDataError`.
 
 | `Op` | Uses | Does |
 |---|---|---|
-| `Damage` | — | The attack's damage to the opponent's Active Pokémon |
+| `Damage` | — | The attack's working damage to the opponent's Active Pokémon |
 | `Draw` | `max` | Draws `max` cards |
 | `DiscardHand`, `ShuffleDeck` | — | As named |
 | `ShuffleHandIntoDeck` | `side` | As named, for each player on that side |
@@ -89,6 +122,10 @@ a value of the wrong JSON type) throws `CardDataError`.
 | `JumpUnless` | `condition`, `jump` | If the condition is false, carries on at step `jump` |
 | `Jump` | `jump` | Carries on at step `jump` |
 | `ApplySpecialCondition` | `special`, `side`, `max` | Gives that side's Active the Special Condition (`max` = Poison counters) |
+| `SetDamage`, `AddDamage` | `amount`, `per`, `count` | Set or raise the attack's working damage |
+| `FlipCoins` | `max` | Flips `max` coins; the heads become the working value |
+| `FlipUntilTails` | — | Flips until tails; the heads become the working value |
+| `HandToDeckBottom` | `side` | As named; the number of cards moved becomes the working value |
 
 `Draw` uses `side` too. `Side` is `You`, `Opponent` or `Each`.
 

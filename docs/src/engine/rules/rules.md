@@ -41,7 +41,7 @@ bend; this file is where they live.
 | `attacks_per_turn(game, pokemon)` | 1 | Dipplin, Goldeen, Seaking (Festival Lead with Festival Grounds) |
 | `can_evolve(game, pokemon)` | Not on either player's first turn, not on the turn it was played, stack not full | Forest of Vitality |
 | `evolves_into(game, pokemon, card)` | The card's "evolves from" names the top card | Rare Candy, Eevee ex |
-| `attack_damage(game, attacker, defender, attack)` | See below | Maximum Belt, Full Metal Lab |
+| `attack_damage(game, attacker, defender, base)` | See below. `base` is the attack's damage after its own formula | Maximum Belt, Full Metal Lab |
 
 `EnergyList` is a `FixedVector<EnergyType, 8>`: answers come back by value with no heap use,
 because a card effect may build a different list than the printed one.
@@ -52,7 +52,7 @@ because a card effect may build a different list than the printed one.
 can hook the right one:
 
 ```
-printed damage → attacker-side effects → × Weakness → − Resistance → defender-side effects → never below 0
+base (printed damage, after the attack's formula) → attacker-side effects → × Weakness → − Resistance → defender-side effects → never below 0
 ```
 
 The attacker-side and defender-side stages do nothing yet. An attack with no printed damage does

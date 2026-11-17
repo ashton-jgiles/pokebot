@@ -43,11 +43,12 @@ List every test:
 | [`test_engine_effects.cpp`](../../tests/test_engine_effects.cpp) | `[effects]` | 10 | Running effects: draw, search, filters, choosing nothing, yes/no, Energy to hand, switching, discard and draw, Knock Outs waiting for the effect, copying a game mid-effect |
 | [`test_engine_trainers.cpp`](../../tests/test_engine_trainers.cpp) | `[trainers]` | 12 | Items resolving and going to the discard pile, one Supporter per turn and none on turn 1, Stadiums replacing each other, one Tool per Pokémon, `"requires"` and unwritten cards, Ultra Ball, Boss's Orders, Poffin to the Bench, `if`, Judge, Night Stretcher's filter |
 | [`test_engine_conditions.cpp`](../../tests/test_engine_conditions.cpp) | `[conditions]` | 11 | Asleep and Paralyzed blocking attacks and retreats, an attack applying Asleep, which conditions replace or stack, Active only, retreating and evolving clearing them, Poison and Burn counters, a Poison Knock Out, recovering on heads, Paralysis timing, confusion failing on tails |
+| [`test_engine_damage.cpp`](../../tests/test_engine_damage.cpp) | `[damage]` | 11 | Damage formulas: × per card in hand, + per Benched Pokémon, flip until tails, an "if you do" bonus, discarding Energy from several Pokémon, × per damage counter; Red Card; Cipher's deck order; the compile rules for formulas |
 | [`test_invariants.cpp`](../../tests/test_invariants.cpp) | `[invariants]` | 5 | The checker catches duplicated, missing and misplaced cards, missed Knock Outs, bad evolutions and Energy, and a missing Active |
 | [`test_agents.cpp`](../../tests/test_agents.cpp) | `[agents]` | 3 | Random choices stay legal and cover every option, the biased agent attacks, seeds repeat |
 | [`test_stress.cpp`](../../tests/test_stress.cpp) | `[stress]` | 3 | 1,000 biased and 1,000 uniform random real-deck games with invariant checks, and every state and action can be described. More than 300 of the biased games must end by Knock Out (random players burn through their decks with draw and search Trainers, so deck-outs are common) |
 
-**140 tests in total.** Tests that need the real card data skip themselves if `data/cards/generated/`
+**151 tests in total.** Tests that need the real card data skip themselves if `data/cards/generated/`
 doesn't exist yet; run `pokebot-import` first.
 
 ## Helpers worth knowing

@@ -97,7 +97,8 @@ A copied attack (N's Zoroark ex, Mew ex, Slowking) runs the other card's text wi
 
 An effect part way through: who it's for (`EffectContext`), which compiled program (`ProgramRef`:
 card, `ProgramKind` (`Attack` or `Trainer`), index), what to do when it finishes (`AfterEffect`), the next step (`pc`), and
-the choices made so far (`chosen`, `chosen_pokemon`). `GameState::effects` stacks up to 4. See the
+the choices made so far (`chosen`, `chosen_pokemon`), and two working numbers: the attack's
+`damage` so far and the latest `value` (heads, or cards moved). `GameState::effects` stacks up to 4. See the
 [interpreter](../effects/interpreter.md).
 
 ## `GameHistory`
