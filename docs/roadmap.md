@@ -8,7 +8,8 @@ The milestone plan from the project proposal, with the current status of each.
 | M0 | Project setup | ✅ Done |
 | M1 | Card data, decklist parser, deck validator | ✅ Done |
 | M2 | Basic engine | ✅ Done |
-| M3 | Effects system and all cards in both decks | ⬜ Next |
+| M3 | Effects system and every card in the four decks | ⬜ Next |
+| M3b | Standard coverage: card-text translator and coverage report | ⬜ Not started |
 | M4 | Observation layer, command-line client, replays | ⬜ Not started |
 | M5 | Greedy agent, match harness, profiling | ⬜ Not started |
 | M6 | Model 1: turn planner (or-tree and and-tree modes) | ⬜ Not started |
@@ -68,13 +69,55 @@ invariant checker after every action (about 10 million actions): **no problems f
 Tools added: `pokebot-sim` (run many games, or `--print` one game move by move), random and biased random
 agents, the invariant checker, and text descriptions of any state or action.
 
-## M3 — Effects system ⬜
+## M3 — Effects system ⬜ (next)
 
-The pending-decision stack, the effect format and its building blocks, Trainers, Abilities,
-Special Conditions and Pokémon Checkup. Every card in both decks gets an effects file, plus test
-cards for mechanics the decks don't use (each Special Condition, Ability lock, healing, Special
-Energy). **Done when:** per-card tests and the 100k-game stress test pass. The current to-do
-list is printed by `pokebot-import` (42 attacks, abilities and cards).
+**Done when:** `pokebot-import` reports 0 attacks, abilities and cards still needing effects (88 today,
+across all four decks), every card has a test, and the 100,000-game stress test still passes.
+
+**Format (decided 2026-11-16): data + C++ hybrid.** Effects are written as data in
+`data/cards/effects/<id>.json`, compiled into a flat list of steps, and run by an interpreter that can
+pause for a player's choice and resume. Where a running effect is up to is stored in `GameState`, so
+search can copy a half-finished Ultra Ball like anything else. A `custom` step calls registered C++
+for the few one-of-a-kind cards. A translator from card text to effects is deferred until the format
+has been proven on these 88.
+
+The 88 texts come in five shapes:
+
+| Shape | Examples | About |
+|---|---|---|
+| One-shot step programs | Ultra Ball, Boss's Orders, Lillie's Determination, Phantom Dive | 50 |
+| Damage formulas | "30 per damage counter", "+120 if Knocked Out last turn", flip until tails | 14 |
+| Lasting effects | "can't attack next turn", "can't retreat", Budew's Item lock | 9 |
+| Passive modifiers | Air Balloon, N's Castle, Hero's Cape, Fairy Zone, Area Zero, Tera | 10 |
+| Abilities and triggers | Run Errand, Teal Dance, Meowth ex on Bench, Risky Ruins, Ignition Energy | 16 |
+
+| Step | Builds | Status |
+|---|---|---|
+| 3.1 | Effect format, loader and compiler, the step interpreter, new decisions (choose cards / Pokémon / yes-no), first building blocks run through attack effects. **Plus the foundations from the [Standard scan](research/standard-scan.md):** every rule cards can bend becomes a question with the rulebook's default answer, an event dispatcher, and game-history fields | ⬜ |
+| 3.2 | Trainer rules (Item, Supporter, Stadium, Tool, play conditions) and the simple Trainers | ⬜ |
+| 3.3 | Special Conditions and the full Pokémon Checkup | ⬜ |
+| 3.4 | Attack effects: damage formulas, damage to Benched Pokémon, damage counters, Tera bench protection | ⬜ |
+| 3.5 | Lasting effects and game history (Knocked Out last turn) | ⬜ |
+| 3.6 | Abilities (once per turn, triggers, passive modifiers), Tools and Stadiums in play | ⬜ |
+| 3.7 | Special Energy and full Energy cost matching | ⬜ |
+| 3.8 | One-of-a-kind cards in custom C++ (Night Joker, Transformation Tome, Rare Candy, Area Zero, …) | ⬜ |
+| 3.9 | Sign-off: 0 missing, a test per card, test-only cards for unused mechanics, 100k-game stress test | ⬜ |
+
+**Designed for all of Standard (2026-11-16).** A [scan of every Standard-legal card](research/standard-scan.md)
+(TEF–DLR: 2,213 distinct cards, 1,455 distinct effect texts) found that 97.6% of texts use known, templated
+mechanics. It also listed the 25 rules that cards change (HP, Retreat Cost, attack cost, Energy provided,
+damage, prevention, Abilities, evolution, Prize cards, Bench size…), the events cards react to, and the game
+history they check. M3 builds that whole vocabulary, so any Standard card can be expressed, but writes
+effects only for our four decks. Covering the rest of Standard is M3b.
+
+## M3b — Standard coverage ⬜
+
+A **translator from card text to effects files**, using the vocabulary M3 builds, plus a coverage report:
+how many Standard cards it converts, and exactly which texts still need new vocabulary or custom code.
+Hand-writing all 1,455 texts isn't realistic; the scan shows the wording is patterned enough for this to
+cover most of them. **Done when:** a target share of Standard (to be set once M3 is done) imports with
+effects and passes generated tests, and the rest is listed by what it needs. Can run alongside M4–M5,
+since the search work only needs our four decks.
 
 ## M4 onward
 
