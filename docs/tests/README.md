@@ -50,11 +50,12 @@ List every test:
 | [`test_engine_abilities.cpp`](../../tests/test_engine_abilities.cpp) | `[abilities]` | 10 | Once per turn and again next turn, Active only, one per name, requirements and costs, damage counters Knocking Out at once, the top 2 cards, shuffling the Active away, moving counters, a filtered switch that Poisons, a Stadium action once per turn |
 | [`test_engine_triggers.cpp`](../../tests/test_engine_triggers.cpp) | `[triggers]` | 8 | A trigger asking yes/no then searching, not offered as an Ability to use, one per name, unmet requirements, discarding the Stadium to its owner, switching in and moving Energy, Risky Ruins on Basic non-{D} Pokémon (Poffin too), Poffin not counting as "played", trigger names |
 | [`test_engine_energy.cpp`](../../tests/test_engine_energy.cpp) | `[energy]` | 7 | A Special Energy's usual Energy and its holder-dependent Energy, one card providing several, a cost a greedy match would miss, Retreat paid in Energy provided, the discard choice stopping once paid, the end-of-turn discard, the load checks |
+| [`test_engine_attach.cpp`](../../tests/test_engine_attach.cpp) | `[attach]` | 6 | Energy from the discard pile to the only matching Benched Pokémon, each of 2 targets getting its own Energy from the deck and Poison for the Active, no Poison without it, up to 2 Energy only with more Prize cards left, moving Energy between your Pokémon, the compiled loop |
 | [`test_invariants.cpp`](../../tests/test_invariants.cpp) | `[invariants]` | 5 | The checker catches duplicated, missing and misplaced cards, missed Knock Outs, bad evolutions and Energy, and a missing Active |
 | [`test_agents.cpp`](../../tests/test_agents.cpp) | `[agents]` | 3 | Random choices stay legal and cover every option, the biased agent attacks, seeds repeat |
 | [`test_stress.cpp`](../../tests/test_stress.cpp) | `[stress]` | 3 | 1,000 biased and 1,000 uniform random real-deck games with invariant checks, and every state and action can be described. More than 300 of the biased games must end by Knock Out (random players burn through their decks with draw and search Trainers, so deck-outs are common) |
 
-**201 tests in total.** Tests that need the real card data skip themselves if `data/cards/generated/`
+**207 tests in total.** Tests that need the real card data skip themselves if `data/cards/generated/`
 doesn't exist yet; run `pokebot-import` first.
 
 ## Helpers worth knowing

@@ -21,7 +21,7 @@ These are the formal model's *Legal* and *δ* (transition) functions.
 | Setup: coin flip, opening hands, mulligans with bonus draws, Active/Bench, 6 Prize cards | What Stadiums and Tools do (they can be played, but have no effect yet) |
 | Trainers: Items, Supporters, Stadiums, Tools, their limits and `"requires"`; 16 with effects | Trainers whose effects aren't written yet (they can't be played) |
 | Turn loop: draw, main phase, end of turn, Pokémon Checkup step | Abilities |
-| Benching, evolving, attaching Energy, retreating | Trainers that attach Energy from the deck or discard pile (step 3.8b) |
+| Benching, evolving, attaching Energy, retreating, and attaching Energy from the deck or discard pile | One-of-a-kind cards: Rare Candy, Transformation Tome, Area Zero Underdepths (step 3.9) |
 | [Triggered effects](actions/abilities.md#triggered-effects): "when you play this Pokémon", Risky Ruins | |
 | [Abilities you choose to use](actions/abilities.md), and Stadium actions | |
 | [Lasting effects](actions/lasting.md): can't attack, can't use an attack, can't retreat, Item lock, damage bonus | |

@@ -22,6 +22,8 @@ Each block is a JSON object with an `"op"`:
 | `search_deck` | `count` (1), `filter`, `to` (`"hand"`), `shuffle` (`true`) | Search your deck for **up to** `count` matching cards, then shuffle (unless `"shuffle": false`, for a card that searches several times and shuffles once) | `ChooseCards`, `MoveChosen`, `ShuffleDeck` |
 | `discard_from_hand` | `count` (1), `filter` | Discard exactly `count` cards from your hand | `ChooseCards`, `MoveChosen` |
 | `from_discard` | `count` (1), `filter`, `to` (`"hand"`), `up_to` (`false`) | Take exactly `count` matching cards from your discard pile, or up to `count` with `"up_to": true` | `ChooseCards`, `MoveChosen` |
+| `attach_to` | `from` (`"discard"`), `targets` (1), `up_to_targets`, `on` (`"any"`), `target`, `count` (1), `up_to`, `filter` | Choose that many of your Pokémon (matching the `target` filter), then for **each** one choose `count` matching cards from `from` (`"discard"`, `"deck"` or `"hand"`) and attach them. From the deck, it shuffles afterwards (N's PP Up, Rosa's Encouragement, Glass Trumpet, Janine's Secret Art) | `ChooseTargets`, `EachTarget`, `ChooseCards`, `MoveChosen`, `NextTarget` |
+| `move_energy` | `filter` | Choose one of your Pokémon with Energy, one of its matching Energy, then another of your Pokémon to move it to (Energy Switch) | `ChooseTargets`, `ChooseCards`, `ChooseDestination`, `MoveChosen` |
 | `move_attached_energy` | `count` (1), `filter`, `to` (`"hand"`), `from` (`"self"`), `up_to` (`false`) | Move exactly `count` Energy attached to this Pokémon (fewer if it has fewer), or up to `count` with `"up_to": true`. `"from": "your_pokemon"` takes it from any of your Pokémon | `ChooseCards`, `MoveChosen` |
 | `set_damage` | `amount`, `per`, `for_each` | The attack's damage becomes `amount` + `per` × the [count](#counting). For "×" attacks | `SetDamage` |
 | `add_damage` | `amount`, `per`, `for_each` | The attack's damage goes up by `amount` + `per` × the count. For "+" attacks and "this attack does N more damage" | `AddDamage` |
@@ -103,6 +105,7 @@ applied afterwards, in the [damage pipeline](../../engine/rules/rules.md#the-dam
 | `name_prefix` | A name starting with this ("N's") |
 | `not_name` | Any name except this one ("except any Pecharunt ex") |
 | `not_type` | Not of this type ("non-{D}") |
+| `tera` | `true` / `false`: a Tera Pokémon or not |
 | `any_of` | A list of filters; at least one must match ("a Pokémon or a Basic Energy card") |
 
 Every field given must match; `{}` (or no filter) matches any card.
@@ -133,6 +136,10 @@ Each is an object with one key, from the point of view of the player the card be
 | `{"has_damaged": true}` | One of your Pokémon in play has damage counters |
 | `{"self_is": filter}` | "This Pokémon" matches |
 | `{"stadium_in_play": true}` | A Stadium is in play |
+| `{"more_prizes_than_opponent": true}` | You have more Prize cards left than your opponent |
+| `{"in_play_has": filter}` | One of your Pokémon in play matches |
+| `{"your_energy_has": filter}` | An Energy attached to one of your Pokémon matches |
+| `{"attached_to_active": true}` | This effect attached Energy to your Active Pokémon (only inside an effect) |
 
 Anything the compiler doesn't recognise (an unknown op, filter field or destination, a bad count,
 a value of the wrong JSON type) throws `CardDataError`.
@@ -194,6 +201,12 @@ for as long as the card is in play:
 | `CountersOnSelf` | `max` | `max` counters on "this Pokémon" |
 | `DiscardStadium` | — | As named |
 | `SwitchToActive` | — | As named |
+| `EachTarget` | `jump` | The start of a loop over the targets: when every target is done, carry on at `jump` |
+| `NextTarget` | `jump` | The end of the loop: the next target, back to `jump` |
+| `ChooseDestination` | — | The player chooses another of their Pokémon (not a target) |
+
+`ChooseTargets` only offers Pokémon that match its `filter`. In a loop, the `TargetEnergy` zone is
+the Energy of the current target. `ChosenEnergy` is the Energy of the Pokémon `ChooseDestination` chose.
 
 ### Special Energy
 

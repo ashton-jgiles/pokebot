@@ -191,7 +191,9 @@ An Item or Supporter has a top-level `effects` list, and optionally `requires`: 
 Trainers with effects so far: Switch, Boss's Orders, Ultra Ball, Night Stretcher, Energy
 Retrieval, Poké Pad (ASC and POR), Cyrano, Lillie's Determination, Judge, Unfair Stamp, Hilda, Dawn,
 Secret Box, Buddy-Buddy Poffin, Lana's Aid, Special Red Card, Ciphermaniac's Codebreaking and
-Crushing Hammer and Black Belt's Training.
+Crushing Hammer, Black Belt's Training, and the Energy Trainers: N's PP Up, Rosa's Encouragement,
+Glass Trumpet, Janine's Secret Art, Energy Switch and Crispin. Crispin's two Energy aren't checked to
+be of different types.
 
 ## `raw/`
 
