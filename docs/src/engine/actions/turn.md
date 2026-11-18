@@ -26,7 +26,7 @@ Runs the game forward while **no decision is pending**:
 
 | Phase | What happens |
 |---|---|
-| `AfterMain` | Raise `TurnEnding`, move to `Checkup`, run Pokémon Checkup, then resolve any Knock Outs |
+| `AfterMain` | Discard the current player's attached Energy marked `discard_at_end_of_turn` (Ignition Energy), raise `TurnEnding`, move to `Checkup`, run Pokémon Checkup, then resolve any Knock Outs |
 | `Checkup` | Start the opponent's turn |
 
 If resolving Knock Outs pushes a "choose a new Active" decision, the loop stops. Once that's

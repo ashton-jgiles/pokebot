@@ -195,6 +195,21 @@ for as long as the card is in play:
 | `DiscardStadium` | — | As named |
 | `SwitchToActive` | — | As named |
 
+### Special Energy
+
+A Special Energy's effects file sets `provides` (TCGdex leaves it empty) and, if what it provides
+depends on the Pokémon it's attached to, `provides_when`:
+
+```json
+{ "provides": ["colorless"],
+  "provides_when": [{ "holder": { "stage": "stage2" }, "provides": ["any", "any"] }] }
+```
+
+The first entry whose `holder` filter matches the Pokémon wins. Each `provides` item is one unit of
+Energy: a type, or `"any"` (it can count as every type). `compile_provides_when` compiles the list.
+`"discard_at_end_of_turn": true` discards the card at the end of its owner's turn (Ignition
+Energy).
+
 ### Triggers
 
 An Ability or a Stadium can say `"trigger"` to run its `effects` on its own instead of being chosen:

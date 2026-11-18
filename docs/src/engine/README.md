@@ -21,14 +21,15 @@ These are the formal model's *Legal* and *δ* (transition) functions.
 | Setup: coin flip, opening hands, mulligans with bonus draws, Active/Bench, 6 Prize cards | What Stadiums and Tools do (they can be played, but have no effect yet) |
 | Trainers: Items, Supporters, Stadiums, Tools, their limits and `"requires"`; 16 with effects | Trainers whose effects aren't written yet (they can't be played) |
 | Turn loop: draw, main phase, end of turn, Pokémon Checkup step | Abilities |
-| Benching, evolving, attaching Energy, retreating | Special Energy and full Energy cost matching (step 3.8) |
+| Benching, evolving, attaching Energy, retreating | Trainers that attach Energy from the deck or discard pile (step 3.8b) |
 | [Triggered effects](actions/abilities.md#triggered-effects): "when you play this Pokémon", Risky Ruins | |
 | [Abilities you choose to use](actions/abilities.md), and Stadium actions | |
 | [Lasting effects](actions/lasting.md): can't attack, can't use an attack, can't retreat, Item lock, damage bonus | |
 | Attacks: Energy costs, Weakness, Resistance, damage, and [effects](effects/interpreter.md): draw, search, switch, "you may", damage formulas, Bench damage, damage counters, copy attacks | |
 | [Special Conditions](actions/conditions.md) and the full Pokémon Checkup | |
-| Knock Outs, Prize cards (1 / 2 ex / 3 Mega ex), new Active | Special Energy: it can be attached but provides nothing |
-| Winning: Prize cards, no Pokémon left, deck-out, both at once | Special Energy (step 3.8) |
+| Knock Outs, Prize cards (1 / 2 ex / 3 Mega ex), new Active | |
+| Winning: Prize cards, no Pokémon left, deck-out, both at once | |
+| Special Energy, Energy counted in units, exact cost matching, Retreat paid in Energy provided | |
 | [Always-on effects](rules/rules.md#always-on-effects) from Tools, Stadiums and passive Abilities: HP, Retreat Cost, Weakness, damage bonuses | |
 | Tera Bench protection | |
 
@@ -135,7 +136,7 @@ bug can be replayed exactly.
   shouldn't see is the observation layer's job (Milestone 4).
 - **After a mulligan bonus draw, any Basic in hand may be benched**, not only the ones just drawn.
 - **Damage modifiers are ignored:** "20×" and "30+" attacks deal their printed number.
-- **Cost matching is greedy**, which is exact while every Energy provides a single type. Energy that
-  provides a choice of types (Milestone 3) will need a proper matching.
+- **Damage formulas count Energy cards**, not units ("for each Energy attached"). Only Neo Upper on a
+  Stage 2 and Ignition on an Evolution Pokémon differ.
 - **`apply` re-checks legality** by building the legal action list each time. That catches agent
   bugs at once, but costs speed; it can become debug-only later.

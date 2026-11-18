@@ -54,6 +54,7 @@ If an invariant breaks, it stops with the seed, the broken rules and the game st
 | Step 3.5a (damage formulas) | about 4,250 games/s, 0.6 million actions/s | about 1,650 games/s |
 | Step 3.7a (lasting and always-on effects) | about 4,340 games/s, 0.6 million actions/s | |
 | Step 3.7b (Abilities you use) | about 3,920 games/s, 0.6 million actions/s (games are 44.5 turns now: draw Abilities empty decks faster) | |
+| Step 3.8a (Special Energy, exact cost matching) | about 3,720 games/s, 0.6 million actions/s | |
 
 Games are longer now (about 145 actions each, up from about 100), so compare actions/s between
 versions. The release preset uses link-time optimization; without it the

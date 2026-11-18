@@ -9,14 +9,16 @@ be paid, as long as `rules::can_attack` allows it. The rulebook answer is no on 
 
 ### `can_pay_cost(game, pokemon, cost)`
 
-- Each typed symbol needs an Energy of that type.
-- Each Colorless symbol takes any Energy left over.
-- Each Energy provides what `rules::energy_provided` says; a Basic Energy provides one of its type. Special Energy provides nothing until
-  Milestone 3.
+Attached Energy is counted in **units**: `rules::energy_provided` gives each card's units, as
+`EnergyMask`s (the types a unit can count as). A Basic Energy is one unit of its type; Neo Upper
+Energy on a Stage 2 is two units of any type; Ignition Energy on an Evolution is three {C} units.
 
-Typed symbols are paid first, then the remainder must cover the Colorless ones. That greedy method
-is exact while each Energy provides a single type; Energy that provides a choice of types will
-need a proper matching.
+- Each typed symbol needs its own unit that can be that type.
+- Each Colorless symbol takes any unit left over.
+
+Typed symbols are matched by trying every assignment. Costs are only a few symbols, so this is
+cheap. It's exact even when some Energy can be any type, where a greedy match could fail: with any,
+any and {R}, the cost {R}{W}{P} needs the {R} Energy to pay {R}.
 
 ## Damage: `attack_damage(game, attacker, defender, attack)`
 

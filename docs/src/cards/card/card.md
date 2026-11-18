@@ -50,6 +50,8 @@ attack text says how the final damage is worked out.
 | `passive`, `modifiers` | An always-on Ability's `"passive"` list (JSON), and the same compiled into [`Modifier`s](../effects/program.md#always-on-effects-passive) |
 | `requirements`, `conditions` | A usable Ability's `"requires"` (JSON), and the compiled conditions |
 | `program` | A usable Ability's `effects`, compiled |
+| `provides_when`, `conditional_provides` | A Special Energy's [`"provides_when"`](../effects/program.md#special-energy) (JSON), and the compiled list |
+| `discard_at_end_of_turn` | A Special Energy discarded at the end of its owner's turn |
 | `trigger` | `Trigger::None`, or when the Ability [runs on its own](../../engine/actions/abilities.md#triggered-effects) (`CardDef` has one too, for Stadiums) |
 | `once_per_turn`, `one_per_name`, `active_only` | [When it can be used](../../engine/actions/abilities.md#when-an-ability-is-ready); default `true`, `false`, `false` |
 

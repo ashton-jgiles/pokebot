@@ -170,6 +170,10 @@ switch. Adrena-Brain always moves as many counters as it can, up to 3.
 Triggered (`"trigger"`): Meowth ex (Last-Ditch Catch), Chien-Pao (Snow Sink) and Iron Leaves ex
 (Rapid Vernier) when played to the Bench, and Risky Ruins.
 
+Special Energy ([`provides` and `provides_when`](../../src/cards/effects/program.md#special-energy)):
+Neo Upper Energy (two of any type on a Stage 2) and Ignition Energy ({C}{C}{C} on an Evolution
+Pokémon, discarded at the end of your turn).
+
 
 An Item or Supporter has a top-level `effects` list, and optionally `requires`: the
 [conditions](../../src/cards/effects/program.md#conditions) that must hold before it can be played.

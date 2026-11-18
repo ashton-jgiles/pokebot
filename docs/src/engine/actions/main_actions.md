@@ -60,15 +60,19 @@ Evolving and retreating remove all [Special Conditions](conditions.md).
 
 ## Retreating
 
+Retreat Cost is paid in Energy **provided** (`rules::energy_units`), not cards: one Ignition Energy
+providing {C}{C}{C} pays a Retreat Cost of 2 or 3.
+
 ```
 Retreat (pick who comes in)
   ├─ cost 0, every attached Energy has to go, or they're all the same card
-  │     → discard automatically, swap at once
-  └─ otherwise → RetreatDiscard decision: discard one Energy at a time until the cost is paid
+  │     → discard automatically (from the last attached) until the cost is covered, swap at once
+  └─ otherwise → RetreatDiscard decision: discard one Energy at a time until the cost is covered
                  → then swap
 ```
 
-The `RetreatDiscard` decision stores the cost still owed in `amount` and the incoming Benched
+The `RetreatDiscard` decision stores the Energy still owed in `amount` (each discard takes off
+what that card provided) and the incoming Benched
 Pokémon in `target`. Its legal actions are one `DiscardEnergy` per *distinct* Energy attached. The
 swap keeps both Pokémon's cards and damage, and the old Active takes the incoming one's Bench
 position.

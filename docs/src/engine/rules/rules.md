@@ -22,7 +22,8 @@ bend; this file is where they live.
 | `retreat_cost(game, pokemon)` | Printed Retreat Cost, plus `retreat_cost` changes; a `set` wins; never below 0 | Air Balloon, N's Castle, Latias ex |
 | `attack_text(game, attack_ref)` | The attack printed on `attack_ref.text_from` | (copy attacks pass another card) |
 | `attack_cost(game, pokemon, attack)` | Printed cost | Counter Gain, Kyurem |
-| `energy_provided(game, pokemon, energy)` | The card's `provides` list | Prism Energy, Meganium's Wild Growth |
+| `energy_provided(game, pokemon, energy)` | The card's `provides`, as units (`EnergyUnits`); a Special Energy's [`provides_when`](../../cards/effects/program.md#special-energy) for a matching holder | Neo Upper, Ignition, Prism Energy, Meganium's Wild Growth |
+| `energy_units(game, pokemon)` | Total units attached: what pays attack costs and Retreat Cost | |
 | `is_active(game, pokemon)` | Whether it's in its owner's Active Spot | |
 | `can_get_special_condition(game, pokemon, condition)` | Only the Active Pokémon | Festival Grounds, Hoothoot, Slowpoke |
 | `poison_counters(game, pokemon)` | What Poisoned it said (usually 1) | Perilous Jungle |
