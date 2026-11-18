@@ -21,6 +21,7 @@ lists the events Standard cards use.
 | `TurnEnding` | Once the main phase is over, before Pokémon Checkup | — | — |
 | `Checkup` | Pokémon Checkup | — | — |
 | `TrainerPlayed` | Playing a Trainer from hand, before its effect | The Pokémon a Tool went on | The Trainer |
+| `PlayedToBench` | Playing a Basic from hand onto the Bench, right after `PutOnBench`. Not raised for Pokémon put on the Bench any other way | The new Pokémon | — |
 
 `player` is whose Pokémon or card the event happened to. Pokémon are named by their
 [`id()`](../game/game_state.md#pokemoninplay), so an event still points at the right Pokémon after it moves.
@@ -30,9 +31,9 @@ Ability or Tera Pokémon leaving play (Area Zero).
 
 ## What happens on an event
 
-Today `raise` only tells the **event hook**, if one is set. In step 3.7 it will also find every
-Ability, Tool, Stadium and Special Energy in play that reacts to the event and queue its effect, with
-the current player's effects first.
+`raise` tells the **event hook**, if one is set, then calls `run_triggers`, which starts any
+[triggered effects](../actions/abilities.md#triggered-effects) for the event. Today those are
+`PlayedToBench` (Abilities) and `PutOnBench` (Stadiums).
 
 ## The event hook
 

@@ -43,6 +43,9 @@ Each block is a JSON object with an `"op"`:
 | `look_at_top` | `count` (1), `take` (1), `to` (`"hand"`), `filter` | Look at the top `count` cards, take `take` of them, and put the rest on the bottom in the same order (Recon Directive) | `ChooseCards`, `MoveChosen`, `RestToBottom` |
 | `attach_from_hand` | `count` (1), `filter` | Attach that many matching cards from your hand to this Pokémon (Teal Dance) | `ChooseCards`, `MoveChosen` |
 | `shuffle_self_into_deck` | — | Shuffle this Pokémon and everything attached into your deck (Run Away Draw) | `ShuffleSelfIntoDeck` |
+| `counters_on_self` | `count` (1) | Put damage counters on "this Pokémon" (Risky Ruins, where "this Pokémon" is the one put on the Bench) | `CountersOnSelf` |
+| `discard_stadium` | — | Discard the Stadium in play, to its owner's discard pile (Snow Sink) | `DiscardStadium` |
+| `switch_to_active` | — | This Benched Pokémon switches with your Active Pokémon (Rapid Vernier) | `SwitchToActive` |
 | `may` | `effects` (a list) | "You may …": ask first, and skip the list on no | `AskYesNo`, then the list |
 | `ignore_defender_effects` | — | "This attack's damage isn't affected by any effects on your opponent's Active Pokémon" (Shred): the printed Weakness and Resistance are used and defender-side effects skipped. Must come before a placed `damage` step. Attacks only | `IgnoreDefenderEffects` |
 | `lasting` | `effect`, `until`, `on` (`"self"`), `player`, `amount`, `only_ex` | A [lasting effect](../../engine/actions/lasting.md). `effect`: `"cant_attack"`, `"cant_use_attack"` (this attack), `"cant_retreat"`, `"no_items"`, `"damage_bonus"`. `until`: `"this_turn"`, `"opponents_next_turn"`, `"your_next_turn"`. `on`: `"self"` or `"defending"` for the first three (attacks only), `"player"` (with `player`) for the last two | `AddLasting` |
@@ -50,7 +53,7 @@ Each block is a JSON object with an `"op"`:
 
 - Cards moved to a hand, deck or discard pile always go to **their owner's**, even when the effect is
   the opponent's (Crushing Hammer's Energy goes to its owner's discard pile).
-- `to` can be `"hand"`, `"discard"`, `"deck"` or `"bench"`. Cards put on the Bench become new
+- `to` can be `"hand"`, `"discard"`, `"deck"`, `"bench"` or `"self"` (attached to this Pokémon). Cards put on the Bench become new
   Pokémon in play, and no more are chosen than the Bench has room for.
 - `player` can be `"you"` (the default), `"opponent"` or `"each"` (you first, then your opponent).
 - `count` must be 0 to 60.
@@ -99,6 +102,7 @@ applied afterwards, in the [damage pipeline](../../engine/rules/rules.md#the-dam
 | `name` | That exact card name |
 | `name_prefix` | A name starting with this ("N's") |
 | `not_name` | Any name except this one ("except any Pecharunt ex") |
+| `not_type` | Not of this type ("non-{D}") |
 | `any_of` | A list of filters; at least one must match ("a Pokémon or a Basic Energy card") |
 
 Every field given must match; `{}` (or no filter) matches any card.
@@ -127,6 +131,8 @@ Each is an object with one key, from the point of view of the player the card be
 | `{"active_is": filter}` | Your Active Pokémon matches |
 | `{"self_has_energy": filter}` | An Energy attached to this Pokémon matches |
 | `{"has_damaged": true}` | One of your Pokémon in play has damage counters |
+| `{"self_is": filter}` | "This Pokémon" matches |
+| `{"stadium_in_play": true}` | A Stadium is in play |
 
 Anything the compiler doesn't recognise (an unknown op, filter field or destination, a bad count,
 a value of the wrong JSON type) throws `CardDataError`.
@@ -185,6 +191,21 @@ for as long as the card is in play:
 | `RestToBottom` | `amount` | The top `amount` cards that weren't taken go to the bottom |
 | `ChooseCounterSource` | — | The player chooses one of their damaged Pokémon |
 | `MoveCounters` | `max` | Up to `max` counters from that Pokémon to the first target |
+| `CountersOnSelf` | `max` | `max` counters on "this Pokémon" |
+| `DiscardStadium` | — | As named |
+| `SwitchToActive` | — | As named |
+
+### Triggers
+
+An Ability or a Stadium can say `"trigger"` to run its `effects` on its own instead of being chosen:
+
+| `"trigger"` | When |
+|---|---|
+| `"played_to_bench"` | An Ability: when you play this Pokémon from your hand onto your Bench |
+| `"put_on_bench"` | A Stadium: whenever a player puts a Pokémon onto their Bench during their turn, by any means |
+
+See [triggered effects](../../engine/actions/abilities.md#triggered-effects). `trigger_from_string`
+reads the name; an unknown one is a `CardDataError`.
 
 `Draw` also records how many cards it drew, for `drew_at_least`.
 

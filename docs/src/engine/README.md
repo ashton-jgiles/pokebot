@@ -21,7 +21,8 @@ These are the formal model's *Legal* and *δ* (transition) functions.
 | Setup: coin flip, opening hands, mulligans with bonus draws, Active/Bench, 6 Prize cards | What Stadiums and Tools do (they can be played, but have no effect yet) |
 | Trainers: Items, Supporters, Stadiums, Tools, their limits and `"requires"`; 16 with effects | Trainers whose effects aren't written yet (they can't be played) |
 | Turn loop: draw, main phase, end of turn, Pokémon Checkup step | Abilities |
-| Benching, evolving, attaching Energy, retreating | Triggered effects: "when you play this Pokémon", Risky Ruins (step 3.7c) |
+| Benching, evolving, attaching Energy, retreating | Special Energy and full Energy cost matching (step 3.8) |
+| [Triggered effects](actions/abilities.md#triggered-effects): "when you play this Pokémon", Risky Ruins | |
 | [Abilities you choose to use](actions/abilities.md), and Stadium actions | |
 | [Lasting effects](actions/lasting.md): can't attack, can't use an attack, can't retreat, Item lock, damage bonus | |
 | Attacks: Energy costs, Weakness, Resistance, damage, and [effects](effects/interpreter.md): draw, search, switch, "you may", damage formulas, Bench damage, damage counters, copy attacks | |
@@ -124,6 +125,7 @@ bug can be replayed exactly.
 | `actions/conditions.cpp` | [conditions.md](actions/conditions.md) | Special Conditions and what Pokémon Checkup does with them |
 | `actions/lasting.cpp` | [lasting.md](actions/lasting.md) | Effects that last past the card that made them |
 | (in `actions/main_actions.cpp`) | [abilities.md](actions/abilities.md) | Abilities you choose to use, and Stadium actions |
+| `effects/triggers.cpp` | [abilities.md](actions/abilities.md#triggered-effects) | Triggered effects |
 | `invariants/invariants.hpp/.cpp` | [invariants.md](invariants/invariants.md) | Consistency checker |
 | `describe/describe.hpp/.cpp` | [describe.md](describe/describe.md) | Text descriptions of states and actions |
 

@@ -50,6 +50,7 @@ attack text says how the final damage is worked out.
 | `passive`, `modifiers` | An always-on Ability's `"passive"` list (JSON), and the same compiled into [`Modifier`s](../effects/program.md#always-on-effects-passive) |
 | `requirements`, `conditions` | A usable Ability's `"requires"` (JSON), and the compiled conditions |
 | `program` | A usable Ability's `effects`, compiled |
+| `trigger` | `Trigger::None`, or when the Ability [runs on its own](../../engine/actions/abilities.md#triggered-effects) (`CardDef` has one too, for Stadiums) |
 | `once_per_turn`, `one_per_name`, `active_only` | [When it can be used](../../engine/actions/abilities.md#when-an-ability-is-ready); default `true`, `false`, `false` |
 
 ### `Attack`

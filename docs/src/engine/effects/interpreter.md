@@ -29,6 +29,7 @@ like the original.** Search can explore a half-finished Ultra Ball like any othe
 | Function | Behavior |
 |---|---|
 | `start_effect(game, who, program, then)` | Pushes a run and runs it until it finishes or needs a choice |
+| `queue_effect(game, who, program, then)` | The same when nothing is running. When an effect is running (a trigger in the middle of Poffin), it only pushes the run, and the running loop starts it right after the current step, so nothing runs twice |
 | `is_effect_decision(kind)` | `ChooseCards`, `ChoosePokemon` or `ChooseYesNo` |
 | `add_effect_choice_actions(game, out)` | The legal answers to the current effect decision |
 | `apply_effect_choice(game, action)` | Records the answer and carries on |

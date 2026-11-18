@@ -167,6 +167,9 @@ or `once_per_turn` (see [Abilities](../../src/engine/actions/abilities.md)). So 
 (Teal Dance), Munkidori (Adrena-Brain) and Mega Greninja ex (Mortal Shuriken), plus Surfing Beach's
 switch. Adrena-Brain always moves as many counters as it can, up to 3.
 
+Triggered (`"trigger"`): Meowth ex (Last-Ditch Catch), Chien-Pao (Snow Sink) and Iron Leaves ex
+(Rapid Vernier) when played to the Bench, and Risky Ruins.
+
 
 An Item or Supporter has a top-level `effects` list, and optionally `requires`: the
 [conditions](../../src/cards/effects/program.md#conditions) that must hold before it can be played.

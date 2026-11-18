@@ -58,6 +58,31 @@ Stadium's program with `then = FinishAbility`.
 A cost ("you must discard a card from your hand in order to use this Ability") is the first effect,
 plus a requirement that it can be paid.
 
+## Triggered effects
+
+**Code:** [`src/engine/effects/triggers.cpp`](../../../../src/engine/effects/triggers.cpp)
+
+Some effects happen on their own when something happens. Every [event](../events/events.md) goes
+through `run_triggers`:
+
+| Event | What runs |
+|---|---|
+| `PlayedToBench` (raised only when a Basic is played from hand) | That Pokémon's Abilities with `"trigger": "played_to_bench"`, when `ability_allowed` says yes (Ability lock, once per turn, one per name, `"requires"`). The use is recorded like a chosen one |
+| `PutOnBench` (any source, during that player's turn) | The Stadium in play, if it has `"trigger": "put_on_bench"`, with the new Pokémon as "this Pokémon" |
+
+"You may use this Ability" is written as a `may` block in the effects. Triggers start through
+[`queue_effect`](../effects/interpreter.md), so one firing in the middle of another effect waits for
+the current step to finish. They end with `FinishAbility`.
+
+`ability_allowed(game, player, pokemon, index)` holds the checks shared by chosen and triggered
+Abilities. Triggered Abilities are never offered as `UseAbility`, and a triggered Stadium is never
+offered as `UseStadium`.
+
+**Known gap:** if a triggered effect Knocks Out a Pokémon in the middle of another card's effect,
+the "choose a new Active" decision comes after that card finishes. Risky Ruins can't Knock Out any
+Pokémon in our decks.
+
 ## Tests
 
-[`tests/test_engine_abilities.cpp`](../../../../tests/test_engine_abilities.cpp), tag `[abilities]`.
+[`tests/test_engine_abilities.cpp`](../../../../tests/test_engine_abilities.cpp), tag `[abilities]`, and
+[`tests/test_engine_triggers.cpp`](../../../../tests/test_engine_triggers.cpp), tag `[triggers]`.
