@@ -1,0 +1,1 @@
+{"effects": [{"op": "search_deck", "count": 1, "filter": {"kind": "energy", "basic": true}, "shuffle": false}, {"op": "attach_to", "from": "deck", "count": 1, "filter": {"kind": "energy", "basic": true}}]}

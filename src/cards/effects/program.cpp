@@ -193,6 +193,8 @@ namespace pokebot {
                     filter.not_name = value.get<std::string>();
                 } else if (key == "not_type") {
                     filter.not_type = energy_type_from_string(value.get<std::string>());
+                } else if (key == "tera") {
+                    filter.tera = value.get<bool>();
                 } else if (key == "any_of") {
                     for (const auto& option : value) {
                         filter.any_of.push_back(parse_filter_fields(option));
@@ -270,6 +272,16 @@ namespace pokebot {
                 condition.filter = parse_filter_fields(value);
             } else if (key == "stadium_in_play") {
                 condition.kind = ConditionKind::StadiumInPlay;
+            } else if (key == "more_prizes_than_opponent") {
+                condition.kind = ConditionKind::MorePrizesThanOpponent;
+            } else if (key == "in_play_has") {
+                condition.kind = ConditionKind::InPlayHas;
+                condition.filter = parse_filter_fields(value);
+            } else if (key == "your_energy_has") {
+                condition.kind = ConditionKind::YourEnergyHas;
+                condition.filter = parse_filter_fields(value);
+            } else if (key == "attached_to_active") {
+                condition.kind = ConditionKind::AttachedToActive;
             } else if (key == "has_benched") {
                 condition.kind = ConditionKind::HasBenched;
             } else if (key == "opponent_has_benched") {
@@ -399,6 +411,45 @@ namespace pokebot {
             void attack_only(const std::string& op) {
                 if (!attack_) {
                     throw CardDataError("only attacks can use \"" + op + "\"");
+                }
+            }
+
+            // Choose your Pokemon, then for each one, choose Energy from `from` and attach it.
+            void attach_to(const json& block) {
+                const std::string from = block.value("from", "discard");
+                Zone zone = Zone::Discard;
+                if (from == "deck") {
+                    zone = Zone::Deck;
+                } else if (from == "hand") {
+                    zone = Zone::Hand;
+                } else if (from != "discard") {
+                    throw CardDataError("attach_to is from \"deck\", \"discard\" or \"hand\", not '" + from + "'");
+                }
+                const int targets = block.value("targets", 1);
+                if (targets < 1 || targets > 6) {
+                    throw CardDataError("targets must be 1 to 6");
+                }
+
+                Step choose;
+                choose.op = Op::ChooseTargets;
+                choose.side = Side::You;
+                choose.from = where_on(block);
+                choose.max = static_cast<std::uint8_t>(targets);
+                choose.min = block.value("up_to_targets", false) ? 0 : choose.max;
+                choose.filter = block.contains("target") ? parse_filter_fields(block.at("target")) : CardFilter{};
+                add(choose);
+
+                const std::size_t each = program.size();
+                add(Op::EachTarget);
+                const std::uint8_t count = count_of(block, 1);
+                choose_and_move(zone, Zone::TargetEnergy, block.value("up_to", false) ? 0 : count, count, parse_filter(block));
+                Step next;
+                next.op = Op::NextTarget;
+                next.jump = static_cast<std::uint8_t>(each);
+                add(next);
+                program[each].jump = here();
+                if (zone == Zone::Deck && block.value("shuffle", true)) {
+                    add(Op::ShuffleDeck);
                 }
             }
 
@@ -547,6 +598,22 @@ namespace pokebot {
                     choose.filter = parse_filter(block);
                     add(choose);
                     add(Op::UseChosenAttack);
+                } else if (op == "attach_to") {
+                    attach_to(block);
+                } else if (op == "move_energy") {
+                    Step source;
+                    source.op = Op::ChooseTargets;
+                    source.side = Side::You;
+                    source.from = Zone::InPlay;
+                    source.min = 1;
+                    source.max = 1;
+                    source.needs_energy = true;
+                    add(source);
+                    choose_and_move(Zone::TargetEnergy, Zone::ChosenEnergy, 1, 1, parse_filter(block));
+                    // choose the destination between choosing the Energy and moving it
+                    Step destination;
+                    destination.op = Op::ChooseDestination;
+                    program.insert(program.end() - 1, destination);
                 } else if (op == "counters_on_self") {
                     Step put;
                     put.op = Op::CountersOnSelf;
@@ -715,6 +782,9 @@ namespace pokebot {
             }
         }
         if (filter.rule_box && card.rules.ex != *filter.rule_box) {
+            return false;
+        }
+        if (filter.tera && card.rules.tera != *filter.tera) {
             return false;
         }
         if (filter.max_hp > 0 && (card.kind != CardKind::Pokemon || card.hp > filter.max_hp)) {
@@ -929,6 +999,12 @@ namespace pokebot {
                 return "discard the Stadium";
             case Op::SwitchToActive:
                 return "switch into the Active Spot";
+            case Op::EachTarget:
+                return "for each target";
+            case Op::NextTarget:
+                return "next target";
+            case Op::ChooseDestination:
+                return "choose where to move it";
         }
         return "unknown op";
     }

@@ -22,7 +22,8 @@ namespace pokebot {
         YourAttachedEnergy,
         DeckTop,
         InPlay,       // the Active Pokemon and the Bench
-        TargetEnergy, // Energy attached to the first chosen target
+        TargetEnergy, // Energy attached to the target being worked on (the first, or the current one in a loop)
+        ChosenEnergy, // Energy attached to the chosen Pokemon (chosen_pokemon)
     };
 
     enum class Side : std::uint8_t {
@@ -67,6 +68,9 @@ namespace pokebot {
         CountersOnSelf,
         DiscardStadium,
         SwitchToActive,
+        EachTarget,        // the start of a loop over the targets: done, carry on at `jump`
+        NextTarget,        // the end of the loop: go back to `jump` for the next target
+        ChooseDestination, // the player chooses another of their Pokemon (chosen_pokemon)
     };
 
     enum class StageFilter : std::uint8_t {
@@ -89,6 +93,7 @@ namespace pokebot {
         std::string name_prefix;
         std::string not_name;
         std::optional<EnergyType> not_type;
+        std::optional<bool> tera;
         std::vector<CardFilter> any_of;
     };
 
@@ -105,13 +110,17 @@ namespace pokebot {
         SharesType,
         SelfEnergyAtLeast,
         KnockedOutByAttackLastTurn,
-        HandHas,        // a card in your hand (other than the one being played) matches `filter`
-        BenchHas,       // one of your Benched Pokemon matches `filter`
-        ActiveIs,       // your Active Pokemon matches `filter`
-        SelfHasEnergy,  // an Energy attached to this Pokemon matches `filter`
-        YouHaveDamaged, // one of your Pokemon in play has damage counters
-        SelfIs,         // "this Pokemon" matches `filter`
-        StadiumInPlay,  // a Stadium is in play
+        HandHas,                // a card in your hand (other than the one being played) matches `filter`
+        BenchHas,               // one of your Benched Pokemon matches `filter`
+        ActiveIs,               // your Active Pokemon matches `filter`
+        SelfHasEnergy,          // an Energy attached to this Pokemon matches `filter`
+        YouHaveDamaged,         // one of your Pokemon in play has damage counters
+        SelfIs,                 // "this Pokemon" matches `filter`
+        StadiumInPlay,          // a Stadium is in play
+        MorePrizesThanOpponent, // you have more Prize cards left than your opponent
+        InPlayHas,              // one of your Pokemon in play matches `filter`
+        YourEnergyHas,          // an Energy attached to one of your Pokemon matches `filter`
+        AttachedToActive,       // this effect attached Energy to your Active Pokemon
     };
 
     // When a triggered effect happens on its own, without being chosen.

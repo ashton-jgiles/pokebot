@@ -1,0 +1,1 @@
+{"requires": [{"your_energy_has": {"kind": "energy", "basic": true}}, {"has_benched": true}], "effects": [{"op": "move_energy", "filter": {"kind": "energy", "basic": true}}]}

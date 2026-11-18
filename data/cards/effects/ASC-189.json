@@ -1,0 +1,1 @@
+{"requires": [{"in_play_has": {"tera": true}}, {"discard_has": {"kind": "energy", "basic": true}}, {"bench_has": {"type": "colorless"}}], "effects": [{"op": "attach_to", "on": "bench", "targets": 2, "up_to_targets": true, "target": {"type": "colorless"}, "count": 1, "filter": {"kind": "energy", "basic": true}}]}

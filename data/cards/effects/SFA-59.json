@@ -1,0 +1,1 @@
+{"effects": [{"op": "attach_to", "from": "deck", "targets": 2, "up_to_targets": true, "target": {"type": "darkness"}, "count": 1, "filter": {"kind": "energy", "basic": true, "type": "darkness"}}, {"op": "if", "condition": {"attached_to_active": true}, "then": [{"op": "special_condition", "condition": "poisoned", "player": "you"}]}]}

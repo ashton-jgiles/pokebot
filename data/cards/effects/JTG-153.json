@@ -1,0 +1,1 @@
+{"requires": [{"discard_has": {"kind": "energy", "basic": true}}, {"bench_has": {"name_prefix": "N's"}}], "effects": [{"op": "attach_to", "on": "bench", "target": {"name_prefix": "N's"}, "count": 1, "filter": {"kind": "energy", "basic": true}}]}

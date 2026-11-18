@@ -1,0 +1,1 @@
+{"requires": [{"more_prizes_than_opponent": true}, {"discard_has": {"kind": "energy", "basic": true}}, {"in_play_has": {"stage": "stage2"}}], "effects": [{"op": "attach_to", "target": {"stage": "stage2"}, "count": 2, "up_to": true, "filter": {"kind": "energy", "basic": true}}]}
