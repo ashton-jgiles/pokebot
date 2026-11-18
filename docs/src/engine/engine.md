@@ -10,9 +10,10 @@
 | `GameState new_game(const CardTable& cards, std::uint64_t seed)` | Shuffles, deals, resolves mulligans, flips the coin. Returns a game waiting for the coin-flip winner to choose turn order. See [setup](setup/setup.md) |
 | `std::vector<Action> legal_actions(const GameState& game)` | Every choice for the pending decision. Empty once the game is over. Never empty otherwise |
 | `void apply(GameState& game, const Action& action)` | Carries out one action, then runs the game forward to the next decision |
+| `void apply_legal(GameState& game, const Action& action)` | The same without the legality check, for an action just taken from `legal_actions(game)`. Building the list again doubled the cost of every action |
 
 `apply` throws:
-- `std::invalid_argument` if the action isn't in `legal_actions(game)`;
+- `std::invalid_argument` if the action isn't in `legal_actions(game)` (`apply_legal` doesn't check: an illegal action there is a bug in the caller);
 - `std::logic_error` if the game is already over.
 
 A typical loop:

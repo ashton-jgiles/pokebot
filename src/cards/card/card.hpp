@@ -35,6 +35,7 @@ namespace pokebot {
         bool one_per_name = false; // "You can't use more than 1 <name> Ability each turn"
         bool active_only = false;  // "if this Pokemon is in the Active Spot"
         Trigger trigger = Trigger::None;
+        std::string no_effect; // why this Ability needs no effects with the cards we have (Damp)
     };
 
     struct Attack {

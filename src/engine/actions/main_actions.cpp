@@ -11,14 +11,14 @@ namespace pokebot {
 
         namespace {
 
-            using Choice = std::pair<const CardDef*, Slot>;
-
-            bool first_time(std::vector<Choice>& seen, const CardDef* def, Slot slot) {
-                const Choice choice{def, slot};
-                if (std::find(seen.begin(), seen.end(), choice) != seen.end()) {
-                    return false;
+            // Copies of a card are interchangeable: a choice already offered for the same card and slot isn't offered again.
+            bool first_time(const GameState& game, const std::vector<Action>& out, ActionKind kind, CardIndex card, Slot slot) {
+                const CardDef* def = &game.def(card);
+                for (const Action& action : out) {
+                    if (action.kind == kind && action.target == slot && &game.def(action.card) == def) {
+                        return false;
+                    }
                 }
-                seen.push_back(choice);
                 return true;
             }
 
@@ -35,9 +35,8 @@ namespace pokebot {
                 if (p.bench.size() >= rules::bench_size(game, player)) {
                     return;
                 }
-                std::vector<Choice> seen;
                 for (const CardIndex card : p.hand) {
-                    if (is_basic_pokemon(game, card) && first_time(seen, &game.def(card), kActiveSlot)) {
+                    if (is_basic_pokemon(game, card) && first_time(game, out, ActionKind::PlayBasic, card, kActiveSlot)) {
                         out.push_back(Action{ActionKind::PlayBasic, card, kActiveSlot, 0});
                     }
                 }
@@ -45,14 +44,13 @@ namespace pokebot {
 
             void add_evolve_actions(const GameState& game, int player, std::vector<Action>& out) {
                 const PlayerState& p = game.player(player);
-                std::vector<Choice> seen;
                 for (const Slot slot : in_play_slots(p)) {
                     const PokemonInPlay& pokemon = pokemon_at(p, slot);
                     if (!rules::can_evolve(game, pokemon)) {
                         continue;
                     }
                     for (const CardIndex card : p.hand) {
-                        if (rules::evolves_into(game, pokemon, card) && first_time(seen, &game.def(card), slot)) {
+                        if (rules::evolves_into(game, pokemon, card) && first_time(game, out, ActionKind::Evolve, card, slot)) {
                             out.push_back(Action{ActionKind::Evolve, card, slot, 0});
                         }
                     }
@@ -64,13 +62,12 @@ namespace pokebot {
                     return;
                 }
                 const PlayerState& p = game.player(player);
-                std::vector<Choice> seen;
                 for (const CardIndex card : p.hand) {
                     if (!is_energy(game, card)) {
                         continue;
                     }
                     for (const Slot slot : in_play_slots(p)) {
-                        if (first_time(seen, &game.def(card), slot)) {
+                        if (first_time(game, out, ActionKind::AttachEnergy, card, slot)) {
                             out.push_back(Action{ActionKind::AttachEnergy, card, slot, 0});
                         }
                     }
@@ -155,19 +152,20 @@ namespace pokebot {
 
             void add_trainer_actions(const GameState& game, int player, std::vector<Action>& out) {
                 const PlayerState& p = game.player(player);
-                std::vector<Choice> seen;
+                FixedVector<const CardDef*, kDeckSize> checked; // each card's requirements are checked once, not once per copy
                 for (const CardIndex card : p.hand) {
                     const CardDef& def = game.def(card);
-                    if (def.kind != CardKind::Trainer) {
+                    if (def.kind != CardKind::Trainer || checked.contains(&def)) {
                         continue;
                     }
+                    checked.push_back(&def);
                     if (def.trainer_kind == TrainerKind::Tool) {
                         for (const Slot slot : in_play_slots(p)) {
-                            if (rules::can_attach_tool(game, pokemon_at(p, slot)) && first_time(seen, &def, slot)) {
+                            if (rules::can_attach_tool(game, pokemon_at(p, slot))) {
                                 out.push_back(Action{ActionKind::AttachTool, card, slot, 0});
                             }
                         }
-                    } else if (can_play_trainer(game, player, card) && first_time(seen, &def, kActiveSlot)) {
+                    } else if (can_play_trainer(game, player, card)) {
                         out.push_back(Action{ActionKind::PlayTrainer, card, kActiveSlot, 0});
                     }
                 }
@@ -314,9 +312,8 @@ namespace pokebot {
 
         void add_retreat_discard_actions(const GameState& game, std::vector<Action>& out) {
             const PokemonInPlay& active = *game.player(game.decision().player).active;
-            std::vector<Choice> seen;
             for (const CardIndex card : active.energy) {
-                if (first_time(seen, &game.def(card), kActiveSlot)) {
+                if (first_time(game, out, ActionKind::DiscardEnergy, card, kActiveSlot)) {
                     out.push_back(Action{ActionKind::DiscardEnergy, card, kActiveSlot, 0});
                 }
             }

@@ -95,6 +95,7 @@ namespace pokebot {
         if (game.is_over()) {
             return actions;
         }
+        actions.reserve(32);
 
         const DecisionKind kind = game.decision().kind;
         if (is_setup_decision(kind)) {
@@ -126,7 +127,10 @@ namespace pokebot {
         if (std::find(legal.begin(), legal.end(), action) == legal.end()) {
             throw std::invalid_argument("apply: that action isn't legal right now");
         }
+        apply_legal(game, action);
+    }
 
+    void apply_legal(GameState& game, const Action& action) {
         const DecisionKind kind = game.decision().kind;
         if (is_setup_decision(kind)) {
             detail::apply_setup_action(game, action);

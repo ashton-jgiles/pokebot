@@ -54,8 +54,7 @@ Needs review:
   ...
 
 80 distinct cards, 0 network requests, 0 failures, 0 name mismatches
-80 cards load cleanly; 1 attacks/abilities/cards still need hand-written effects
-  needs effects: ASC-39 Psyduck: ability Damp
+80 cards load cleanly; 0 attacks/abilities/cards still need hand-written effects
 
 Deck legality:
   legal    data/decks/basic-box.txt

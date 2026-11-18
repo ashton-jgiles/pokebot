@@ -55,11 +55,21 @@ If an invariant breaks, it stops with the seed, the broken rules and the game st
 | Step 3.7a (lasting and always-on effects) | about 4,340 games/s, 0.6 million actions/s | |
 | Step 3.7b (Abilities you use) | about 3,920 games/s, 0.6 million actions/s (games are 44.5 turns now: draw Abilities empty decks faster) | |
 | Step 3.8a (Special Energy, exact cost matching) | about 3,720 games/s, 0.6 million actions/s | |
+| Step 3.9 (one-of-a-kind cards, 8-space Bench) | about 3,130 games/s, 0.5 million actions/s | |
+| Step 3.10 (`apply_legal`, no heap use when listing main-phase actions) | *to be measured* | |
 
 Games are longer now (about 145 actions each, up from about 100), so compare actions/s between
 versions. The release preset uses link-time optimization; without it the
-[rules](../../src/engine/rules/rules.md) questions cost about 15%. Profiling the engine is part of
-the Milestone 3 sign-off, before search needs the speed.
+[rules](../../src/engine/rules/rules.md) questions cost about 15%.
+
+At the Milestone 3 sign-off, the main costs were:
+- **`apply` built the legal action list a second time** to check the action. The harness now calls
+  `apply_legal` with the list it already has.
+- **Merging duplicate choices** used a heap-allocated list four times per main phase. It now looks
+  through the actions already offered instead.
+- **Trainer requirements were checked once per copy** in hand. Three Rare Candy meant three searches
+  of every Stage 2 against every card in the game. Each card name is checked once now, and a
+  requirement stops at the first pair it finds.
 
 ```bash
 cmake --preset release

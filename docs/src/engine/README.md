@@ -18,7 +18,7 @@ These are the formal model's *Legal* and *δ* (transition) functions.
 
 | Covered | Not yet (Milestone 3) |
 |---|---|
-| Setup: coin flip, opening hands, mulligans with bonus draws, Active/Bench, 6 Prize cards | Psyduck's Damp (no Ability in our decks needs it) |
+| Setup: coin flip, opening hands, mulligans with bonus draws, Active/Bench, 6 Prize cards | |
 | Trainers: Items, Supporters, Stadiums, Tools, their limits and `"requires"`; 16 with effects | |
 | Turn loop: draw, main phase, end of turn, Pokémon Checkup step | |
 | Benching, evolving, attaching Energy, retreating, and attaching Energy from the deck or discard pile | |
@@ -142,5 +142,7 @@ bug can be replayed exactly.
 - **Damage modifiers are ignored:** "20×" and "30+" attacks deal their printed number.
 - **Damage formulas count Energy cards**, not units ("for each Energy attached"). Only Neo Upper on a
   Stage 2 and Ignition on an Evolution Pokémon differ.
-- **`apply` re-checks legality** by building the legal action list each time. That catches agent
-  bugs at once, but costs speed; it can become debug-only later.
+- **`apply` re-checks legality** by building the legal action list again. Code that has just built
+  the list (the match harness, and later search) calls `apply_legal`, which skips that.
+- **Psyduck's Damp does nothing:** it stops Abilities that Knock Out their own Pokémon, and no card
+  in our pool has one. Its effects file says so with `no_effect`.

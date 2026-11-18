@@ -128,6 +128,9 @@ namespace pokebot {
                 if (a.trigger != Trigger::None) {
                     ability["trigger"] = to_string(a.trigger);
                 }
+                if (!a.no_effect.empty()) {
+                    ability["no_effect"] = a.no_effect;
+                }
                 abilities.push_back(ability);
             }
             j["abilities"] = abilities;
@@ -218,6 +221,7 @@ namespace pokebot {
                     ability.one_per_name = a.value("one_per_name", false);
                     ability.active_only = a.value("active_only", false);
                     ability.trigger = trigger_from_string(a.value("trigger", "none"));
+                    ability.no_effect = a.value("no_effect", "");
                     c.abilities.push_back(std::move(ability));
                 }
                 for (const auto& a : j.value("attacks", json::array())) {

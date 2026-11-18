@@ -31,9 +31,9 @@ List every test:
 | [`test_tcgdex.cpp`](../../tests/test_tcgdex.cpp) | `[tcgdex]` | 5 | Padded card ids, unknown sets and numbers, cache then offline reuse, retries after empty/failed responses, giving up, offline with no cache |
 | [`test_convert.cpp`](../../tests/test_convert.cpp) | `[convert]` | 7 | Pokémon ex with `×` damage and a free attack, damage modifiers surviving save and reload, Mega ex worth 3 Prizes with no Tera check, ACE SPEC detection, Basic Energy type from its name, Special Energy mislabeled as Normal, rejecting unknown data |
 | [`test_deck_validator.cpp`](../../tests/test_deck_validator.cpp) | `[deck_validator]` | 9 | One test per deck-building rule, all printings of a name counting together, Basic Energy exemption, unknown cards, several problems at once, and every real deck in `data/decks/` (skipped without generated data) |
-| [`test_card_db.cpp`](../../tests/test_card_db.cpp) | `[card_db]` | 5 | JSON round trip, effects files adding rules and attack effects, typo'd attack names rejected, `missing_effects` list, bad card data rejected |
+| [`test_card_db.cpp`](../../tests/test_card_db.cpp) | `[card_db]` | 6 | JSON round trip, effects files adding rules and attack effects, typo'd attack names rejected, `missing_effects` list, `no_effect` Abilities not missing, bad card data rejected |
 | [`test_engine_state.cpp`](../../tests/test_engine_state.cpp) | `[engine]` | 9 | `FixedVector`, `Rng` determinism and shuffles, independent `GameState` copies, card ownership, `CardTable` numbering and illegal decks |
-| [`test_engine_setup.cpp`](../../tests/test_engine_setup.cpp) | `[setup]` | 9 | Opening hands, determinism, turn order, Prize cards and turn 1, merged choices and the Bench limit, mulligan bonus draws, 1,000 random real-deck setups, illegal actions |
+| [`test_engine_setup.cpp`](../../tests/test_engine_setup.cpp) | `[setup]` | 10 | Opening hands, determinism, turn order, Prize cards and turn 1, merged choices and the Bench limit, mulligan bonus draws, 1,000 random real-deck setups, illegal actions, `apply_legal` playing the same game as `apply` |
 | [`test_engine_turns.cpp`](../../tests/test_engine_turns.cpp) | `[turns]` | 5 | Ending the turn, drawing, alternating turns, flag resets, deck-out |
 | [`test_engine_actions.cpp`](../../tests/test_engine_actions.cpp) | `[actions]` | 10 | Benching, one Energy per turn, evolution timing, retreating (with and without a choice, free, not allowed), 200 random real-deck games (the Bench never over `rules::bench_size`) with a summary of how they ended |
 | [`test_engine_attacks.cpp`](../../tests/test_engine_attacks.cpp) | `[attacks]` | 11 | Cost matching, no attack on turn 1, damage, Weakness and Resistance, copied attacks using the attacker's type, Pokémon ids, Knock Outs and promotion, ex / Mega ex Prize cards, every way to win including draws |
@@ -54,10 +54,30 @@ List every test:
 | [`test_engine_custom.cpp`](../../tests/test_engine_custom.cpp) | `[custom]` | 7 | Rare Candy straight to Stage 2, not on the first turns or a Pokémon played this turn; Transformation Tome needing two, keeping Energy and damage, and Knocking Out a Basic with less HP; Area Zero's 8 spaces with a Tera Pokémon and the discard down to 5 when it leaves; the load checks |
 | [`test_invariants.cpp`](../../tests/test_invariants.cpp) | `[invariants]` | 5 | The checker catches duplicated, missing and misplaced cards, missed Knock Outs, bad evolutions and Energy, and a missing Active |
 | [`test_agents.cpp`](../../tests/test_agents.cpp) | `[agents]` | 3 | Random choices stay legal and cover every option, the biased agent attacks, seeds repeat |
+| [`test_coverage.cpp`](../../tests/test_coverage.cpp) | `[coverage]` | 2 | Every card in our decks has its effects written, and 2,000 biased random games use every attack (copied ones too), every Ability you choose to use, every Trainer, every Stadium action and every Special Energy in our decks, listing whatever was never used |
 | [`test_stress.cpp`](../../tests/test_stress.cpp) | `[stress]` | 3 | 1,000 biased and 1,000 uniform random real-deck games with invariant checks, and every state and action can be described. More than 300 of the biased games must end by Knock Out (random players burn through their decks with draw and search Trainers, so deck-outs are common) |
 
-**214 tests in total.** Tests that need the real card data skip themselves if `data/cards/generated/`
+**218 tests in total.** Tests that need the real card data skip themselves if `data/cards/generated/`
 doesn't exist yet; run `pokebot-import` first.
+
+## Every card is tested
+
+Milestone 3's sign-off asks for a test per card. It's covered three ways:
+
+- **Chosen effects** (attacks, Abilities you use, Trainers, Stadium actions, Special Energy): the
+  coverage test plays them in random games with the real decks, and the stress tests check every
+  invariant while they do. Most also have a test of their own with a made-up card.
+- **Triggered and always-on effects** aren't chosen, so each has its own test: the triggers in
+  `test_engine_triggers.cpp`, Tools, Stadiums and passive Abilities in `test_engine_passive.cpp`,
+  Area Zero in `test_engine_custom.cpp`, and Neo Upper and Ignition in `test_engine_energy.cpp`.
+- **Mechanics no deck card uses** are tested with made-up cards, so they work when a card needs them:
+
+| Mechanic | Test |
+|---|---|
+| Burned | "Poisoned and Burned put damage counters on at Pokemon Checkup", "Asleep and Burned are each removed on heads" |
+| Paralyzed | "Asleep and Paralyzed Pokemon can't attack or retreat", "Paralyzed wears off at the Checkup after its owner's next turn" |
+| More than one attack a turn (Festival Lead) | "an extra attack offers that Pokemon's attacks or ending the turn" |
+| A Bench over the limit | "when Area Zero leaves play, a player over the limit discards down to 5" |
 
 ## Helpers worth knowing
 

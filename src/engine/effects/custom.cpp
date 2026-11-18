@@ -36,7 +36,7 @@ namespace pokebot {
                 return false;
             }
 
-            std::vector<Pair> candy_pairs(const GameState& game, int player) {
+            std::vector<Pair> candy_pairs(const GameState& game, int player, bool first_only) {
                 std::vector<Pair> pairs;
                 std::vector<std::pair<const CardDef*, Slot>> seen;
                 const PlayerState& p = game.player(player);
@@ -50,6 +50,9 @@ namespace pokebot {
                         if (candy_evolves(game, pokemon, card) && std::find(seen.begin(), seen.end(), key) == seen.end()) {
                             seen.push_back(key);
                             pairs.emplace_back(card, slot);
+                            if (first_only) {
+                                return pairs;
+                            }
                         }
                     }
                 }
@@ -57,7 +60,7 @@ namespace pokebot {
             }
 
             // Transformation Tome: a Basic Pokemon in the discard pile and one of your unevolved Basic Pokemon in play.
-            std::vector<Pair> tome_pairs(const GameState& game, int player) {
+            std::vector<Pair> tome_pairs(const GameState& game, int player, bool first_only) {
                 std::vector<Pair> pairs;
                 std::vector<std::pair<const CardDef*, Slot>> seen;
                 const PlayerState& p = game.player(player);
@@ -70,18 +73,21 @@ namespace pokebot {
                         if (unevolved(pokemon_at(p, slot)) && std::find(seen.begin(), seen.end(), key) == seen.end()) {
                             seen.push_back(key);
                             pairs.emplace_back(card, slot);
+                            if (first_only) {
+                                return pairs;
+                            }
                         }
                     }
                 }
                 return pairs;
             }
 
-            std::vector<Pair> pairs_for(const GameState& game, int player, CustomEffect effect) {
+            std::vector<Pair> pairs_for(const GameState& game, int player, CustomEffect effect, bool first_only = false) {
                 switch (effect) {
                     case CustomEffect::RareCandy:
-                        return candy_pairs(game, player);
+                        return candy_pairs(game, player, first_only);
                     case CustomEffect::TransformationTome:
-                        return tome_pairs(game, player);
+                        return tome_pairs(game, player, first_only);
                 }
                 return {};
             }
@@ -131,7 +137,7 @@ namespace pokebot {
             if (effect == CustomEffect::RareCandy && rules::is_first_turn(game)) {
                 return false;
             }
-            return !pairs_for(game, player, effect).empty();
+            return !pairs_for(game, player, effect, true).empty();
         }
 
         bool run_custom(GameState& game, EffectRun& run, const Step& step) {
@@ -139,7 +145,7 @@ namespace pokebot {
                 discard_second_tome(game, run);
                 run.value = 1; // once, even if the step is asked again after its choice
             }
-            if (pairs_for(game, run.who.player, step.custom).empty()) {
+            if (pairs_for(game, run.who.player, step.custom, true).empty()) {
                 return true;
             }
             game.pending.push_back(Decision{DecisionKind::CustomChoice, run.who.player, 1, 1});

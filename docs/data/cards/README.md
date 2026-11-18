@@ -176,8 +176,15 @@ Pokémon, discarded at the end of your turn).
 
 One-of-a-kind cards name their [C++ code](../../src/engine/effects/custom.md) with `"custom"`:
 Rare Candy and Transformation Tome. Area Zero Underdepths is a `bench_size` passive with
-`"if_tera_in_play": true`. Psyduck's Damp is the only effect not written, since no Ability in our
-decks needs it.
+`"if_tera_in_play": true`.
+
+An Ability that can't change anything with the cards we have says why with `no_effect`, and
+doesn't count as missing. Only Psyduck's Damp does: no card in our pool has an Ability that Knocks
+Out its own Pokémon.
+
+```json
+{ "abilities": { "Damp": { "no_effect": "No Ability in our card pool requires its Pokemon to Knock Out itself" } } }
+```
 
 
 An Item or Supporter has a top-level `effects` list, and optionally `requires`: the

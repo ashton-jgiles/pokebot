@@ -1,0 +1,7 @@
+{
+  "abilities": {
+    "Damp": {
+      "no_effect": "No Ability in our card pool requires its Pokemon to Knock Out itself, so Damp never changes anything"
+    }
+  }
+}

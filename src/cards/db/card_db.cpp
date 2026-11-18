@@ -131,7 +131,7 @@ namespace pokebot {
                 missing.push_back(label);
             }
             for (const auto& a : c.abilities) {
-                if (!a.text.empty() && a.effects.empty() && a.passive.empty()) {
+                if (!a.text.empty() && a.effects.empty() && a.passive.empty() && a.no_effect.empty()) {
                     missing.push_back(label + ": ability " + a.name);
                 }
             }

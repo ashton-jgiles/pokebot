@@ -15,6 +15,9 @@ namespace pokebot {
                     return false;
                 }
             }
+            if (ability.conditions.empty()) {
+                return true;
+            }
             EffectRun context;
             context.who = EffectContext{static_cast<std::uint8_t>(player), pokemon.id(), pokemon.top()};
             for (const Condition& condition : ability.conditions) {
