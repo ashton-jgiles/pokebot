@@ -73,7 +73,7 @@ returns `nullptr` once it has left play.
 | `deck` | `back()` is the **top** card, so drawing is a cheap `pop_back()` |
 | `hand`, `prizes`, `discard`, `lost_zone` | The other zones |
 | `active` | `std::optional<PokemonInPlay>`; empty only while choosing a new Active, or after the game is decided |
-| `bench` | Up to 5 Pokémon |
+| `bench` | Up to `kMaxBenchSize` (8) Pokémon; how many are allowed is [`rules::bench_size`](../rules/rules.md) |
 | `resolving` | Up to 2 Trainer cards being played, while their effect runs |
 | `stadium` | This player's Stadium in play, or `kNoCard`. At most one player has one |
 | `mulligans` | Mulligans taken during setup |
@@ -139,7 +139,7 @@ happens once every pending decision is answered. See [`continue_game`](../action
 |---|---|
 | `kind` | One of the `DecisionKind`s listed in the [engine overview](../README.md#every-choice-is-a-decision) |
 | `player` | Who decides |
-| `amount` | Extra number the decision needs: bonus cards allowed, Energy still to discard |
+| `amount` | Extra number the decision needs: bonus cards allowed, Energy still to discard, Benched Pokémon still to discard |
 | `target` | A `Slot`, e.g. the Benched Pokémon a retreat will bring in, or for `ExtraAttack` the `id()` of the Pokémon allowed to attack again |
 
 ## `GameResult`
@@ -168,7 +168,7 @@ Helpers: `player(p)`, `def(card)`, `decision()` (the top of `pending`), `is_over
 
 A `static_assert` requires `GameState` to be **trivially copyable**. Adding a `std::vector` or
 `std::string` to it stops the build, because copying the state is how search explores the game.
-A whole game is **1,920 bytes**.
+A whole game is **2,624 bytes** (1,920 before the Bench grew to 8 for Area Zero Underdepths).
 
 ## Tests
 

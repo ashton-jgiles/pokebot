@@ -77,6 +77,8 @@ Runs after every attack and after every Pokémon Checkup (rulebook p. 14):
 3. **Check for a winner** (below). If the game is over, stop.
 4. Each player whose Active Spot is empty gets a `PromoteActive` decision: after a Knock Out, or after
    an effect like Tuck Tail took the Active out of play. The opponent of the current player chooses first.
+5. [Bench limits](../effects/custom.md#the-bench-limit) are checked: Knocking Out the last Tera
+   Pokémon can take Area Zero Underdepths' 8 spaces back to 5.
 
 Bench Pokémon are checked too, since attacks can damage them and put damage counters on them.
 

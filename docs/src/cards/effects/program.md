@@ -140,6 +140,7 @@ Each is an object with one key, from the point of view of the player the card be
 | `{"in_play_has": filter}` | One of your Pokémon in play matches |
 | `{"your_energy_has": filter}` | An Energy attached to one of your Pokémon matches |
 | `{"attached_to_active": true}` | This effect attached Energy to your Active Pokémon (only inside an effect) |
+| `{"custom": name}` | A [one-of-a-kind card](../../engine/effects/custom.md)'s own check (`rare_candy`, `transformation_tome`) |
 
 Anything the compiler doesn't recognise (an unknown op, filter field or destination, a bad count,
 a value of the wrong JSON type) throws `CardDataError`.
@@ -156,12 +157,13 @@ for as long as the card is in play:
 
 | Field | Meaning |
 |---|---|
-| `modify` | `"max_hp"`, `"retreat_cost"`, `"weakness_type"` (needs `type`) or `"damage_dealt"` (attacks by the Pokémon do `add` more to the opponent's Active, before Weakness) |
+| `modify` | `"max_hp"`, `"retreat_cost"`, `"weakness_type"` (needs `type`) `"damage_dealt"` (attacks by the Pokémon do `add` more to the opponent's Active, before Weakness) or `"bench_size"` (needs `set`: the owner of each Pokémon it applies to gets that many Bench spaces) |
 | `add` / `set` | A change, or a new value. A `set` wins over `add`s ("has no Retreat Cost") |
 | `type` | For `weakness_type`: the new Weakness type. A Pokémon with no printed Weakness gets one, ×2 |
 | `applies_to` | `"holder"` (the default: the Pokémon the Tool is attached to, or the Pokémon with the Ability), `"yours"`, `"opponents"` or `"all"` (everyone's Pokémon in play) |
 | `filter` | Which Pokémon it affects, matched against the Pokémon's top card |
 | `if_poisoned` | Only while that Pokémon is Poisoned |
+| `if_tera_in_play` | For `bench_size`: only for a player with a Tera Pokémon in play (Area Zero Underdepths) |
 
 `compile_passive(json)` compiles a list; mistakes throw `CardDataError`.
 
@@ -204,6 +206,7 @@ for as long as the card is in play:
 | `EachTarget` | `jump` | The start of a loop over the targets: when every target is done, carry on at `jump` |
 | `NextTarget` | `jump` | The end of the loop: the next target, back to `jump` |
 | `ChooseDestination` | — | The player chooses another of their Pokémon (not a target) |
+| `Custom` | `custom` | Hands over to a [one-of-a-kind card's C++](../../engine/effects/custom.md) |
 
 `ChooseTargets` only offers Pokémon that match its `filter`. In a loop, the `TargetEnergy` zone is
 the Energy of the current target. `ChosenEnergy` is the Energy of the Pokémon `ChooseDestination` chose.

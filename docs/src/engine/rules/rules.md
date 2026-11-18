@@ -29,7 +29,7 @@ bend; this file is where they live.
 | `poison_counters(game, pokemon)` | What Poisoned it said (usually 1) | Perilous Jungle |
 | `burn_counters(game, pokemon)` | 2 | |
 | `prize_value(game, pokemon)` | 1, 2 for ex, 3 for Mega ex | Lillie's Pearl, Legacy Energy |
-| `bench_size(game, player)` | 5 | Area Zero Underdepths |
+| `bench_size(game, player)` | 5; a `bench_size` passive's `set` instead (Area Zero Underdepths: 8 with a Tera Pokémon in play), at most `kMaxBenchSize` | Area Zero Underdepths |
 | `is_first_turn(game)` | Turns 1 and 2 | (used by other questions) |
 | `can_attach_energy(game, player)` | Not yet this turn | Emboar, Iono's Bellibolt ex |
 | `can_retreat(game, player)` | Not yet this turn, with a Benched Pokémon to switch in, the Active isn't Asleep or Paralyzed, and no [lasting](../actions/lasting.md) "can't retreat" | Clutch, Sob |

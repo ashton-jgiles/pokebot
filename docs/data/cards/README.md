@@ -174,6 +174,11 @@ Special Energy ([`provides` and `provides_when`](../../src/cards/effects/program
 Neo Upper Energy (two of any type on a Stage 2) and Ignition Energy ({C}{C}{C} on an Evolution
 Pokémon, discarded at the end of your turn).
 
+One-of-a-kind cards name their [C++ code](../../src/engine/effects/custom.md) with `"custom"`:
+Rare Candy and Transformation Tome. Area Zero Underdepths is a `bench_size` passive with
+`"if_tera_in_play": true`. Psyduck's Damp is the only effect not written, since no Ability in our
+decks needs it.
+
 
 An Item or Supporter has a top-level `effects` list, and optionally `requires`: the
 [conditions](../../src/cards/effects/program.md#conditions) that must hold before it can be played.

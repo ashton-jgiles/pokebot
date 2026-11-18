@@ -48,6 +48,7 @@ When a run's last step is done, it's removed and its `then` runs.
 | `ChoosePokemon` | `ChoosePokemon` with a slot (0 is the Active) | Depends on the step. **Switching**: a Benched Pokémon of the step's side. **Targets**: up to `decision.amount` different Pokémon, `ChooseDone` once `decision.target` are chosen. **Damage counters**: one per counter, each in a slot no lower than the last, so each spread of counters is offered once (6 counters on 5 Pokémon: 210 choices, not 15,625). Skipped when there's nothing to choose |
 | `ChooseAttack` | `ChooseAttack` with the card, Bench slot and attack index | Each attack of each matching Benched Pokémon, identical ones merged; copy attacks left out |
 | `ChooseYesNo` | `AnswerYes`, `AnswerNo` | No jumps past the `may` block |
+| `CustomChoice` | `ChooseCard` with a card and a slot | A [one-of-a-kind card's](custom.md) pair, such as Rare Candy's Stage 2 and the Basic it goes on |
 
 The player answering is `who.player`. Choosing from the deck shows the chooser their whole deck;
 hiding what a player shouldn't see is the observation layer's job (Milestone 4).
@@ -57,7 +58,8 @@ hiding what a player shouldn't see is the observation layer's job (Milestone 4).
 An Item or Supporter is moved from the hand to `PlayerState::resolving` and its program starts with
 `then = DiscardTrainer`. When the program finishes, the card goes to the discard pile. Until then it
 isn't in the hand (Ultra Ball can't discard itself) or the discard pile (Night Stretcher can't take
-it back). The `MainPhase` decision stays underneath, so the turn carries on afterwards. See
+it back). Then Knock Outs are handled (Transformation Tome can cause one) and the
+[Bench limit](custom.md#the-bench-limit) is checked. The `MainPhase` decision stays underneath, so the turn carries on afterwards. See
 [main actions](../actions/main_actions.md#trainer-cards).
 
 ## Attacks are effects
