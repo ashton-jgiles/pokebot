@@ -1,1 +1,1 @@
-{"effects": [{"op": "search_deck", "count": 1, "filter": {"kind": "pokemon", "rule_box": false}}]}
+{"effects": [{"op": "search_deck", "reveal": true, "count": 1, "filter": {"kind": "pokemon", "rule_box": false}}]}

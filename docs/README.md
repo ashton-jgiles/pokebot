@@ -50,6 +50,7 @@ see the engine through `legal_actions` and `apply`.
 | | [events.md](src/engine/events/events.md) | Moments cards react to, the event hook |
 | | [interpreter.md](src/engine/effects/interpreter.md) | Running effects and their choices |
 | | [custom.md](src/engine/effects/custom.md) | One-of-a-kind cards (Rare Candy, Transformation Tome) and the Bench limit |
+| | [knowledge.md](src/engine/knowledge/knowledge.md) | What each player knows: seen cards, revealed cards, shuffled card numbers |
 | | [invariants.md](src/engine/invariants/invariants.md) | Consistency checker |
 | | [describe.md](src/engine/describe/describe.md) | States and actions as text |
 | | [fixed_vector.md](src/engine/shared/fixed_vector.md), [rng.md](src/engine/shared/rng.md) | Fixed-capacity list, seeded RNG |

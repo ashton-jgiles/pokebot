@@ -38,6 +38,10 @@ namespace pokebot {
 
         const CardDef& def(CardIndex card) const { return *defs_[card]; }
 
+        // A copy with each player's cards numbered in a random order (each player keeps their range).
+        // Players see card numbers, so decklist order would tell them what the opponent's deck holds.
+        CardTable shuffled(std::uint64_t seed) const;
+
     private:
         std::array<const CardDef*, kMaxCards> defs_{};
     };
@@ -232,6 +236,29 @@ namespace pokebot {
         bool operator==(const GameHistory&) const = default;
     };
 
+    // A set of cards, one bit each. Unlike std::bitset it's guaranteed trivially copyable.
+    class CardSet {
+    public:
+        void insert(CardIndex card) { words_[card / 64] |= bit(card); }
+        void erase(CardIndex card) { words_[card / 64] &= ~bit(card); }
+        bool contains(CardIndex card) const { return (words_[card / 64] & bit(card)) != 0; }
+
+        bool operator==(const CardSet&) const = default;
+
+    private:
+        static std::uint64_t bit(CardIndex card) { return std::uint64_t{1} << (card % 64); }
+
+        std::array<std::uint64_t, (kMaxCards + 63) / 64> words_{};
+    };
+
+    // What each player knows, beyond the rules of which zones are face up (see engine/knowledge).
+    struct Knowledge {
+        std::array<CardSet, kPlayers> located; // cards whose place this player knows
+        std::array<CardSet, kPlayers> seen;    // every card this player has seen this game
+
+        bool operator==(const Knowledge&) const = default;
+    };
+
     enum class GameResult : std::uint8_t {
         Ongoing,
         Player0Wins,
@@ -251,6 +278,7 @@ namespace pokebot {
         FixedVector<Decision, 8> pending;
         FixedVector<EffectRun, 4> effects;
         FixedVector<LastingEffect, 8> lasting;
+        Knowledge knowledge;
         Rng rng;
         GameResult result = GameResult::Ongoing;
 

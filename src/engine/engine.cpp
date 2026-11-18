@@ -147,6 +147,7 @@ namespace pokebot {
         } else {
             throw std::logic_error("unknown decision");
         }
+        detail::note_visible(game);
     }
 
 } // namespace pokebot

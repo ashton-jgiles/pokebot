@@ -5,6 +5,7 @@
 #include "engine/actions/action.hpp"
 #include "engine/events/events.hpp"
 #include "engine/game/game_state.hpp"
+#include "engine/knowledge/knowledge.hpp"
 #include "engine/rules/rules.hpp"
 
 namespace pokebot::detail {

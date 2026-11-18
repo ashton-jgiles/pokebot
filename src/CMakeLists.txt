@@ -20,6 +20,7 @@ add_library(pokebot_lib
   engine/actions/conditions.cpp
   engine/actions/lasting.cpp
   engine/actions/bench_limit.cpp
+  engine/knowledge/knowledge.cpp
   engine/invariants/invariants.cpp
   engine/describe/describe.cpp
   agents/random_agent.cpp

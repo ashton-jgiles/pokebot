@@ -1,5 +1,6 @@
 #include <set>
 #include <stdexcept>
+#include <string>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -152,6 +153,31 @@ TEST_CASE("CardTable numbers cards in decklist order", "[engine]") {
     CHECK(table.def(4).name == "Darkness Energy");
     CHECK(table.def(59).name == "Darkness Energy");
     CHECK(table.def(60).name == "Testmon"); // player 1's first card
+}
+
+TEST_CASE("a shuffled CardTable numbers each player's own cards in a repeatable random order", "[engine]") {
+    const CardDB db = sample_db();
+    const CardTable table(db, sample_deck(), sample_deck());
+    const CardTable a = table.shuffled(1);
+    const CardTable b = table.shuffled(1);
+    const CardTable c = table.shuffled(2);
+    bool moved = false;
+    bool differs = false;
+    for (std::size_t first = 0; first < pokebot::kMaxCards; first += pokebot::kDeckSize) {
+        std::multiset<std::string> before;
+        std::multiset<std::string> after;
+        for (std::size_t i = first; i < first + pokebot::kDeckSize; ++i) {
+            const auto card = static_cast<CardIndex>(i);
+            before.insert(table.def(card).name);
+            after.insert(a.def(card).name);
+            CHECK(&a.def(card) == &b.def(card)); // the same seed, the same numbering
+            moved = moved || &a.def(card) != &table.def(card);
+            differs = differs || &a.def(card) != &c.def(card);
+        }
+        CHECK(before == after); // each player still has exactly their own cards
+    }
+    CHECK(moved);
+    CHECK(differs);
 }
 
 TEST_CASE("CardTable refuses an illegal deck", "[engine]") {

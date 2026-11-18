@@ -66,7 +66,8 @@ namespace pokebot {
 
     GameRecord play_game(const CardTable& cards, std::uint64_t seed, Agent& player0, Agent& player1,
                          const MatchOptions& options) {
-        GameState game = new_game(cards, seed);
+        const CardTable table = cards.shuffled(~seed); // numbered in decklist order, cards would give the decks away
+        GameState game = new_game(table, seed);
         const std::array<Agent*, kPlayers> agents{&player0, &player1};
         int actions = 0;
         if (options.check_invariants) {

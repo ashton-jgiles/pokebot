@@ -10,7 +10,7 @@ The milestone plan from the project proposal, with the current status of each.
 | M2 | Basic engine | ✅ Done |
 | M3 | Effects system and every card in the four decks | ✅ Done |
 | M3b | Standard coverage: card-text translator and coverage report | ⬜ Not started |
-| M4 | Observation layer, command-line client, replays | ⬜ Not started |
+| M4 | Observation layer, command-line client, replays | 🟨 In progress |
 | M5 | Greedy agent, match harness, profiling | ⬜ Not started |
 | M6 | Model 1: turn planner (or-tree and and-tree modes) | ⬜ Not started |
 | M7 | Determinization and flat Monte Carlo | ⬜ Not started |
@@ -136,10 +136,36 @@ cover most of them. **Done when:** a target share of Standard (to be set once M3
 effects and passes generated tests, and the rest is listed by what it needs. Can run alongside M4–M5,
 since the search work only needs our four decks.
 
-## M4 onward
+## M4 — Observation layer, client, replays 🟨 (in progress)
 
-The full definitions of M4–M11 (what each builds and its "done when" test) are in the project
-proposal. The table at the top lists them in order.
+**Done when:** agents only see what their player could see at the table (tests prove two games that
+differ only in hidden cards look identical), 10,000 simulated games round-trip through replays
+exactly, and a full game against the random agent can be played in the terminal.
+
+**Opponent decks (decided 2026-11-18):** agents never get the opponent's decklist. They see the cards
+the opponent has shown and, from M7, guess the list from a library of known archetype lists, the
+way a player recognises Dragapult from a Dreepy and then wonders whether it's the Crushing Hammer or
+the Blaziken ex version. M4 makes sure the list can't leak and records what each player has seen.
+
+| Step | Builds | Status |
+|---|---|---|
+| 4.1 | **Who knows what:** each player's `located` and `seen` cards, revealed searches (`"reveal": true`), looking at the top of the deck, mulligans showing the hand, face-down setup, shuffles forgetting, and card numbers shuffled per game. See [knowledge](src/engine/knowledge/knowledge.md) | 🟨 |
+| 4.2 | **`Observation`:** what one player can see, with card definitions only for cards they've seen; their own deck and Prize cards as one unordered list; the opponent's seen cards; `describe(observation)`; identical observations for games that differ only in hidden cards | ⬜ |
+| 4.3 | **Agents see observations:** `Agent::choose(const Observation&, actions)`, with no `GameState` or `CardTable` | ⬜ |
+| 4.4 | **Replays:** decks, seed and actions as JSON, replayed exactly; viewed as either player or with everything shown; `--save-replay`, and a saved replay whenever an invariant breaks | ⬜ |
+| 4.5 | **Command-line client:** `pokebot play` (you against an agent, seeing only your view), `watch` and `replay` | ⬜ |
+| 4.6 | Sign-off | ⬜ |
+
+## M5 onward
+
+The full definitions of M5–M11 (what each builds and its "done when" test) are in the project
+proposal. The table at the top lists them in order. Two changes since:
+
+- **M7 starts with an opponent deck model:** a library of archetype lists (`data/archetypes/`), a
+  belief over them updated from the cards seen (Bayes' rule, with a small chance for cards no list
+  explains), and dealing the opponent's unseen cards from a list drawn from that belief. Lists can
+  only use cards the engine has effects for, so M3b widens what they can hold.
+- **M11's opponent inference** becomes the learned, stronger version of that model.
 
 ## Known gaps and notes
 

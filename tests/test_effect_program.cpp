@@ -39,6 +39,15 @@ TEST_CASE("search_deck becomes choose, move and shuffle", "[effects]") {
     CHECK(program[2].to == Zone::Hand);
 }
 
+TEST_CASE("a search can reveal what it finds", "[effects]") {
+    const auto revealed = pokebot::compile_trainer(json::parse(R"([{"op": "search_deck", "reveal": true}])"));
+    REQUIRE(ops(revealed) == std::vector<Op>{Op::ChooseCards, Op::MoveChosen, Op::ShuffleDeck});
+    CHECK(revealed[1].reveal);
+    CHECK_FALSE(pokebot::compile_trainer(json::parse(R"([{"op": "search_deck"}])"))[1].reveal);
+    CHECK(pokebot::compile_trainer(json::parse(R"([{"op": "search_to_top", "reveal": true}])"))[2].reveal);
+    CHECK_THROWS_AS(pokebot::compile_trainer(json::parse(R"([{"op": "search_deck", "reveal": "yes"}])")), CardDataError);
+}
+
 TEST_CASE("may asks first and jumps past its effects on no", "[effects]") {
     const auto program = compile_attack(json::parse(R"([{"op": "may", "effects": [{"op": "search_deck"}]}, {"op": "draw"}])"));
     REQUIRE(ops(program) == std::vector<Op>{Op::Damage, Op::AskYesNo, Op::ChooseCards, Op::MoveChosen, Op::ShuffleDeck, Op::Draw});

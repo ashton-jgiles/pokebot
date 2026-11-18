@@ -34,4 +34,20 @@ namespace pokebot {
         fill_deck(defs_, kDeckSize, db, deck1, 1);
     }
 
+    CardTable CardTable::shuffled(std::uint64_t seed) const {
+        CardTable copy = *this;
+        Rng rng(seed);
+        for (std::size_t first = 0; first < kMaxCards; first += kDeckSize) {
+            FixedVector<const CardDef*, kDeckSize> defs;
+            for (std::size_t i = 0; i < kDeckSize; ++i) {
+                defs.push_back(defs_[first + i]);
+            }
+            rng.shuffle(defs);
+            for (std::size_t i = 0; i < kDeckSize; ++i) {
+                copy.defs_[first + i] = defs[i];
+            }
+        }
+        return copy;
+    }
+
 } // namespace pokebot

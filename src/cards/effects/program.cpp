@@ -371,7 +371,7 @@ namespace pokebot {
 
             std::uint8_t here() const { return static_cast<std::uint8_t>(program.size()); }
 
-            void choose_and_move(Zone from, Zone to, std::uint8_t min, std::uint8_t max, const CardFilter& filter) {
+            void choose_and_move(Zone from, Zone to, std::uint8_t min, std::uint8_t max, const CardFilter& filter, bool reveal = false) {
                 Step choose;
                 choose.op = Op::ChooseCards;
                 choose.from = from;
@@ -385,7 +385,17 @@ namespace pokebot {
                 move.op = Op::MoveChosen;
                 move.from = from;
                 move.to = to;
+                move.reveal = reveal;
                 add(move);
+            }
+
+            // "reveal them": the opponent sees the cards found.
+            static bool reveal_of(const json& block) {
+                const json& reveal = block.value("reveal", json(false));
+                if (!reveal.is_boolean()) {
+                    throw CardDataError("\"reveal\" must be true or false");
+                }
+                return reveal.get<bool>();
             }
 
             void change_damage(Op op, const json& block) {
@@ -505,7 +515,7 @@ namespace pokebot {
                     shuffle.side = side_of(block);
                     add(shuffle);
                 } else if (op == "search_deck") {
-                    choose_and_move(Zone::Deck, destination(block), 0, count_of(block, 1), parse_filter(block));
+                    choose_and_move(Zone::Deck, destination(block), 0, count_of(block, 1), parse_filter(block), reveal_of(block));
                     if (block.value("shuffle", true)) {
                         add(Op::ShuffleDeck);
                     }
@@ -569,6 +579,7 @@ namespace pokebot {
                     move.op = Op::MoveChosen;
                     move.from = Zone::Deck;
                     move.to = Zone::DeckTop;
+                    move.reveal = reveal_of(block);
                     add(move);
                 } else if (op == "damage_to") {
                     attack_only(op);

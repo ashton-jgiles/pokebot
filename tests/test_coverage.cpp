@@ -132,6 +132,40 @@ TEST_CASE("every card in our decks has its effects written", "[coverage]") {
     CHECK(list.empty());
 }
 
+TEST_CASE("every card whose text says \"reveal\" reveals what it finds", "[coverage]") {
+    const auto real = load_real_decks();
+    if (!real) {
+        SKIP("no generated card data; run pokebot-import first");
+    }
+    const auto says_reveal = [](const std::string& text) {
+        return text.find("reveal") != std::string::npos;
+    };
+    const auto reveals = [](const nlohmann::json& effects) {
+        return effects.dump().find("\"reveal\":true") != std::string::npos;
+    };
+    std::string list;
+    for (const auto& deck : real->decks) {
+        for (const auto& entry : deck.entries) {
+            const CardDef& c = real->db.at(pokebot::card_id(entry));
+            if (says_reveal(c.text) && !reveals(c.effects)) {
+                list += "\n  " + card_key(c);
+            }
+            for (const auto& a : c.attacks) {
+                if (says_reveal(a.text) && !reveals(a.effects)) {
+                    list += "\n  " + card_key(c) + ": attack " + a.name;
+                }
+            }
+            for (const auto& a : c.abilities) {
+                if (says_reveal(a.text) && !reveals(a.effects)) {
+                    list += "\n  " + card_key(c) + ": ability " + a.name;
+                }
+            }
+        }
+    }
+    INFO("missing \"reveal\": true:" << list);
+    CHECK(list.empty());
+}
+
 TEST_CASE("random games use every attack, Ability, Trainer and Special Energy in our decks", "[coverage]") {
     const auto real = load_real_decks();
     if (!real) {

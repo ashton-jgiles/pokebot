@@ -89,7 +89,8 @@ namespace {
     }
 
     // Plays one game, printing the board at the start of each turn and every action taken.
-    void narrate(const CardTable& table, const Options& options) {
+    void narrate(const CardTable& cards, const Options& options) {
+        const CardTable table = cards.shuffled(~options.seed);
         GameState game = new_game(table, options.seed);
         const auto agent0 = make_agent(options.agent, options.seed * 2);
         const auto agent1 = make_agent(options.agent, options.seed * 2 + 1);

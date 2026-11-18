@@ -10,7 +10,8 @@ GameRecord play_game(const CardTable& cards, std::uint64_t seed, Agent& player0,
                      const MatchOptions& options = {});
 ```
 
-Plays one game from `seed`. At every decision it asks the agent whose decision it is, which may not
+Plays one game from `seed`, on `cards.shuffled(~seed)`, so card numbers are in a random order and
+don't give the decks away (see [knowledge](../engine/knowledge/knowledge.md#card-numbers)). At every decision it asks the agent whose decision it is, which may not
 be the current player (e.g. choosing a new Active after a Knock Out). The chosen action must be in
 the list the agent was given, or it throws `std::invalid_argument` naming the agent; then it's
 carried out with [`apply_legal`](../engine/engine.md), so the list isn't built twice.

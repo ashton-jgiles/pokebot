@@ -169,7 +169,7 @@ namespace pokebot {
                 if (pokemon.tool != kNoCard) {
                     p.deck.push_back(pokemon.tool);
                 }
-                game.rng.shuffle(p.deck);
+                shuffle_deck(game, owner_of(run.who.self));
             }
 
             // The top `look` cards that weren't taken go to the bottom of the deck, in the same order.
@@ -395,6 +395,12 @@ namespace pokebot {
                         continue;
                     }
                     ++moved;
+                    if (step.reveal) {
+                        show(game, opponent_of(run.who.player), card);
+                    }
+                    if (step.to == Zone::DeckTop) {
+                        show(game, run.who.player, card); // you put it there
+                    }
                     if (step.to == Zone::Bench) {
                         game.player(run.who.player).bench.push_back(new_pokemon(card, game.turn));
                         raise(game, Event{EventKind::PutOnBench, run.who.player, card, kNoCard});
@@ -481,7 +487,7 @@ namespace pokebot {
                 while (!p.hand.empty()) {
                     p.deck.push_back(p.hand.pop_back());
                 }
-                game.rng.shuffle(p.deck);
+                shuffle_deck(game, player);
             }
 
             void switch_with_chosen(GameState& game, const EffectRun& run, const Step& step) {
@@ -523,7 +529,7 @@ namespace pokebot {
                         }
                         break;
                     case Op::ShuffleDeck:
-                        game.rng.shuffle(p.deck);
+                        shuffle_deck(game, run.who.player);
                         break;
                     case Op::ShuffleHandIntoDeck:
                         for (const int player : players_on(step.side, run.who.player)) {
@@ -531,6 +537,13 @@ namespace pokebot {
                         }
                         break;
                     case Op::ChooseCards: {
+                        if (step.from == Zone::DeckTop) { // looking at the top cards: you now know where they are
+                            const auto& deck = p.deck;
+                            const std::size_t look = std::min<std::size_t>(static_cast<std::size_t>(step.amount), deck.size());
+                            for (std::size_t i = deck.size() - look; i < deck.size(); ++i) {
+                                show(game, run.who.player, deck[i]);
+                            }
+                        }
                         const std::size_t max = choice_limit(game, run, step);
                         if (max == 0) {
                             break;
