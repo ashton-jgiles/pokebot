@@ -12,7 +12,7 @@ GameRecord play_game(const CardTable& cards, std::uint64_t seed, Agent& player0,
 
 Plays one game from `seed`, on `cards.shuffled(~seed)`, so card numbers are in a random order and
 don't give the decks away (see [knowledge](../engine/knowledge/knowledge.md#card-numbers)). At every decision it asks the agent whose decision it is, which may not
-be the current player (e.g. choosing a new Active after a Knock Out). The chosen action must be in
+be the current player (e.g. choosing a new Active after a Knock Out), using [`ask`](#ask). The chosen action must be in
 the list the agent was given, or it throws `std::invalid_argument` naming the agent; then it's
 carried out with [`apply_legal`](../engine/engine.md), so the list isn't built twice.
 
@@ -38,6 +38,20 @@ action and after every action. If anything is inconsistent, it throws `std::logi
 | `end` | `GameEnd`: how it ended |
 | `first_player` | Who went first |
 | `turns`, `actions` | Length of the game |
+
+## `ask`
+
+```cpp
+Action ask(Agent& agent, const GameState& game, const std::vector<Action>& actions);
+```
+
+Asks `agent` to make the game's current decision, showing it
+[`observe(game, game.decision().player)`](../engine/observation/observation.md): only what that
+player can see. `play_game`, `pokebot-sim --print` and the tests that run agents all go through it.
+
+Building the observation costs about 1.2 µs per decision in the release build, about as much as
+carrying out the action. With the random agents that roughly halves the sim's speed. Real agents
+will spend far longer than that thinking about each decision.
 
 ## How a game ended
 

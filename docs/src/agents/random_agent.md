@@ -34,4 +34,4 @@ well.
 
 [`tests/test_agents.cpp`](../../../tests/test_agents.cpp), tag `[agents]`: the random agent picks
 every choice and only offered ones; the biased agent attacks whenever it can, over 95% of the time;
-the same seed repeats choices.
+the same seed repeats choices. They ignore the observation, so the tests hand them an empty one.

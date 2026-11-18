@@ -15,7 +15,7 @@ namespace pokebot {
         explicit RandomAgent(std::uint64_t seed) : rng_(seed) {}
 
         std::string name() const override { return "random"; }
-        Action choose(const GameState& game, const std::vector<Action>& actions) override;
+        Action choose(const Observation& observation, const std::vector<Action>& actions) override;
 
     private:
         Rng rng_;
@@ -28,7 +28,7 @@ namespace pokebot {
         explicit BiasedRandomAgent(std::uint64_t seed) : rng_(seed) {}
 
         std::string name() const override { return "biased"; }
-        Action choose(const GameState& game, const std::vector<Action>& actions) override;
+        Action choose(const Observation& observation, const std::vector<Action>& actions) override;
 
     private:
         Rng rng_;

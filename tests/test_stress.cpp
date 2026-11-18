@@ -90,7 +90,7 @@ TEST_CASE("every state and every legal action can be described", "[stress][descr
                 REQUIRE_FALSE(text.empty());
                 REQUIRE(text.find("unknown") == std::string::npos);
             }
-            pokebot::apply(game, agent.choose(game, actions));
+            pokebot::apply(game, pokebot::ask(agent, game, actions));
         }
         CHECK(pokebot::describe(game).find("game over") != std::string::npos);
     }

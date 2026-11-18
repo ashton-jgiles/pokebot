@@ -84,21 +84,25 @@ namespace pokebot {
         }
 
         const PlayerState& mine = game.player(viewer);
+        CardSet unknown;
         const auto add_unknown = [&](const auto& zone) {
             for (const CardIndex card : zone) {
                 if (!knows_where(game, viewer, card)) {
-                    view.deck_or_prizes.push_back(card);
+                    unknown.insert(card);
                 }
             }
         };
         add_unknown(mine.deck);
         add_unknown(mine.prizes);
-        std::sort(view.deck_or_prizes.begin(), view.deck_or_prizes.end());
 
         const std::size_t own_first = static_cast<std::size_t>(viewer) * kDeckSize;
         const std::size_t opponent_first = static_cast<std::size_t>(opponent_of(viewer)) * kDeckSize;
         for (std::size_t i = 0; i < kDeckSize; ++i) {
-            view.defs[own_first + i] = &game.def(card_at(own_first + i));
+            const CardIndex own = card_at(own_first + i);
+            view.defs[own] = &game.def(own);
+            if (unknown.contains(own)) {
+                view.deck_or_prizes.push_back(own); // in card order, so the deck's order can't show
+            }
             const CardIndex theirs = card_at(opponent_first + i);
             if (has_seen(game, viewer, theirs)) {
                 view.opponent_seen.push_back(theirs);

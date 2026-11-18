@@ -6,7 +6,7 @@
 
 using pokebot::Action;
 using pokebot::ActionKind;
-using pokebot::GameState;
+using pokebot::Observation;
 
 namespace {
 
@@ -17,14 +17,14 @@ namespace {
 } // namespace
 
 TEST_CASE("the random agent picks every choice, and only from the list", "[agents]") {
-    // The random agents don't look at the game state, so an empty one is fine here.
-    const GameState game;
+    // The random agents don't look at what they're shown, so an empty observation is fine here.
+    const Observation observation;
     const std::vector<Action> actions{kEndTurn, kAttack, kRetreat};
     pokebot::RandomAgent agent(1);
 
     int counts[3] = {0, 0, 0};
     for (int i = 0; i < 3000; ++i) {
-        const Action chosen = agent.choose(game, actions);
+        const Action chosen = agent.choose(observation, actions);
         if (chosen == kEndTurn) {
             ++counts[0];
         } else if (chosen == kAttack) {
@@ -41,13 +41,13 @@ TEST_CASE("the random agent picks every choice, and only from the list", "[agent
 }
 
 TEST_CASE("the biased agent attacks whenever it can, most of the time", "[agents]") {
-    const GameState game;
+    const Observation observation;
     const std::vector<Action> actions{kEndTurn, kRetreat, kAttack};
     pokebot::BiasedRandomAgent agent(2);
 
     int attacks = 0;
     for (int i = 0; i < 1000; ++i) {
-        if (agent.choose(game, actions) == kAttack) {
+        if (agent.choose(observation, actions) == kAttack) {
             ++attacks;
         }
     }
@@ -55,11 +55,11 @@ TEST_CASE("the biased agent attacks whenever it can, most of the time", "[agents
 }
 
 TEST_CASE("the same seed makes the same choices", "[agents]") {
-    const GameState game;
+    const Observation observation;
     const std::vector<Action> actions{kEndTurn, kAttack, kRetreat};
     pokebot::RandomAgent a(7);
     pokebot::RandomAgent b(7);
     for (int i = 0; i < 100; ++i) {
-        CHECK(a.choose(game, actions) == b.choose(game, actions));
+        CHECK(a.choose(observation, actions) == b.choose(observation, actions));
     }
 }

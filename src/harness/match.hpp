@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 #include "agents/agent.hpp"
 #include "engine/game/game_state.hpp"
@@ -12,13 +13,16 @@ namespace pokebot {
         NoPokemon,
         DeckOut,
         Draw,
-        ActionLimit, 
+        ActionLimit,
     };
 
     const char* to_string(GameEnd end);
 
     // How a game ended; ActionLimit if it hasn't.
     GameEnd how_game_ended(const GameState& game);
+
+    // Asks `agent` to make the game's current decision, showing it only what that player can see.
+    Action ask(Agent& agent, const GameState& game, const std::vector<Action>& actions);
 
     struct MatchOptions {
         int max_actions = 20000;

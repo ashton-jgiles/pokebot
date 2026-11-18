@@ -58,6 +58,7 @@ If an invariant breaks, it stops with the seed, the broken rules and the game st
 | Step 3.9 (one-of-a-kind cards, 8-space Bench) | about 3,130 games/s, 0.5 million actions/s | |
 | Step 3.10 (`apply_legal`, no heap use when listing main-phase actions) | about 5,480 games/s, 0.8 million actions/s | about 1,920 games/s |
 | Step 4.1 (each player's knowledge recorded after every action) | about 4,630 games/s, 0.7 million actions/s | |
+| Step 4.3 (each agent is shown an observation, built at every decision) | about 2,000 games/s, 0.3 million actions/s | |
 
 Games are longer now (about 145 actions each, up from about 100), so compare actions/s between
 versions. The release preset uses link-time optimization; without it the

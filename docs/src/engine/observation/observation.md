@@ -3,8 +3,8 @@
 **Files:** [`observation.hpp`](../../../../src/engine/observation/observation.hpp), [`observation.cpp`](../../../../src/engine/observation/observation.cpp) · **Library:** `pokebot_lib` · **Namespace:** `pokebot`
 
 A `GameState` holds every card, hidden ones included. An `Observation` holds only what one player
-could see sitting at the table. From step 4.3 it's all an agent gets, so an agent can't cheat, even
-by accident.
+could see sitting at the table. It's all an [agent](../../agents/agent.md) gets, so an agent can't
+cheat, even by accident.
 
 ```cpp
 Observation observe(const GameState& game, int viewer);
@@ -69,4 +69,6 @@ the opponent's hand as a count and the cards known in it.
 - random games on the sample cards and on the real decks, checking after every action that every
   card an observation names is one whose place the viewer knows, with its definition. The real-deck
   games also swap hidden cards every 20 actions and check the viewer sees no difference;
-- `describe(observation)`.
+- `describe(observation)`;
+- [`play_game`](../../harness/match.md) showing each agent its own player's view, and on the real
+  decks, every action offered naming only cards the deciding player knows the place of.

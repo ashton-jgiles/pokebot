@@ -167,6 +167,23 @@ TEST_CASE("a search that doesn't reveal shows the opponent nothing", "[knowledge
     CHECK_FALSE(knows_where(f.game, f.them, found));
 }
 
+TEST_CASE("searching your deck shows you all of it, and only you, until it's shuffled", "[knowledge]") {
+    Fixture f;
+    const auto& deck = f.game.player(f.me).deck;
+    REQUIRE_FALSE(knows_where(f.game, f.me, deck.front()));
+    f.play("TST-4");
+    REQUIRE(f.game.decision().kind == DecisionKind::ChooseCards);
+    for (const CardIndex card : deck) {
+        CHECK(knows_where(f.game, f.me, card));
+        CHECK_FALSE(knows_where(f.game, f.them, card));
+    }
+
+    f.choose(); // then the deck is shuffled
+    for (const CardIndex card : deck) {
+        CHECK_FALSE(knows_where(f.game, f.me, card));
+    }
+}
+
 TEST_CASE("a card picked up from the discard pile stays known to the opponent", "[knowledge]") {
     Fixture f;
     f.game.player(f.me).discard.push_back(test::take_from_deck(f.game, f.me, f.basic_left()));

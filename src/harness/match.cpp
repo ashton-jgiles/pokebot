@@ -64,6 +64,10 @@ namespace pokebot {
         return GameEnd::DeckOut;
     }
 
+    Action ask(Agent& agent, const GameState& game, const std::vector<Action>& actions) {
+        return agent.choose(observe(game, game.decision().player), actions);
+    }
+
     GameRecord play_game(const CardTable& cards, std::uint64_t seed, Agent& player0, Agent& player1,
                          const MatchOptions& options) {
         const CardTable table = cards.shuffled(~seed); // numbered in decklist order, cards would give the decks away
@@ -77,7 +81,7 @@ namespace pokebot {
         while (!game.is_over() && actions < options.max_actions) {
             const auto legal = legal_actions(game);
             Agent& agent = *agents[game.decision().player];
-            const Action action = agent.choose(game, legal);
+            const Action action = ask(agent, game, legal);
             if (std::find(legal.begin(), legal.end(), action) == legal.end()) {
                 throw std::invalid_argument("play_game: the " + agent.name() + " agent chose an action that isn't legal");
             }

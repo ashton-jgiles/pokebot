@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -10,6 +11,7 @@
 #include "engine/engine.hpp"
 #include "engine/knowledge/knowledge.hpp"
 #include "engine/observation/observation.hpp"
+#include "harness/match.hpp"
 #include "support/real_decks.hpp"
 #include "support/test_cards.hpp"
 #include "support/test_game.hpp"
@@ -24,6 +26,7 @@ using pokebot::CardTable;
 using pokebot::DecisionKind;
 using pokebot::EnergyType;
 using pokebot::GameState;
+using pokebot::kNoCard;
 using pokebot::Observation;
 using pokebot::observe;
 using pokebot::TrainerKind;
@@ -337,7 +340,7 @@ TEST_CASE("on the real decks, observations name only cards the viewer knows and 
         GameState game = pokebot::new_game(table, seed);
         for (int step = 0; step < 3000 && !game.is_over(); ++step) {
             const auto actions = pokebot::legal_actions(game);
-            pokebot::apply_legal(game, agent.choose(game, actions));
+            pokebot::apply_legal(game, pokebot::ask(agent, game, actions));
             for (int viewer = 0; viewer < pokebot::kPlayers; ++viewer) {
                 INFO("seed " << seed << ", step " << step);
                 check_names(game, viewer);
@@ -362,4 +365,89 @@ TEST_CASE("describe shows your hand, and the opponent's as a count", "[observati
     const std::string theirs = describe(observe(f.game, f.them));
     CHECK(theirs.find("Opponent (player " + std::to_string(f.me)) != std::string::npos);
     CHECK(theirs.find("Hand:   1 card\n") != std::string::npos);
+}
+
+namespace {
+
+    // Plays like the biased agent, and counts anything wrong with what it's shown.
+    class Spy final : public pokebot::Agent {
+    public:
+        Spy(int seat, std::uint64_t seed) : seat_(seat), inner_(seed) {}
+
+        std::string name() const override { return "spy"; }
+
+        Action choose(const Observation& observation, const std::vector<Action>& actions) override {
+            ++asked;
+            if (observation.viewer != seat_ || observation.decision.player != seat_) {
+                ++wrong_viewer;
+            }
+            for (const Action& action : actions) {
+                if (action.card != kNoCard && observation.def(action.card) == nullptr) {
+                    ++unseen_cards;
+                }
+            }
+            return inner_.choose(observation, actions);
+        }
+
+        int asked = 0;
+        int wrong_viewer = 0;
+        int unseen_cards = 0;
+
+    private:
+        int seat_;
+        pokebot::BiasedRandomAgent inner_;
+    };
+
+} // namespace
+
+TEST_CASE("play_game shows each agent its own player's view", "[observation][agents]") {
+    const CardDB db = sample_db();
+    const CardTable table(db, kDeck, kDeck);
+    for (std::uint64_t seed = 0; seed < 20; ++seed) {
+        Spy first(0, seed * 2);
+        Spy second(1, seed * 2 + 1);
+        pokebot::play_game(table, seed, first, second);
+        INFO("seed " << seed);
+        CHECK(first.asked > 0);
+        CHECK(second.asked > 0);
+        CHECK(first.wrong_viewer + second.wrong_viewer == 0);
+        CHECK(first.unseen_cards + second.unseen_cards == 0);
+    }
+}
+
+TEST_CASE("on the real decks, the actions offered name only cards the agent knows the place of", "[observation][agents]") {
+    const auto real = test::load_real_decks();
+    if (!real) {
+        SKIP("no generated card data; run pokebot-import first");
+    }
+    const std::size_t n = real->decks.size();
+    int offered = 0;
+    int unknown = 0;
+    std::string first_unknown;
+    for (std::uint64_t seed = 0; seed < 100; ++seed) {
+        const auto i = static_cast<std::size_t>(seed);
+        const CardTable table = CardTable(real->db, real->decks[i % n], real->decks[(i / n) % n]).shuffled(~seed);
+        pokebot::BiasedRandomAgent agent(seed);
+        GameState game = pokebot::new_game(table, seed);
+        for (int step = 0; step < 3000 && !game.is_over(); ++step) {
+            const auto actions = pokebot::legal_actions(game);
+            const int player = game.decision().player;
+            for (const Action& action : actions) {
+                if (action.card == kNoCard) {
+                    continue;
+                }
+                ++offered;
+                if (!pokebot::knows_where(game, player, action.card)) {
+                    if (unknown == 0) {
+                        first_unknown = "seed " + std::to_string(seed) + ", step " + std::to_string(step) + ": " + pokebot::describe(game, action);
+                    }
+                    ++unknown;
+                }
+            }
+            pokebot::apply_legal(game, pokebot::ask(agent, game, actions));
+        }
+    }
+    CHECK(offered > 10000);
+    INFO(first_unknown);
+    CHECK(unknown == 0);
 }

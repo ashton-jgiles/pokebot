@@ -9,6 +9,7 @@
 #include "agents/random_agent.hpp"
 #include "cards/db/card_db.hpp"
 #include "engine/engine.hpp"
+#include "harness/match.hpp"
 #include "support/real_decks.hpp"
 
 using pokebot::Action;
@@ -164,7 +165,7 @@ TEST_CASE("random games use every attack, Ability, Trainer and Special Energy in
         pokebot::BiasedRandomAgent agent(i);
         for (int step = 0; step < 20000 && !game.is_over(); ++step) {
             const auto actions = pokebot::legal_actions(game);
-            const Action action = agent.choose(game, actions);
+            const Action action = pokebot::ask(agent, game, actions);
             record(game, action, used);
             pokebot::apply(game, action);
         }

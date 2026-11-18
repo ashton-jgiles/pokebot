@@ -104,7 +104,7 @@ namespace {
             const auto legal = legal_actions(game);
             const int player = game.decision().player;
             Agent& agent = player == 0 ? *agent0 : *agent1;
-            const Action action = agent.choose(game, legal);
+            const Action action = ask(agent, game, legal);
             std::cout << "  > player " << player << ": " << describe(game, action) << '\n';
             apply(game, action);
         }

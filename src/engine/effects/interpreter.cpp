@@ -543,6 +543,10 @@ namespace pokebot {
                             for (std::size_t i = deck.size() - look; i < deck.size(); ++i) {
                                 show(game, run.who.player, deck[i]);
                             }
+                        } else if (step.from == Zone::Deck) { // searching: you look through the whole deck
+                            for (const CardIndex card : p.deck) {
+                                show(game, run.who.player, card);
+                            }
                         }
                         const std::size_t max = choice_limit(game, run, step);
                         if (max == 0) {

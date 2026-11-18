@@ -34,6 +34,7 @@ Dreepy is shuffled away. `located` is what the observation shows and what search
 | Its owner, during setup | Pokémon put down during setup are face down until both players have set up | `note_visible` (while `turn` is 0) |
 | The opponent | A search that says "reveal them" (`"reveal": true`) put it in the hand | `MoveChosen` |
 | Its owner | They looked at the top of their deck (Recon Directive), or put it on top themselves (Ciphermaniac's Codebreaking) | `ChooseCards` from the deck top, `MoveChosen` to the deck top |
+| Its owner | They searched their deck (Ultra Ball, Nest Ball): they look through all of it, so they also know what's left is their Prize cards | `ChooseCards` from the deck |
 | The opponent (seen only) | Its owner mulliganed: the hand is shown, then shuffled back | `new_game` |
 
 A card a player knows stays known when it moves, until a shuffle. So a Pokémon taken from the
@@ -69,6 +70,7 @@ every effect that moves cards out of the open waits for a choice first.
 
 [`tests/test_engine_knowledge.cpp`](../../../../tests/test_engine_knowledge.cpp), tag `[knowledge]`: the
 open zones and hands, face-down setup, a revealed search known until it's shuffled away, a search
-that doesn't reveal, a card picked up from the discard pile, looking at the top of the deck, a
+that doesn't reveal, searching the deck showing all of it to its owner until the shuffle, a card
+picked up from the discard pile, looking at the top of the deck, a
 mulligan showing the hand, and 100 random games checking after every action that every visible card
 is recorded and no Prize card is known.
