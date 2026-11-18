@@ -53,12 +53,13 @@ List every test:
 | [`test_engine_attach.cpp`](../../tests/test_engine_attach.cpp) | `[attach]` | 6 | Energy from the discard pile to the only matching Benched Pokémon, each of 2 targets getting its own Energy from the deck and Poison for the Active, no Poison without it, up to 2 Energy only with more Prize cards left, moving Energy between your Pokémon, the compiled loop |
 | [`test_engine_custom.cpp`](../../tests/test_engine_custom.cpp) | `[custom]` | 7 | Rare Candy straight to Stage 2, not on the first turns or a Pokémon played this turn; Transformation Tome needing two, keeping Energy and damage, and Knocking Out a Basic with less HP; Area Zero's 8 spaces with a Tera Pokémon and the discard down to 5 when it leaves; the load checks |
 | [`test_engine_knowledge.cpp`](../../tests/test_engine_knowledge.cpp) | `[knowledge]` | 8 | The open zones and hands, face-down setup, a revealed search known until shuffled away, a search that doesn't reveal, a card picked up from the discard pile, looking at the top of the deck, a mulligan showing the hand, and 100 random games checking every visible card is recorded and no Prize card is known |
+| [`test_observation.cpp`](../../tests/test_observation.cpp) | `[observation]` | 11 | Your own hand and only the size of the opponent's, definitions only for seen cards, the deck and Prize cards as one sorted list, a revealed card in the opponent's view, cards on the bottom of the deck shown where they are, face-down setup, games differing only in hidden cards looking the same (and a visible change showing), random games on the sample cards and the real decks naming only cards the viewer knows, and `describe(observation)` |
 | [`test_invariants.cpp`](../../tests/test_invariants.cpp) | `[invariants]` | 5 | The checker catches duplicated, missing and misplaced cards, missed Knock Outs, bad evolutions and Energy, and a missing Active |
 | [`test_agents.cpp`](../../tests/test_agents.cpp) | `[agents]` | 3 | Random choices stay legal and cover every option, the biased agent attacks, seeds repeat |
 | [`test_coverage.cpp`](../../tests/test_coverage.cpp) | `[coverage]` | 3 | Every card in our decks has its effects written, every search whose text says "reveal" sets `reveal`, and 2,000 biased random games use every attack (copied ones too), every Ability you choose to use, every Trainer, every Stadium action and every Special Energy in our decks, listing whatever was never used |
 | [`test_stress.cpp`](../../tests/test_stress.cpp) | `[stress]` | 3 | 1,000 biased and 1,000 uniform random real-deck games with invariant checks, and every state and action can be described. More than 300 of the biased games must end by Knock Out (random players burn through their decks with draw and search Trainers, so deck-outs are common) |
 
-**229 tests in total.** Tests that need the real card data skip themselves if `data/cards/generated/`
+**240 tests in total.** Tests that need the real card data skip themselves if `data/cards/generated/`
 doesn't exist yet; run `pokebot-import` first.
 
 ## Every card is tested
@@ -91,6 +92,8 @@ Milestone 3's sign-off asks for a test per card. It's covered three ways:
   test ends.
 - **`support/test_cards.hpp`**: build made-up cards and decklists: `basic_pokemon`, `evolution`,
   `basic_energy`, `attack`, and `deck({{count, number}, ...})` for set `TST`.
+- **`support/real_decks.hpp`**: `load_real_decks()`, the project's real card data and decklists, or
+  nothing if `pokebot-import` hasn't been run (the test then skips itself).
 - **`support/test_game.hpp`**: arrange exact positions without breaking card accounting:
   `play_setup`, `take_from_deck` (deck, then hand), `put_in_hand`, `set_active`, `clear_bench`,
   `add_to_bench`, `attach_from_deck`, `end_turns`, plus `offers`, `find_action` and

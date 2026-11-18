@@ -8,17 +8,43 @@ namespace pokebot {
 
     namespace {
 
-        template <class Cards>
-        std::string card_list(const GameState& game, const Cards& cards) {
+        template <class Cards, class Name>
+        std::string join_names(const Cards& cards, Name name) {
             if (cards.empty()) {
                 return "(none)";
             }
             std::string text;
-            for (const CardIndex card : cards) {
+            for (const auto& card : cards) {
                 if (!text.empty()) {
                     text += ", ";
                 }
-                text += game.def(card).name;
+                text += name(card);
+            }
+            return text;
+        }
+
+        template <class Cards>
+        std::string card_list(const GameState& game, const Cards& cards) {
+            return join_names(cards, [&](CardIndex card) { return game.def(card).name; });
+        }
+
+        std::string name_of(const Observation& view, CardIndex card) {
+            const CardDef* def = view.def(card);
+            return def != nullptr ? def->name : "an unseen card";
+        }
+
+        template <class Cards>
+        std::string card_list(const Observation& view, const Cards& cards) {
+            return join_names(cards, [&](CardIndex card) { return name_of(view, card); });
+        }
+
+        std::string conditions(const SpecialConditions& special) {
+            const std::pair<bool, const char*> names[] = {{special.asleep, "Asleep"}, {special.burned, "Burned"}, {special.confused, "Confused"}, {special.paralyzed, "Paralyzed"}, {special.poison > 0, "Poisoned"}};
+            std::string text;
+            for (const auto& [has, name] : names) {
+                if (has) {
+                    text += std::string(" (") + name + ")";
+                }
             }
             return text;
         }
@@ -29,14 +55,19 @@ namespace pokebot {
             if (!pokemon.energy.empty()) {
                 text += " [" + card_list(game, pokemon.energy) + "]";
             }
-            const SpecialConditions& special = pokemon.special;
-            const std::pair<bool, const char*> names[] = {{special.asleep, "Asleep"}, {special.burned, "Burned"}, {special.confused, "Confused"}, {special.paralyzed, "Paralyzed"}, {special.poison > 0, "Poisoned"}};
-            for (const auto& [has, name] : names) {
-                if (has) {
-                    text += std::string(" (") + name + ")";
-                }
+            return text + conditions(pokemon.special);
+        }
+
+        std::string pokemon_summary(const Observation& view, const PokemonView& seen) {
+            const PokemonInPlay& pokemon = seen.pokemon;
+            std::string text = name_of(view, pokemon.top()) + " " + std::to_string(seen.remaining_hp()) + "/" + std::to_string(seen.max_hp) + " HP";
+            if (!pokemon.energy.empty()) {
+                text += " [" + card_list(view, pokemon.energy) + "]";
             }
-            return text;
+            if (pokemon.tool != kNoCard) {
+                text += " {" + name_of(view, pokemon.tool) + "}";
+            }
+            return text + conditions(pokemon.special);
         }
 
         std::string slot_name(const GameState& game, int player, Slot slot) {
@@ -199,6 +230,60 @@ namespace pokebot {
         }
         if (const CardIndex stadium = rules::stadium_in_play(game); stadium != kNoCard) {
             out << "Stadium: " << game.def(stadium).name << '\n';
+        }
+        return out.str();
+    }
+
+    std::string describe(const Observation& view) {
+        std::ostringstream out;
+        out << "Turn " << view.turn << ", player " << static_cast<int>(view.current_player) << "'s turn";
+        if (view.is_over()) {
+            out << " - game over: " << result_name(view.result);
+        } else {
+            out << " - waiting on player " << static_cast<int>(view.decision.player) << ": " << decision_name(view.decision.kind);
+        }
+        out << '\n';
+
+        CardIndex stadium = kNoCard;
+        for (const int p : {static_cast<int>(view.viewer), opponent_of(view.viewer)}) {
+            const PlayerView& player = view.player(p);
+            const bool mine = p == view.viewer;
+            out << (mine ? "You" : "Opponent") << " (player " << p << (view.turn > 0 && p == view.first_player ? ", went first" : "")
+                << "): " << static_cast<int>(player.prize_count) << " Prize cards, " << static_cast<int>(player.deck_size) << " in deck, "
+                << static_cast<int>(player.hand_size) << " in hand, " << player.discard.size() << " in discard\n";
+            out << "  Active: " << (player.active ? pokemon_summary(view, *player.active) : "(none)") << '\n';
+            out << "  Bench:  ";
+            if (player.bench.empty()) {
+                out << "(empty)";
+            }
+            for (std::size_t i = 0; i < player.bench.size(); ++i) {
+                out << (i > 0 ? "; " : "") << pokemon_summary(view, player.bench[i]);
+            }
+            out << '\n';
+            if (player.face_down > 0) {
+                out << "  Face down: " << static_cast<int>(player.face_down) << " Pokemon\n";
+            }
+            if (mine) {
+                out << "  Hand:   " << card_list(view, player.hand) << '\n';
+            } else {
+                const std::size_t unknown = player.hand_size - player.hand.size();
+                out << "  Hand:   " << static_cast<int>(player.hand_size) << (player.hand_size == 1 ? " card" : " cards");
+                if (!player.hand.empty()) {
+                    out << ": " << card_list(view, player.hand) << " and " << unknown << " unknown";
+                }
+                out << '\n';
+            }
+            if (!player.deck.empty()) {
+                out << "  Known in deck: " << join_names(player.deck, [&](const DeckCard& card) {
+                    return name_of(view, card.card) + " (" + (card.from_top == 0 ? std::string("top") : std::to_string(card.from_top + 1) + " from the top") + ")";
+                }) << '\n';
+            }
+            if (player.stadium != kNoCard) {
+                stadium = player.stadium;
+            }
+        }
+        if (stadium != kNoCard) {
+            out << "Stadium: " << name_of(view, stadium) << '\n';
         }
         return out.str();
     }

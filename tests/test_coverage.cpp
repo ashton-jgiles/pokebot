@@ -1,7 +1,5 @@
 #include <cstdint>
-#include <filesystem>
 #include <map>
-#include <memory>
 #include <set>
 #include <string>
 #include <vector>
@@ -11,39 +9,20 @@
 #include "agents/random_agent.hpp"
 #include "cards/db/card_db.hpp"
 #include "engine/engine.hpp"
+#include "support/real_decks.hpp"
 
 using pokebot::Action;
 using pokebot::ActionKind;
-using pokebot::CardDB;
 using pokebot::CardDef;
 using pokebot::CardKind;
 using pokebot::CardTable;
 using pokebot::GameState;
+using test::load_real_decks;
 
 // Milestone 3's sign-off: every card in our decks has its effects written, and random games reach every
 // one of them. Mechanics no deck card uses (Burned, Paralyzed, extra attacks, ...) have test-only cards in
 // the other engine tests; docs/tests/README.md lists them.
 namespace {
-
-    struct RealDecks {
-        CardDB db;
-        std::vector<pokebot::Decklist> decks;
-    };
-
-    std::unique_ptr<RealDecks> load_real_decks() {
-        const std::filesystem::path root = POKEBOT_SOURCE_DIR;
-        if (!std::filesystem::exists(root / "data/cards/generated")) {
-            return nullptr;
-        }
-        auto real = std::make_unique<RealDecks>();
-        real->db = CardDB::load(root / "data/cards/generated", root / "data/cards/effects");
-        for (const auto& file : std::filesystem::directory_iterator(root / "data/decks")) {
-            if (file.path().extension() == ".txt") {
-                real->decks.push_back(pokebot::load_decklist(file.path()));
-            }
-        }
-        return real;
-    }
 
     std::string card_key(const CardDef& c) {
         return c.id + " " + c.name;

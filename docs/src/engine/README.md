@@ -110,7 +110,8 @@ A `Slot` names a place in play: **0 is the Active Spot, 1–8 are Bench position
 
 The engine sees every card. Each player only knows the open zones, their own hand, and what they've
 been shown. [Knowledge](knowledge/knowledge.md) records that after every action, and card numbers
-are shuffled per game so they don't give the decks away.
+are shuffled per game so they don't give the decks away. [`observe(game, player)`](observation/observation.md)
+builds an `Observation`: only what that player can see.
 
 ### Randomness is seeded
 
@@ -140,13 +141,14 @@ bug can be replayed exactly.
 | `effects/custom.cpp`, `actions/bench_limit.cpp` | [custom.md](effects/custom.md) | One-of-a-kind cards in C++, the Bench limit |
 | `effects/triggers.cpp` | [abilities.md](actions/abilities.md#triggered-effects) | Triggered effects |
 | `knowledge/knowledge.hpp/.cpp` | [knowledge.md](knowledge/knowledge.md) | What each player knows about where the cards are |
+| `observation/observation.hpp/.cpp` | [observation.md](observation/observation.md) | `Observation`: the game as one player sees it |
 | `invariants/invariants.hpp/.cpp` | [invariants.md](invariants/invariants.md) | Consistency checker |
-| `describe/describe.hpp/.cpp` | [describe.md](describe/describe.md) | Text descriptions of states and actions |
+| `describe/describe.hpp/.cpp` | [describe.md](describe/describe.md) | Text descriptions of states, observations and actions |
 
 ## Known simplifications
 
-- **Setup is sequential, not face down.** Player 1 places Pokémon after player 0. Hiding what player 1
-  shouldn't see is the observation layer's job (Milestone 4).
+- **Setup is sequential.** Player 1 places Pokémon after player 0, but can't see player 0's until both
+  have set up: they're face down in player 1's [observation](observation/observation.md).
 - **After a mulligan bonus draw, any Basic in hand may be benched**, not only the ones just drawn.
 - **Damage modifiers are ignored:** "20×" and "30+" attacks deal their printed number.
 - **Damage formulas count Energy cards**, not units ("for each Energy attached"). Only Neo Upper on a
