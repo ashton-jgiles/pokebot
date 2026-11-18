@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <filesystem>
+#include <map>
 #include <memory>
 #include <set>
 #include <string>
@@ -55,6 +56,12 @@ namespace {
     std::string ability_key(const CardDef& c, std::size_t ability) {
         return card_key(c) + ": ability " + c.abilities[ability].name;
     }
+
+    // Things our decks can never do, and why. Each one's effect is still tested with a made-up card.
+    const std::map<std::string, std::string> kCantHappen = {
+        {"SSP-56 Chien-Pao: attack Icicle Loop",
+         "costs {W}{W}{C}, but basic-box has 1 Water Energy; tested by \"an Energy attached to the attacker can be put into the hand\""},
+    };
 
     bool is_special_energy(const CardDef& c) {
         return c.kind == CardKind::Energy && c.energy_kind == pokebot::EnergyKind::Special;
@@ -152,7 +159,7 @@ TEST_CASE("random games use every attack, Ability, Trainer and Special Energy in
 
     std::string never;
     for (const auto& key : expected) {
-        if (!used.contains(key)) {
+        if (!used.contains(key) && !kCantHappen.contains(key)) {
             never += "\n  " + key;
         }
     }

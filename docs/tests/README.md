@@ -66,7 +66,9 @@ Milestone 3's sign-off asks for a test per card. It's covered three ways:
 
 - **Chosen effects** (attacks, Abilities you use, Trainers, Stadium actions, Special Energy): the
   coverage test plays them in random games with the real decks, and the stress tests check every
-  invariant while they do. Most also have a test of their own with a made-up card.
+  invariant while they do. Most also have a test of their own with a made-up card. A few can't happen
+  with our decks, and the test lists them with the reason: Chien-Pao's Icicle Loop costs {W}{W}{C},
+  but `basic-box` has 1 Water Energy (Chien-Pao is there for Snow Sink).
 - **Triggered and always-on effects** aren't chosen, so each has its own test: the triggers in
   `test_engine_triggers.cpp`, Tools, Stadiums and passive Abilities in `test_engine_passive.cpp`,
   Area Zero in `test_engine_custom.cpp`, and Neo Upper and Ignition in `test_engine_energy.cpp`.
