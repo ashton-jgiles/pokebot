@@ -736,7 +736,7 @@ namespace pokebot {
                         if (p.resolving.remove(run.who.source)) {
                             p.discard.push_back(run.who.source);
                         }
-                        enforce_bench_limits(game, run.who.player);
+                        handle_knockouts(game); // Transformation Tome can swap in a Basic with less HP than its damage; also checks Bench limits
                         break;
                     }
                 }

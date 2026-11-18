@@ -75,6 +75,11 @@ namespace {
             them = pokebot::opponent_of(me);
             test::set_active(game, me, "TST-1");
             test::clear_bench(game, me);
+            auto& p = game.player(me);
+            for (const auto card : p.hand) { // the hand may already hold a Stage 2 or a Tome
+                p.deck.push_back(card);
+            }
+            p.hand.clear();
         }
         Fixture(const Fixture&) = delete;
         Fixture& operator=(const Fixture&) = delete;
@@ -161,6 +166,27 @@ TEST_CASE("Transformation Tome: two at once, swapping a Basic in play with one f
     CHECK(f.mine().active->damage_counters == 3); // and so does the damage
     CHECK(f.mine().discard.contains(old_basic));
     CHECK(f.mine().discard.size() == discard + 2); // both Tomes in, Basicmon in, Plainmon out
+    f.check_cards();
+}
+
+TEST_CASE("Transformation Tome Knocks Out the new Basic if its damage is more than its HP", "[custom]") {
+    Fixture f;
+    test::set_active(f.game, f.me, "TST-4"); // Plainmon, 90 HP
+    f.mine().active->damage_counters = 8;
+    test::add_to_bench(f.game, f.me, "TST-4");
+    const auto basicmon = test::take_from_deck(f.game, f.me, "TST-1"); // 70 HP
+    f.mine().discard.push_back(basicmon);
+    test::put_in_hand(f.game, f.me, "TST-8");
+    test::put_in_hand(f.game, f.me, "TST-8");
+
+    const auto prizes = f.game.player(f.them).prizes.size();
+    pokebot::apply(f.game, test::find_action(f.game, ActionKind::PlayTrainer, "TST-8"));
+    pokebot::apply(f.game, Action{ActionKind::ChooseCard, basicmon, kActiveSlot, 0});
+
+    CHECK_FALSE(f.mine().active.has_value());
+    CHECK(f.mine().discard.contains(basicmon));
+    CHECK(f.game.player(f.them).prizes.size() == prizes - 1);
+    CHECK(f.game.decision().kind == DecisionKind::PromoteActive);
     f.check_cards();
 }
 
