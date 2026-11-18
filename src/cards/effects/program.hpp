@@ -222,6 +222,14 @@ namespace pokebot {
     Program compile_trainer(const nlohmann::json& effects);
     std::vector<Condition> compile_conditions(const nlohmann::json& requirements);
     std::vector<Modifier> compile_passive(const nlohmann::json& passive);
+
+    // A Special Energy that provides something else when attached to a Pokemon that matches `holder`.
+    struct ConditionalProvides {
+        CardFilter holder;
+        std::vector<EnergyMask> provides;
+    };
+
+    std::vector<ConditionalProvides> compile_provides_when(const nlohmann::json& provides_when);
     Trigger trigger_from_string(const std::string& name);
     const char* to_string(Trigger trigger);
     const char* to_string(Op op);

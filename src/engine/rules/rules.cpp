@@ -180,8 +180,29 @@ namespace pokebot::rules {
         return to_list(game.def(pokemon.top()).attacks[attack].cost);
     }
 
-    EnergyList energy_provided(const GameState& game, const PokemonInPlay&, CardIndex energy) {
-        return to_list(game.def(energy).provides);
+    EnergyUnits energy_provided(const GameState& game, const PokemonInPlay& pokemon, CardIndex energy) {
+        const CardDef& def = game.def(energy);
+        EnergyUnits units;
+        for (const ConditionalProvides& when : def.conditional_provides) {
+            if (matches(when.holder, game.def(pokemon.top()))) {
+                for (const EnergyMask unit : when.provides) {
+                    units.push_back(unit);
+                }
+                return units;
+            }
+        }
+        for (const EnergyType type : def.provides) {
+            units.push_back(energy_mask(type));
+        }
+        return units;
+    }
+
+    std::size_t energy_units(const GameState& game, const PokemonInPlay& pokemon) {
+        std::size_t total = 0;
+        for (const CardIndex card : pokemon.energy) {
+            total += energy_provided(game, pokemon, card).size();
+        }
+        return total;
     }
 
     int prize_value(const GameState& game, const PokemonInPlay& pokemon) {

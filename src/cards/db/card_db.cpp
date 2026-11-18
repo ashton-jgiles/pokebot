@@ -94,6 +94,7 @@ namespace pokebot {
             }
             card.conditions = compile_conditions(card.requirements);
             card.modifiers = compile_passive(card.passive);
+            card.conditional_provides = compile_provides_when(card.provides_when);
         } catch (const CardDataError& e) {
             throw CardDataError(card.id + ": " + e.what());
         }
@@ -126,7 +127,7 @@ namespace pokebot {
         std::vector<std::string> missing;
         for (const auto& [id, c] : cards_) {
             const std::string label = id + " " + c.name;
-            if (!c.text.empty() && c.effects.empty() && c.passive.empty()) {
+            if (!c.text.empty() && c.effects.empty() && c.passive.empty() && c.provides_when.empty()) {
                 missing.push_back(label);
             }
             for (const auto& a : c.abilities) {

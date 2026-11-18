@@ -82,7 +82,7 @@ namespace pokebot {
                 if (!rules::can_retreat(game, player)) {
                     return;
                 }
-                if (p.active->energy.size() < retreat_cost(game, *p.active)) {
+                if (rules::energy_units(game, *p.active) < retreat_cost(game, *p.active)) {
                     return;
                 }
                 for (std::size_t i = 0; i < p.bench.size(); ++i) {
@@ -107,7 +107,7 @@ namespace pokebot {
             }
 
             bool discard_choice_matters(const GameState& game, const PokemonInPlay& pokemon, std::size_t cost) {
-                if (cost == 0 || cost == pokemon.energy.size()) {
+                if (cost == 0 || cost == rules::energy_units(game, pokemon)) {
                     return false;
                 }
                 for (const CardIndex card : pokemon.energy) {
@@ -126,8 +126,11 @@ namespace pokebot {
                     game.pending.push_back(Decision{DecisionKind::RetreatDiscard, static_cast<std::uint8_t>(player), static_cast<std::uint8_t>(cost), target});
                     return;
                 }
-                for (std::size_t i = 0; i < cost; ++i) {
-                    discard_attatched_energy(p, p.active->energy.back());
+                std::size_t paid = 0;
+                while (paid < cost && !p.active->energy.empty()) {
+                    const CardIndex card = p.active->energy.back();
+                    paid += rules::energy_provided(game, *p.active, card).size();
+                    discard_attatched_energy(p, card);
                 }
                 finish_retreat(game, player, target);
             }
@@ -318,8 +321,9 @@ namespace pokebot {
         void apply_retreat_discard(GameState& game, const Action& action) {
             Decision& decision = game.pending.back();
             PlayerState& p = game.player(decision.player);
+            const std::size_t units = rules::energy_provided(game, *p.active, action.card).size();
             discard_attatched_energy(p, action.card);
-            --decision.amount;
+            decision.amount = static_cast<std::uint8_t>(decision.amount > units ? decision.amount - units : 0);
             if (decision.amount == 0) {
                 const Slot target = decision.target;
                 const int player = decision.player;

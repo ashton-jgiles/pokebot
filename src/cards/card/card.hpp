@@ -85,6 +85,11 @@ namespace pokebot {
         std::vector<Modifier> modifiers;
         Trigger trigger = Trigger::None; // a Stadium's effect that happens on its own
 
+        // Special Energy
+        nlohmann::json provides_when = nlohmann::json::array();
+        std::vector<ConditionalProvides> conditional_provides;
+        bool discard_at_end_of_turn = false; // "If this card is attached to 1 of your Pokemon, discard it at the end of your turn"
+
         int prize_value() const;
     };
 

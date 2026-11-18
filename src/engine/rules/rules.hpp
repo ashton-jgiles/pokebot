@@ -10,6 +10,7 @@
 namespace pokebot::rules {
 
     using EnergyList = FixedVector<EnergyType, 8>;
+    using EnergyUnits = FixedVector<EnergyMask, 4>;
 
     // Pokemon in play
     int max_hp(const GameState& game, const PokemonInPlay& pokemon);
@@ -21,7 +22,10 @@ namespace pokebot::rules {
     int retreat_cost(const GameState& game, const PokemonInPlay& pokemon);
     const Attack& attack_text(const GameState& game, AttackRef attack);
     EnergyList attack_cost(const GameState& game, const PokemonInPlay& pokemon, std::size_t attack);
-    EnergyList energy_provided(const GameState& game, const PokemonInPlay& pokemon, CardIndex energy);
+    // What one attached Energy card provides, as units (see EnergyMask). Most provide one unit of one type.
+    EnergyUnits energy_provided(const GameState& game, const PokemonInPlay& pokemon, CardIndex energy);
+    // The total Energy units attached to the Pokemon: what pays its attack costs and Retreat Cost.
+    std::size_t energy_units(const GameState& game, const PokemonInPlay& pokemon);
     int prize_value(const GameState& game, const PokemonInPlay& pokemon);
     bool is_active(const GameState& game, const PokemonInPlay& pokemon);
     bool can_get_special_condition(const GameState& game, const PokemonInPlay& pokemon, SpecialCondition condition);

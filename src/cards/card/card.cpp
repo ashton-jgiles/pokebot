@@ -163,6 +163,12 @@ namespace pokebot {
             if (c.trigger != Trigger::None) {
                 j["trigger"] = to_string(c.trigger);
             }
+            if (!c.provides_when.empty()) {
+                j["provides_when"] = c.provides_when;
+            }
+            if (c.discard_at_end_of_turn) {
+                j["discard_at_end_of_turn"] = true;
+            }
         }
     }
 
@@ -237,6 +243,8 @@ namespace pokebot {
                 c.requirements = j.value("requires", json::array());
                 c.passive = j.value("passive", json::array());
                 c.trigger = trigger_from_string(j.value("trigger", "none"));
+                c.provides_when = j.value("provides_when", json::array());
+                c.discard_at_end_of_turn = j.value("discard_at_end_of_turn", false);
             }
         } catch (const json::exception& e) {
             throw CardDataError(std::string("bad card data: ") + e.what());

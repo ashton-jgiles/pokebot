@@ -1,0 +1,1 @@
+{"provides": ["colorless"], "discard_at_end_of_turn": true, "provides_when": [{"holder": {"stage": "evolution"}, "provides": ["colorless", "colorless", "colorless"]}]}

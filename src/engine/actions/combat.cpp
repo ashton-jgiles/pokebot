@@ -13,8 +13,6 @@ namespace pokebot {
 
         namespace {
 
-            constexpr std::size_t kEnergyTypeCount = 11;
-
             bool has_pokemon_in_play(const PlayerState& player) {
                 return player.active.has_value() || !player.bench.empty();
             }
@@ -87,29 +85,43 @@ namespace pokebot {
         } // namespace
 
         bool can_pay_cost(const GameState& game, const PokemonInPlay& pokemon, const rules::EnergyList& cost) {
-            std::array<int, kEnergyTypeCount> available{};
-            int total = 0;
+            FixedVector<EnergyMask, kDeckSize> units;
             for (const CardIndex card : pokemon.energy) {
-                for (const EnergyType type : rules::energy_provided(game, pokemon, card)) {
-                    ++available[static_cast<std::size_t>(type)];
-                    ++total;
+                for (const EnergyMask unit : rules::energy_provided(game, pokemon, card)) {
+                    units.push_back(unit);
                 }
             }
-
-            int colorless = 0;
+            FixedVector<EnergyType, 8> typed;
+            std::size_t colorless = 0;
             for (const EnergyType symbol : cost) {
                 if (symbol == EnergyType::Colorless) {
                     ++colorless;
-                    continue;
+                } else {
+                    typed.push_back(symbol);
                 }
-                int& left = available[static_cast<std::size_t>(symbol)];
-                if (left == 0) {
-                    return false;
-                }
-                --left;
-                --total;
             }
-            return total >= colorless;
+            if (units.size() < typed.size() + colorless) {
+                return false;
+            }
+            // Each typed symbol needs its own unit that can be that type; whatever is left pays for Colorless.
+            // Costs are at most a few symbols, so trying every assignment is cheap.
+            std::array<bool, kDeckSize> used{};
+            const auto assign = [&](const auto& self, std::size_t i) -> bool {
+                if (i == typed.size()) {
+                    return true;
+                }
+                for (std::size_t u = 0; u < units.size(); ++u) {
+                    if (!used[u] && (units[u] & energy_mask(typed[i])) != 0) {
+                        used[u] = true;
+                        if (self(self, i + 1)) {
+                            return true;
+                        }
+                        used[u] = false;
+                    }
+                }
+                return false;
+            };
+            return assign(assign, 0);
         }
 
         int attack_damage(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, const Attack& attack) {

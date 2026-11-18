@@ -78,7 +78,7 @@ TEST_CASE("rules answer the printed type, costs, Energy and Prize cards", "[rule
     CHECK(rules::prize_value(f.game, f.active()) == 1);
 
     const auto energy = test::take_from_deck(f.game, f.me, "TST-4");
-    CHECK(rules::energy_provided(f.game, f.active(), energy) == rules::EnergyList{E::Water});
+    CHECK(rules::energy_provided(f.game, f.active(), energy) == rules::EnergyUnits{pokebot::energy_mask(E::Water)});
 
     test::set_active(f.game, f.me, "TST-3");
     CHECK(rules::prize_value(f.game, f.active()) == 2);

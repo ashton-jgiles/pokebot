@@ -757,6 +757,27 @@ namespace pokebot {
         }
     }
 
+    std::vector<ConditionalProvides> compile_provides_when(const nlohmann::json& provides_when) {
+        if (!provides_when.is_array()) {
+            throw CardDataError("provides_when must be a list");
+        }
+        try {
+            std::vector<ConditionalProvides> result;
+            for (const auto& item : provides_when) {
+                ConditionalProvides entry;
+                entry.holder = item.contains("holder") ? parse_filter_fields(item.at("holder")) : CardFilter{};
+                for (const auto& unit : item.at("provides")) {
+                    const std::string name = unit.get<std::string>();
+                    entry.provides.push_back(name == "any" ? kAnyEnergy : energy_mask(energy_type_from_string(name)));
+                }
+                result.push_back(std::move(entry));
+            }
+            return result;
+        } catch (const nlohmann::json::exception& e) {
+            throw CardDataError(std::string("badly formed provides_when: ") + e.what());
+        }
+    }
+
     std::vector<Modifier> compile_passive(const nlohmann::json& passive) {
         if (!passive.is_array()) {
             throw CardDataError("passive must be a list");
