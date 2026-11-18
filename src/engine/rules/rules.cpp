@@ -230,8 +230,22 @@ namespace pokebot::rules {
         return game.turn <= 2;
     }
 
-    std::size_t bench_size(const GameState&, int) {
-        return kBenchSize;
+    std::size_t bench_size(const GameState& game, int player) {
+        std::size_t size = kBenchSize;
+        bool has_tera = false;
+        const PlayerState& p = game.player(player);
+        if (p.active && game.def(p.active->top()).rules.tera) {
+            has_tera = true;
+        }
+        for (const PokemonInPlay& pokemon : p.bench) {
+            has_tera = has_tera || game.def(pokemon.top()).rules.tera;
+        }
+        each_modifier(game, [&](const Modifier& m, int, const PokemonInPlay*) {
+            if (m.what == Modifies::BenchSize && m.set && (!m.only_with_tera || has_tera)) {
+                size = std::max(size, static_cast<std::size_t>(*m.set));
+            }
+        });
+        return std::min(size, kMaxBenchSize);
     }
 
     bool can_attach_energy(const GameState& game, int) {

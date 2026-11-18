@@ -71,6 +71,7 @@ namespace pokebot {
         EachTarget,        // the start of a loop over the targets: done, carry on at `jump`
         NextTarget,        // the end of the loop: go back to `jump` for the next target
         ChooseDestination, // the player chooses another of their Pokemon (chosen_pokemon)
+        Custom,            // a one-of-a-kind card's own C++ (engine/effects/custom.cpp)
     };
 
     enum class StageFilter : std::uint8_t {
@@ -121,6 +122,13 @@ namespace pokebot {
         InPlayHas,              // one of your Pokemon in play matches `filter`
         YourEnergyHas,          // an Energy attached to one of your Pokemon matches `filter`
         AttachedToActive,       // this effect attached Energy to your Active Pokemon
+        Custom,                 // a one-of-a-kind card's own requirement (`custom`)
+    };
+
+    // The one-of-a-kind cards with their own C++.
+    enum class CustomEffect : std::uint8_t {
+        RareCandy,
+        TransformationTome,
     };
 
     // When a triggered effect happens on its own, without being chosen.
@@ -134,6 +142,7 @@ namespace pokebot {
         ConditionKind kind = ConditionKind::HandBesides;
         int value = 0;
         CardFilter filter;
+        CustomEffect custom = CustomEffect::RareCandy;
     };
 
     enum class CountKind : std::uint8_t {
@@ -196,6 +205,7 @@ namespace pokebot {
         Count count;
         bool needs_energy = false;
         LastingSpec lasting;
+        CustomEffect custom = CustomEffect::RareCandy;
         std::uint8_t jump = 0;
     };
 
@@ -207,6 +217,7 @@ namespace pokebot {
         RetreatCost,
         WeaknessType,
         DamageDealt, // attacks by the Pokemon do `add` more to the opponent's Active (before Weakness)
+        BenchSize,   // a player's Bench can hold `set` Pokemon
     };
 
     enum class AppliesTo : std::uint8_t {
@@ -224,6 +235,7 @@ namespace pokebot {
         std::optional<EnergyType> type;
         CardFilter filter;
         bool only_if_poisoned = false;
+        bool only_with_tera = false; // only for a player with a Tera Pokemon in play
     };
 
     bool matches(const CardFilter& filter, const CardDef& card);

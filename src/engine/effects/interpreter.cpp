@@ -187,8 +187,8 @@ namespace pokebot {
                 deck = reordered;
             }
 
-            FixedVector<Slot, kBenchSize + 1> damaged_slots(const GameState& game, int player) {
-                FixedVector<Slot, kBenchSize + 1> slots;
+            FixedVector<Slot, kMaxBenchSize + 1> damaged_slots(const GameState& game, int player) {
+                FixedVector<Slot, kMaxBenchSize + 1> slots;
                 const PlayerState& p = game.player(player);
                 for (const Slot slot : in_play_slots(p)) {
                     if (pokemon_at(p, slot).damage_counters > 0) {
@@ -228,8 +228,8 @@ namespace pokebot {
             }
 
             // Your other Pokemon: anywhere in play except the targets (where something is being moved from).
-            FixedVector<Slot, kBenchSize + 1> destinations(const GameState& game, const EffectRun& run) {
-                FixedVector<Slot, kBenchSize + 1> slots;
+            FixedVector<Slot, kMaxBenchSize + 1> destinations(const GameState& game, const EffectRun& run) {
+                FixedVector<Slot, kMaxBenchSize + 1> slots;
                 const PlayerState& p = game.player(run.who.player);
                 for (const Slot slot : in_play_slots(p)) {
                     if (!run.targets.contains(pokemon_at(p, slot).id())) {
@@ -256,8 +256,8 @@ namespace pokebot {
             }
 
             // The slots of that side's Pokemon this step may choose: on the Bench, or anywhere in play.
-            FixedVector<Slot, kBenchSize + 1> targetable(const GameState& game, const EffectRun& run, const Step& step) {
-                FixedVector<Slot, kBenchSize + 1> slots;
+            FixedVector<Slot, kMaxBenchSize + 1> targetable(const GameState& game, const EffectRun& run, const Step& step) {
+                FixedVector<Slot, kMaxBenchSize + 1> slots;
                 const PlayerState& p = game.player(player_on(step.side, run.who.player));
                 for (const Slot slot : in_play_slots(p)) {
                     const PokemonInPlay& pokemon = pokemon_at(p, slot);
@@ -690,6 +690,11 @@ namespace pokebot {
                         ++run.target_index;
                         run.pc = step.jump;
                         return true;
+                    case Op::Custom:
+                        if (!run_custom(game, run, step)) {
+                            return false;
+                        }
+                        break;
                     case Op::ChooseDestination:
                         run.chosen_pokemon = kNoCard;
                         if (destinations(game, run).empty()) {
@@ -731,6 +736,7 @@ namespace pokebot {
                         if (p.resolving.remove(run.who.source)) {
                             p.discard.push_back(run.who.source);
                         }
+                        enforce_bench_limits(game, run.who.player);
                         break;
                     }
                 }
@@ -772,7 +778,7 @@ namespace pokebot {
 
         bool is_effect_decision(DecisionKind kind) {
             return kind == DecisionKind::ChooseCards || kind == DecisionKind::ChoosePokemon || kind == DecisionKind::ChooseYesNo ||
-                   kind == DecisionKind::ChooseAttack;
+                   kind == DecisionKind::ChooseAttack || kind == DecisionKind::CustomChoice;
         }
 
         bool condition_holds(const GameState& game, int player, const Condition& condition, CardIndex playing, const EffectRun* run) {
@@ -833,6 +839,8 @@ namespace pokebot {
                     return false;
                 case ConditionKind::AttachedToActive:
                     return run != nullptr && run->attached_to_active;
+                case ConditionKind::Custom:
+                    return custom_condition(game, player, condition.custom);
                 case ConditionKind::HasBenched:
                     return !p.bench.empty();
                 case ConditionKind::OpponentHasBenched:
@@ -933,6 +941,9 @@ namespace pokebot {
                         out.push_back(option);
                     }
                     break;
+                case DecisionKind::CustomChoice:
+                    add_custom_actions(game, run, current_step(game), out);
+                    break;
                 case DecisionKind::ChooseYesNo:
                     out.push_back(Action{ActionKind::AnswerYes, kNoCard, kActiveSlot, 0});
                     out.push_back(Action{ActionKind::AnswerNo, kNoCard, kActiveSlot, 0});
@@ -946,6 +957,11 @@ namespace pokebot {
             EffectRun& run = game.effects.back();
             switch (action.kind) {
                 case ActionKind::ChooseCard:
+                    if (game.decision().kind == DecisionKind::CustomChoice) {
+                        apply_custom(game, run, current_step(game), action);
+                        resume(game);
+                        break;
+                    }
                     run.chosen.push_back(action.card);
                     if (run.chosen.size() >= game.decision().amount) {
                         resume(game);

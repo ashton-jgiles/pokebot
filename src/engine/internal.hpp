@@ -24,7 +24,7 @@ namespace pokebot::detail {
     const PokemonInPlay* find_pokemon(const GameState& game, CardIndex id);
 
     // every occupied slots the active pokemon first then the bench in order left to right
-    FixedVector<Slot, kBenchSize + 1> in_play_slots(const PlayerState& player);
+    FixedVector<Slot, kMaxBenchSize + 1> in_play_slots(const PlayerState& player);
 
     // draw cards to get starting hand and cards in subsequent turns
     int draw_cards(GameState& game, int player, int count);
@@ -81,6 +81,17 @@ namespace pokebot::detail {
     void start_effect(GameState& game, const EffectContext& who, ProgramRef program, AfterEffect then);
     // Runs the effect now, or, if one is already running, right after its current step.
     void queue_effect(GameState& game, const EffectContext& who, ProgramRef program, AfterEffect then);
+
+    // effects/custom.cpp
+    bool custom_condition(const GameState& game, int player, CustomEffect effect);
+    bool run_custom(GameState& game, EffectRun& run, const Step& step); // false while waiting for the choice
+    void add_custom_actions(const GameState& game, const EffectRun& run, const Step& step, std::vector<Action>& out);
+    void apply_custom(GameState& game, const EffectRun& run, const Step& step, const Action& action);
+
+    // actions/bench_limit.cpp
+    void enforce_bench_limits(GameState& game, int first);
+    void add_discard_benched_actions(const GameState& game, std::vector<Action>& out);
+    void apply_discard_benched(GameState& game, const Action& action);
 
     // effects/triggers.cpp
     bool ability_allowed(const GameState& game, int player, const PokemonInPlay& pokemon, std::size_t index);

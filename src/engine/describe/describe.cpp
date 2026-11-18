@@ -75,6 +75,10 @@ namespace pokebot {
                     return "decide whether to use an effect";
                 case DecisionKind::ChooseAttack:
                     return "choose an attack to use";
+                case DecisionKind::CustomChoice:
+                    return "choose a card and a Pokemon for an effect";
+                case DecisionKind::DiscardBenched:
+                    return "discard Benched Pokemon down to the limit";
             }
             return "unknown decision";
         }
@@ -146,6 +150,9 @@ namespace pokebot {
             case ActionKind::Promote:
                 return "promote " + slot_name(game, player, action.target);
             case ActionKind::ChooseCard:
+                if (action.target != kActiveSlot || (!game.is_over() && game.decision().kind == DecisionKind::CustomChoice)) {
+                    return "choose " + card() + " for " + slot_name(game, player, action.target);
+                }
                 return "choose " + card();
             case ActionKind::ChooseDone:
                 return "stop choosing";
@@ -157,6 +164,8 @@ namespace pokebot {
                 return "no";
             case ActionKind::ChooseAttack:
                 return "use " + game.def(action.card).attacks[action.amount].name + " from " + card();
+            case ActionKind::DiscardBenched:
+                return "discard " + slot_name(game, player, action.target);
         }
         return "unknown action";
     }

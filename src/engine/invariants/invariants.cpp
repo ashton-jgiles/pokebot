@@ -85,7 +85,8 @@ namespace pokebot {
                 for (std::size_t i = 1; i < pokemon.stack.size(); ++i) {
                     const CardDef& below = game_.def(pokemon.stack[i - 1]);
                     const CardDef& above = game_.def(pokemon.stack[i]);
-                    if (above.evolves_from != below.name) {
+                    const bool rare_candy = below.stage == Stage::Basic && above.stage == Stage::Stage2;
+                    if (above.evolves_from != below.name && !rare_candy) {
                         fail(where + ": " + above.name + " doesn't evolve from " + below.name);
                     }
                 }
@@ -121,12 +122,25 @@ namespace pokebot {
                     }
                     check_pokemon(*player.active, p, who + "Active Pokemon");
                 }
+                if (!game_.is_over() && player.bench.size() > rules::bench_size(game_, p) && !bench_discard_pending(p)) {
+                    fail(who + "Bench has " + std::to_string(player.bench.size()) + " Pokemon, more than " +
+                         std::to_string(rules::bench_size(game_, p)) + ", and no discard is pending");
+                }
                 for (std::size_t i = 0; i < player.bench.size(); ++i) {
                     if (player.bench[i].special.any()) {
                         fail(who + "Bench " + std::to_string(i + 1) + " has a Special Condition, but only the Active Pokemon can");
                     }
                     check_pokemon(player.bench[i], p, who + "Bench " + std::to_string(i + 1));
                 }
+            }
+
+            bool bench_discard_pending(int player) const {
+                for (const Decision& decision : game_.pending) {
+                    if (decision.kind == DecisionKind::DiscardBenched && decision.player == player) {
+                        return true;
+                    }
+                }
+                return false;
             }
 
             bool promotion_pending(int player) const {
@@ -155,7 +169,8 @@ namespace pokebot {
                     }
                 }
                 const Decision& decision = game_.decision();
-                const bool effect_decision = decision.kind == DecisionKind::ChooseCards || decision.kind == DecisionKind::ChoosePokemon || decision.kind == DecisionKind::ChooseYesNo || decision.kind == DecisionKind::ChooseAttack;
+                const bool effect_decision = decision.kind == DecisionKind::ChooseCards || decision.kind == DecisionKind::ChoosePokemon || decision.kind == DecisionKind::ChooseYesNo || decision.kind == DecisionKind::ChooseAttack ||
+                                             decision.kind == DecisionKind::CustomChoice;
                 if (effect_decision && game_.effects.empty()) {
                     fail("an effect's decision is pending but no effect is running");
                 }

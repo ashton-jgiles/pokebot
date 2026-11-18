@@ -117,6 +117,16 @@ namespace pokebot {
             return spec;
         }
 
+        CustomEffect custom_of(const std::string& name) {
+            if (name == "rare_candy") {
+                return CustomEffect::RareCandy;
+            }
+            if (name == "transformation_tome") {
+                return CustomEffect::TransformationTome;
+            }
+            throw CardDataError("unknown custom effect '" + name + "'");
+        }
+
         StageFilter stage_of(const std::string& stage) {
             if (stage == "basic") {
                 return StageFilter::Basic;
@@ -282,6 +292,9 @@ namespace pokebot {
                 condition.filter = parse_filter_fields(value);
             } else if (key == "attached_to_active") {
                 condition.kind = ConditionKind::AttachedToActive;
+            } else if (key == "custom") {
+                condition.kind = ConditionKind::Custom;
+                condition.custom = custom_of(value.get<std::string>());
             } else if (key == "has_benched") {
                 condition.kind = ConditionKind::HasBenched;
             } else if (key == "opponent_has_benched") {
@@ -598,6 +611,11 @@ namespace pokebot {
                     choose.filter = parse_filter(block);
                     add(choose);
                     add(Op::UseChosenAttack);
+                } else if (op == "custom") {
+                    Step custom;
+                    custom.op = Op::Custom;
+                    custom.custom = custom_of(block.at("name").get<std::string>());
+                    add(custom);
                 } else if (op == "attach_to") {
                     attach_to(block);
                 } else if (op == "move_energy") {
@@ -865,6 +883,8 @@ namespace pokebot {
                     m.what = Modifies::WeaknessType;
                 } else if (what == "damage_dealt") {
                     m.what = Modifies::DamageDealt;
+                } else if (what == "bench_size") {
+                    m.what = Modifies::BenchSize;
                 } else {
                     throw CardDataError("unknown thing to modify '" + what + "'");
                 }
@@ -891,6 +911,10 @@ namespace pokebot {
                 }
                 m.filter = parse_filter(item);
                 m.only_if_poisoned = item.value("if_poisoned", false);
+                m.only_with_tera = item.value("if_tera_in_play", false);
+                if (m.what == Modifies::BenchSize && !m.set) {
+                    throw CardDataError("'bench_size' needs \"set\"");
+                }
                 if (m.what == Modifies::WeaknessType ? !m.type : (m.add == 0 && !m.set)) {
                     throw CardDataError("'" + what + "' needs " + (m.what == Modifies::WeaknessType ? "a \"type\"" : "\"add\" or \"set\""));
                 }
@@ -1005,6 +1029,8 @@ namespace pokebot {
                 return "next target";
             case Op::ChooseDestination:
                 return "choose where to move it";
+            case Op::Custom:
+                return "custom";
         }
         return "unknown op";
     }

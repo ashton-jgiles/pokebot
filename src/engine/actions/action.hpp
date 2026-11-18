@@ -43,6 +43,7 @@ namespace pokebot {
         AnswerYes,
         AnswerNo,
         ChooseAttack,
+        DiscardBenched,
     };
 
     struct Action {

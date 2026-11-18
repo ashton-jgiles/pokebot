@@ -19,7 +19,8 @@ namespace pokebot {
     constexpr int kPlayers = 2;
     constexpr std::size_t kDeckSize = 60;
     constexpr std::size_t kMaxCards = kPlayers * kDeckSize;
-    constexpr std::size_t kBenchSize = 5;
+    constexpr std::size_t kBenchSize = 5;    // the rulebook's Bench
+    constexpr std::size_t kMaxBenchSize = 8; // the most any card allows (Area Zero Underdepths)
     constexpr std::size_t kPrizeCount = 6;
     constexpr std::size_t kMaxEvolutionStack = 3;
 
@@ -74,7 +75,7 @@ namespace pokebot {
         FixedVector<CardIndex, kDeckSize> discard;
         FixedVector<CardIndex, kDeckSize> lost_zone;
         std::optional<PokemonInPlay> active;
-        FixedVector<PokemonInPlay, kBenchSize> bench;
+        FixedVector<PokemonInPlay, kMaxBenchSize> bench;
         FixedVector<CardIndex, 2> resolving;
         CardIndex stadium = kNoCard;
         std::uint8_t mulligans = 0;
@@ -123,6 +124,8 @@ namespace pokebot {
         ChoosePokemon,
         ChooseYesNo,
         ChooseAttack,
+        CustomChoice,   // a one-of-a-kind card's choice (a card and a Pokemon in play)
+        DiscardBenched, // too many Benched Pokemon: discard `amount` of them
     };
 
     struct Decision {

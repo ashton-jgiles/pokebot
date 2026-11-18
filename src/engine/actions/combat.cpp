@@ -218,6 +218,7 @@ namespace pokebot {
                     game.pending.push_back(Decision{DecisionKind::PromoteActive, static_cast<std::uint8_t>(p), 0, 0});
                 }
             }
+            enforce_bench_limits(game, current); // a Tera Pokemon was Knocked Out, so Area Zero's 8 may be back to 5
         }
 
         void add_promote_actions(const GameState& game, std::vector<Action>& out) {

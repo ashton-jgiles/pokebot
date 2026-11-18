@@ -68,8 +68,8 @@ namespace pokebot {
             return const_cast<PokemonInPlay*>(find_pokemon(static_cast<const GameState&>(game), id));
         }
 
-        FixedVector<Slot, kBenchSize + 1> in_play_slots(const PlayerState& player) {
-            FixedVector<Slot, kBenchSize + 1> slots;
+        FixedVector<Slot, kMaxBenchSize + 1> in_play_slots(const PlayerState& player) {
+            FixedVector<Slot, kMaxBenchSize + 1> slots;
             if (player.active) {
                 slots.push_back(kActiveSlot);
             }
@@ -105,6 +105,8 @@ namespace pokebot {
             detail::add_retreat_discard_actions(game, actions);
         } else if (kind == DecisionKind::PromoteActive) {
             detail::add_promote_actions(game, actions);
+        } else if (kind == DecisionKind::DiscardBenched) {
+            detail::add_discard_benched_actions(game, actions);
         } else if (kind == DecisionKind::ExtraAttack) {
             detail::add_extra_attack_actions(game, actions);
         } else if (detail::is_effect_decision(kind)) {
@@ -134,6 +136,8 @@ namespace pokebot {
             detail::apply_retreat_discard(game, action);
         } else if (kind == DecisionKind::PromoteActive) {
             detail::apply_promote(game, action);
+        } else if (kind == DecisionKind::DiscardBenched) {
+            detail::apply_discard_benched(game, action);
         } else if (detail::is_effect_decision(kind)) {
             detail::apply_effect_choice(game, action);
         } else {

@@ -208,15 +208,19 @@ namespace pokebot {
             }
 
             void play_stadium(GameState& game, std::uint8_t player, CardIndex card) {
+                int old_owner = player;
                 for (int i = 0; i < kPlayers; ++i) {
                     PlayerState& owner = game.player(i);
                     if (owner.stadium != kNoCard) {
                         owner.discard.push_back(owner.stadium);
                         owner.stadium = kNoCard;
+                        old_owner = i;
                     }
                 }
                 game.player(player).stadium = card;
                 game.flags.stadium_played = true;
+                // "When this card leaves play, both players discard ... and the player who played this card discards first."
+                enforce_bench_limits(game, old_owner);
             }
 
             void play_trainer(GameState& game, std::uint8_t player, CardIndex card) {
