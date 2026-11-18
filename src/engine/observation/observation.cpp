@@ -33,7 +33,7 @@ namespace pokebot {
                 }
             }
             if (owner != viewer) {
-                std::sort(out.hand.begin(), out.hand.end()); // the order would show where the unknown cards are
+                std::sort(out.hand.begin(), out.hand.end());
             }
             for (std::size_t i = player.deck.size(); i-- > 0;) {
                 if (knows(player.deck[i])) {

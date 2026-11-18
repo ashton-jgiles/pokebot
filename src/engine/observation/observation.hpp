@@ -7,10 +7,8 @@
 
 #include "engine/game/game_state.hpp"
 
-// What one player can see of a game: everything an agent is allowed to know.
 namespace pokebot {
 
-    // A card in a deck whose place the viewer knows. `from_top` 0 is the top card.
     struct DeckCard {
         CardIndex card = kNoCard;
         std::uint8_t from_top = 0;
@@ -18,7 +16,6 @@ namespace pokebot {
         bool operator==(const DeckCard&) const = default;
     };
 
-    // A Pokemon in play, with its HP worked out by the engine (Tools and Stadiums can change it).
     struct PokemonView {
         PokemonInPlay pokemon;
         std::int16_t max_hp = 0;
@@ -33,9 +30,9 @@ namespace pokebot {
         std::uint8_t deck_size = 0;
         std::uint8_t prize_count = 0;
         std::uint8_t mulligans = 0;
-        std::uint8_t face_down = 0;             // Pokemon put down during setup that the viewer can't see yet
-        FixedVector<CardIndex, kDeckSize> hand; // the cards in hand the viewer knows: all of their own
-        FixedVector<DeckCard, kDeckSize> deck;  // the deck cards whose place the viewer knows, top first
+        std::uint8_t face_down = 0;
+        FixedVector<CardIndex, kDeckSize> hand;
+        FixedVector<DeckCard, kDeckSize> deck;
         FixedVector<CardIndex, kDeckSize> discard;
         FixedVector<CardIndex, kDeckSize> lost_zone;
         std::optional<PokemonView> active;
@@ -55,13 +52,13 @@ namespace pokebot {
         TurnFlags flags;
         GameHistory history;
         FixedVector<LastingEffect, 8> lasting;
-        Decision decision; // what's being decided, unless the game is over
-        ProgramRef effect; // the attack, Trainer or Ability resolving (card is kNoCard if none)
+        Decision decision; 
+        ProgramRef effect; 
         GameResult result = GameResult::Ongoing;
         std::array<PlayerView, kPlayers> players;
-        FixedVector<CardIndex, kDeckSize> deck_or_prizes; // the viewer's cards whose place they don't know, sorted
-        FixedVector<CardIndex, kDeckSize> opponent_seen;  // every opponent card the viewer has seen this game, sorted
-        std::array<const CardDef*, kMaxCards> defs{};     // nullptr for opponent cards the viewer hasn't seen
+        FixedVector<CardIndex, kDeckSize> deck_or_prizes; 
+        FixedVector<CardIndex, kDeckSize> opponent_seen;  
+        std::array<const CardDef*, kMaxCards> defs{}; 
 
         const CardDef* def(CardIndex card) const { return defs[card]; }
         const PlayerView& player(int p) const { return players[static_cast<std::size_t>(p)]; }
