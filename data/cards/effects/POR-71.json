@@ -1,0 +1,1 @@
+{"effects": [{"op": "flip_coins"}, {"op": "if", "condition": {"heads_at_least": 1}, "then": [{"op": "discard_target_energy"}]}]}

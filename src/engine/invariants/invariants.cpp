@@ -3,6 +3,8 @@
 #include <array>
 #include <string>
 
+#include "engine/rules/rules.hpp"
+
 namespace pokebot {
 
     namespace {
@@ -21,6 +23,14 @@ namespace pokebot {
                     }
                 }
                 check_decisions();
+                if (game_.player(0).stadium != kNoCard && game_.player(1).stadium != kNoCard) {
+                    fail("two Stadiums are in play");
+                }
+                for (const LastingEffect& effect : game_.lasting) {
+                    if (effect.turn < game_.turn) {
+                        fail("a lasting effect for turn " + std::to_string(effect.turn) + " is still there on turn " + std::to_string(game_.turn));
+                    }
+                }
                 return std::move(problems_);
             }
 
@@ -75,14 +85,15 @@ namespace pokebot {
                 for (std::size_t i = 1; i < pokemon.stack.size(); ++i) {
                     const CardDef& below = game_.def(pokemon.stack[i - 1]);
                     const CardDef& above = game_.def(pokemon.stack[i]);
-                    if (above.evolves_from != below.name) {
+                    const bool rare_candy = below.stage == Stage::Basic && above.stage == Stage::Stage2;
+                    if (above.evolves_from != below.name && !rare_candy) {
                         fail(where + ": " + above.name + " doesn't evolve from " + below.name);
                     }
                 }
                 const CardDef& top = game_.def(pokemon.top());
-                if (static_cast<int>(pokemon.damage_counters) * 10 >= top.hp) {
+                if (game_.effects.empty() && rules::is_knocked_out(game_, pokemon)) {
                     fail(where + " (" + top.name + ") has " + std::to_string(pokemon.damage_counters * 10) + " damage on " +
-                         std::to_string(top.hp) + " HP and should have been Knocked Out");
+                         std::to_string(rules::max_hp(game_, pokemon)) + " HP and should have been Knocked Out");
                 }
             }
 
@@ -94,12 +105,42 @@ namespace pokebot {
                 note_zone(player.prizes, p, who + "Prize cards");
                 note_zone(player.discard, p, who + "discard pile");
                 note_zone(player.lost_zone, p, who + "Lost Zone");
+                note_zone(player.resolving, p, who + "cards being played");
+                if (player.stadium != kNoCard) {
+                    note(player.stadium, p, who + "stadium");
+                    if (game_.def(player.stadium).trainer_kind != TrainerKind::Stadium) {
+                        fail(who + "Stadium in play isn't a stadium card");
+                    }
+                }
+                if (!game_.is_over() && !player.resolving.empty() && game_.effects.empty()) {
+                    fail(who + "card is still being played but no effect is running");
+                }
                 if (player.active) {
+                    const SpecialConditions& special = player.active->special;
+                    if (special.asleep + special.confused + special.paralyzed > 1) {
+                        fail(who + "Active Pokemon has more than one of Asleep, Confused and Paralyzed");
+                    }
                     check_pokemon(*player.active, p, who + "Active Pokemon");
                 }
+                if (!game_.is_over() && player.bench.size() > rules::bench_size(game_, p) && !bench_discard_pending(p)) {
+                    fail(who + "Bench has " + std::to_string(player.bench.size()) + " Pokemon, more than " +
+                         std::to_string(rules::bench_size(game_, p)) + ", and no discard is pending");
+                }
                 for (std::size_t i = 0; i < player.bench.size(); ++i) {
+                    if (player.bench[i].special.any()) {
+                        fail(who + "Bench " + std::to_string(i + 1) + " has a Special Condition, but only the Active Pokemon can");
+                    }
                     check_pokemon(player.bench[i], p, who + "Bench " + std::to_string(i + 1));
                 }
+            }
+
+            bool bench_discard_pending(int player) const {
+                for (const Decision& decision : game_.pending) {
+                    if (decision.kind == DecisionKind::DiscardBenched && decision.player == player) {
+                        return true;
+                    }
+                }
+                return false;
             }
 
             bool promotion_pending(int player) const {
@@ -113,8 +154,8 @@ namespace pokebot {
 
             void check_decisions() {
                 if (game_.is_over()) {
-                    if (!game_.pending.empty()) {
-                        fail("the game is over but a decision is still pending");
+                    if (!game_.pending.empty() || !game_.effects.empty()) {
+                        fail("the game is over but a decision or effect is still pending");
                     }
                     return;
                 }
@@ -128,7 +169,12 @@ namespace pokebot {
                     }
                 }
                 const Decision& decision = game_.decision();
-                if (decision.kind == DecisionKind::MainPhase &&
+                const bool effect_decision = decision.kind == DecisionKind::ChooseCards || decision.kind == DecisionKind::ChoosePokemon || decision.kind == DecisionKind::ChooseYesNo || decision.kind == DecisionKind::ChooseAttack ||
+                                             decision.kind == DecisionKind::CustomChoice;
+                if (effect_decision && game_.effects.empty()) {
+                    fail("an effect's decision is pending but no effect is running");
+                }
+                if ((decision.kind == DecisionKind::MainPhase || decision.kind == DecisionKind::ExtraAttack) &&
                     (decision.player != game_.current_player || game_.phase != TurnPhase::Main)) {
                     fail("a main-phase decision for a player whose turn it isn't, or outside the main phase");
                 }

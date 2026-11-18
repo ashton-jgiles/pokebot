@@ -37,7 +37,7 @@ file is caught instead of silently ignored.
 | Member | Behavior |
 |---|---|
 | `static CardDB load(generated_dir, effects_dir)` | Reads every `*.json` in `generated_dir`, merges `effects_dir/<same name>` when it exists, and parses the result into a `CardDef` |
-| `void add(CardDef card)` | Adds or replaces a card (used by tests) |
+| `void add(CardDef card)` | Compiles each attack's effects into its `program`, an Item's or Supporter's effects into the card's `program`, `requirements` into `conditions`, and every `passive` list into `modifiers`, then adds or replaces the card. A bad effect throws `CardDataError` naming the card and attack. `load` uses it too |
 | `const CardDef* find(std::string_view id) const` | The card, or `nullptr` |
 | `const CardDef& at(std::string_view id) const` | The card; throws `CardDataError` if unknown |
 | `std::size_t size() const` | Number of cards |
@@ -51,6 +51,8 @@ If `generated_dir` doesn't exist, `load` fails with the standard library's files
 Run `pokebot-import` first.
 
 ### `missing_effects()`
+
+A card, Ability or attack counts as written when it has `effects` or a `passive` list.
 
 Returns lines like:
 

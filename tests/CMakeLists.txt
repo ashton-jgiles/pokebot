@@ -19,9 +19,25 @@ add_executable(pokebot_tests
   test_engine_turns.cpp
   test_engine_actions.cpp
   test_engine_attacks.cpp
+  test_rules.cpp
+  test_engine_events.cpp
+  test_effect_program.cpp
+  test_engine_effects.cpp
+  test_engine_trainers.cpp
+  test_engine_conditions.cpp
+  test_engine_damage.cpp
+  test_engine_targets.cpp
+  test_engine_lasting.cpp
+  test_engine_passive.cpp
+  test_engine_abilities.cpp
+  test_engine_triggers.cpp
+  test_engine_energy.cpp
+  test_engine_attach.cpp
+  test_engine_custom.cpp
   test_invariants.cpp
   test_agents.cpp
   test_stress.cpp
+  test_coverage.cpp
 )
 target_link_libraries(pokebot_tests PRIVATE
   pokebot_lib pokebot_import_lib pokebot_warnings Catch2::Catch2WithMain)

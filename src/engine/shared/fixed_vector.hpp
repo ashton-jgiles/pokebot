@@ -3,6 +3,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <initializer_list>
 #include <stdexcept>
 
 namespace pokebot {
@@ -17,6 +18,13 @@ namespace pokebot {
         using value_type = T;
         using iterator = T*;
         using const_iterator = const T*;
+
+        FixedVector() = default;
+        FixedVector(std::initializer_list<T> values) {
+            for (const T& value : values) {
+                push_back(value);
+            }
+        }
 
         static constexpr std::size_t capacity() { return N; }
         std::size_t size() const { return size_; }

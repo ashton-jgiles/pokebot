@@ -121,7 +121,7 @@ namespace pokebot {
                     add_basic_choices(game, player, ActionKind::SetupPlaceActive, out);
                     break;
                 case DecisionKind::SetupBench:
-                    if (!game.player(player).bench.full()) {
+                    if (game.player(player).bench.size() < rules::bench_size(game, player)) {
                         add_basic_choices(game, player, ActionKind::SetupPlaceBench, out);
                     }
                     out.push_back(Action{ActionKind::SetupDone, kNoCard, kActiveSlot, 0});
@@ -162,7 +162,7 @@ namespace pokebot {
                 case ActionKind::DrawMulliganCards:
                     game.pending.pop_back();
                     draw_cards(game, decision.player, action.amount);
-                    if (action.amount > 0 && !player.bench.full() && hand_has_basic(game, decision.player)) {
+                    if (action.amount > 0 && player.bench.size() < rules::bench_size(game, decision.player) && hand_has_basic(game, decision.player)) {
                         game.pending.push_back(decision_for(DecisionKind::SetupBench, decision.player));
                     }
                     break;

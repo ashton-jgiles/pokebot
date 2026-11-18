@@ -1,0 +1,1 @@
+{ "attacks": { "Trading Places": { "effects": [{ "op": "switch_self" }] } } }

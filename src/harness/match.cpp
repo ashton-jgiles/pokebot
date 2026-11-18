@@ -1,5 +1,6 @@
 #include "harness/match.hpp"
 
+#include <algorithm>
 #include <array>
 #include <stdexcept>
 #include <string>
@@ -75,7 +76,11 @@ namespace pokebot {
         while (!game.is_over() && actions < options.max_actions) {
             const auto legal = legal_actions(game);
             Agent& agent = *agents[game.decision().player];
-            apply(game, agent.choose(game, legal));
+            const Action action = agent.choose(game, legal);
+            if (std::find(legal.begin(), legal.end(), action) == legal.end()) {
+                throw std::invalid_argument("play_game: the " + agent.name() + " agent chose an action that isn't legal");
+            }
+            apply_legal(game, action); // the list was just built, so apply needn't build it again
             ++actions;
             if (options.check_invariants) {
                 require_invariants(game, seed, actions);

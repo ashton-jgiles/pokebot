@@ -1,0 +1,1 @@
+{"passive": [{"modify": "retreat_cost", "set": 0, "applies_to": "all", "filter": {"name_prefix": "N's"}}]}

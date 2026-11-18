@@ -12,6 +12,10 @@ so on) will be part of the engine's game state in Milestone 2.
 
 ## Enums
 
+The enums and `CardDataError` are in [`card_types.hpp`](../../../../src/cards/card/card_types.hpp),
+which `card.hpp` includes. They're separate so the [effect language](../effects/program.md) can use
+them without including `card.hpp`.
+
 | Enum | Values | JSON spelling |
 |---|---|---|
 | `EnergyType` | Grass, Fire, Water, Lightning, Psychic, Fighting, Darkness, Metal, Fairy, Dragon, Colorless | lowercase, e.g. `"darkness"` |
@@ -43,6 +47,13 @@ attack text says how the final damage is worked out.
 | `name` | Ability name |
 | `text` | Printed text. Reference only; the engine never reads it |
 | `effects` | Engine-readable effects (JSON array), hand-written in Milestone 3 |
+| `passive`, `modifiers` | An always-on Ability's `"passive"` list (JSON), and the same compiled into [`Modifier`s](../effects/program.md#always-on-effects-passive) |
+| `requirements`, `conditions` | A usable Ability's `"requires"` (JSON), and the compiled conditions |
+| `program` | A usable Ability's `effects`, compiled |
+| `provides_when`, `conditional_provides` | A Special Energy's [`"provides_when"`](../effects/program.md#special-energy) (JSON), and the compiled list |
+| `discard_at_end_of_turn` | A Special Energy discarded at the end of its owner's turn |
+| `trigger` | `Trigger::None`, or when the Ability [runs on its own](../../engine/actions/abilities.md#triggered-effects) (`CardDef` has one too, for Stadiums) |
+| `once_per_turn`, `one_per_name`, `active_only` | [When it can be used](../../engine/actions/abilities.md#when-an-ability-is-ready); default `true`, `false`, `false` |
 
 ### `Attack`
 
@@ -53,7 +64,12 @@ attack text says how the final damage is worked out.
 | `damage` | Printed base damage (0 if none) |
 | `damage_mod` | `+`, `-` or `×` after the damage, if any |
 | `text` | Printed text, reference only |
-| `effects` | Engine-readable effects, hand-written in Milestone 3 |
+| `effects` | Engine-readable effects (JSON), from the effects file |
+| `program` | `effects` compiled into [steps](../effects/program.md), filled in by `CardDB::add` |
+
+`CardDef` also has `passive` and `modifiers` for Tools and Stadiums. It has the same pair for Items and Supporters (`effects` → `program`), plus `requirements`
+(the card's `"requires"` JSON) and `conditions` (compiled from it): what must hold for the card to be
+played. `requires` itself is a C++20 keyword, hence the different name.
 
 ### `CardRules`
 
@@ -88,6 +104,7 @@ Derives from `std::runtime_error`. Thrown for any missing, misspelled or wrongly
 |---|---|
 | `std::string_view to_string(EnergyType)` | `EnergyType::Darkness` → `"darkness"` |
 | `EnergyType energy_type_from_string(std::string_view)` | `"darkness"` → `EnergyType::Darkness`. Throws `CardDataError` for unknown names |
+| `CardKind card_kind_from_string(std::string_view)` | `"pokemon"` → `CardKind::Pokemon`, likewise |
 | `void to_json(nlohmann::json&, const CardDef&)` | Writes our card JSON. Pokémon get the Pokémon fields; Trainers and Energy get `text` and `effects` |
 | `void from_json(const nlohmann::json&, CardDef&)` | Reads our card JSON. Throws `CardDataError` on missing required fields, unknown enum names or wrong types (e.g. `"hp": "200"`) |
 

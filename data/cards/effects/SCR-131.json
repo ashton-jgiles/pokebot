@@ -1,0 +1,1 @@
+{"passive": [{"modify": "bench_size", "set": 8, "if_tera_in_play": true, "applies_to": "all"}]}

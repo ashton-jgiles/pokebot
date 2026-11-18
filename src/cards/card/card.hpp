@@ -1,64 +1,14 @@
 #pragma once
 
-#include <cstdint>
 #include <optional>
-#include <stdexcept>
-#include <string>
 #include <string_view>
-#include <vector>
 
 #include <nlohmann/json.hpp>
 
+#include "cards/card/card_types.hpp"
+#include "cards/effects/program.hpp"
+
 namespace pokebot {
-
-    enum class EnergyType : std::uint8_t {
-        Grass,
-        Fire,
-        Water,
-        Lightning,
-        Psychic,
-        Fighting,
-        Darkness,
-        Metal,
-        Fairy,
-        Dragon,
-        Colorless
-    };
-
-    enum class CardKind : std::uint8_t {
-        Pokemon,
-        Trainer,
-        Energy
-    };
-    enum class Stage : std::uint8_t {
-        None,
-        Basic,
-        Stage1,
-        Stage2
-    };
-    enum class TrainerKind : std::uint8_t {
-        None,
-        Item,
-        Supporter,
-        Stadium,
-        Tool
-    };
-    enum class EnergyKind : std::uint8_t {
-        None,
-        Basic,
-        Special
-    };
-    enum class DamageMod : std::uint8_t {
-        None,
-        Plus,
-        Minus,
-        Times
-    };
-
-    class CardDataError : public std::runtime_error {
-    public:
-        using std::runtime_error::runtime_error;
-    };
 
     struct Weakness {
         EnergyType type = EnergyType::Colorless;
@@ -74,6 +24,18 @@ namespace pokebot {
         std::string name;
         std::string text;
         nlohmann::json effects = nlohmann::json::array();
+        nlohmann::json passive = nlohmann::json::array();
+        std::vector<Modifier> modifiers;
+
+        // An Ability you choose to use: its effects compile to `program`, `requires` to `conditions`.
+        nlohmann::json requirements = nlohmann::json::array();
+        Program program;
+        std::vector<Condition> conditions;
+        bool once_per_turn = true; // "Once during your turn"
+        bool one_per_name = false; // "You can't use more than 1 <name> Ability each turn"
+        bool active_only = false;  // "if this Pokemon is in the Active Spot"
+        Trigger trigger = Trigger::None;
+        std::string no_effect; // why this Ability needs no effects with the cards we have (Damp)
     };
 
     struct Attack {
@@ -83,6 +45,7 @@ namespace pokebot {
         DamageMod damage_mod = DamageMod::None;
         std::string text;
         nlohmann::json effects = nlohmann::json::array();
+        Program program;
     };
 
     struct CardRules {
@@ -116,12 +79,24 @@ namespace pokebot {
         std::vector<EnergyType> provides;
         std::string text;
         nlohmann::json effects = nlohmann::json::array();
+        nlohmann::json requirements = nlohmann::json::array();
+        Program program;
+        std::vector<Condition> conditions;
+        nlohmann::json passive = nlohmann::json::array();
+        std::vector<Modifier> modifiers;
+        Trigger trigger = Trigger::None; // a Stadium's effect that happens on its own
+
+        // Special Energy
+        nlohmann::json provides_when = nlohmann::json::array();
+        std::vector<ConditionalProvides> conditional_provides;
+        bool discard_at_end_of_turn = false; // "If this card is attached to 1 of your Pokemon, discard it at the end of your turn"
 
         int prize_value() const;
     };
 
     std::string_view to_string(EnergyType type);
     EnergyType energy_type_from_string(std::string_view name);
+    CardKind card_kind_from_string(std::string_view name);
 
     void to_json(nlohmann::json& j, const CardDef& card);
     void from_json(const nlohmann::json& j, CardDef& card);

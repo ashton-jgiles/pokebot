@@ -13,12 +13,13 @@ namespace test {
 
     // Every card a player owns must be in exactly one place, so this should always be 60.
     inline std::size_t cards_accounted_for(const pokebot::PlayerState& p) {
-        std::size_t n = p.deck.size() + p.hand.size() + p.prizes.size() + p.discard.size() + p.lost_zone.size();
+        std::size_t n = p.deck.size() + p.hand.size() + p.prizes.size() + p.discard.size() + p.lost_zone.size() + p.resolving.size();
+        n += p.stadium != pokebot::kNoCard ? 1 : 0;
         if (p.active) {
-            n += p.active->stack.size() + p.active->energy.size();
+            n += p.active->stack.size() + p.active->energy.size() + (p.active->tool != pokebot::kNoCard ? 1 : 0);
         }
         for (const auto& pokemon : p.bench) {
-            n += pokemon.stack.size() + pokemon.energy.size();
+            n += pokemon.stack.size() + pokemon.energy.size() + (pokemon.tool != pokebot::kNoCard ? 1 : 0);
         }
         return n;
     }

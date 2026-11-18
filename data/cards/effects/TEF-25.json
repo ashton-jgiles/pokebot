@@ -1,3 +1,1 @@
-{
-  "rules": ["ex"]
-}
+{"rules": ["ex"], "attacks": {"Prism Edge": {"effects": [{"op": "lasting", "effect": "cant_attack", "until": "your_next_turn"}]}}, "abilities": {"Rapid Vernier": {"trigger": "played_to_bench", "effects": [{"op": "may", "effects": [{"op": "switch_to_active"}, {"op": "move_attached_energy", "from": "your_pokemon", "count": 60, "up_to": true, "to": "self"}]}]}}}

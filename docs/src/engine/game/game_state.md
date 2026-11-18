@@ -59,8 +59,12 @@ the table must outlive every `GameState` that uses it.
 | `tool` | Attached Tool, or `kNoCard` |
 | `damage_counters` | Each is 10 damage |
 | `turn_played` | Turn it came into play or last evolved (0 = setup); used by the evolution rules |
+| `special` | Its [Special Conditions](../actions/conditions.md): `asleep`, `confused`, `paralyzed`, `burned`, `poison` (counters per Checkup, 0 = not Poisoned), `paralyzed_turn`; `any()` |
 
-Special Conditions will be added in Milestone 3.
+`id()` returns the **bottom** card. It never changes while the Pokémon stays in play, even when it
+evolves, retreats or changes slot, so effects, events and history use it to name a Pokémon. Slots
+shift when a Benched Pokémon leaves; ids don't. `detail::find_pokemon(game, id)` finds it again, or
+returns `nullptr` once it has left play.
 
 ## `PlayerState`
 
@@ -69,13 +73,60 @@ Special Conditions will be added in Milestone 3.
 | `deck` | `back()` is the **top** card, so drawing is a cheap `pop_back()` |
 | `hand`, `prizes`, `discard`, `lost_zone` | The other zones |
 | `active` | `std::optional<PokemonInPlay>`; empty only while choosing a new Active, or after the game is decided |
-| `bench` | Up to 5 Pokémon |
+| `bench` | Up to `kMaxBenchSize` (8) Pokémon; how many are allowed is [`rules::bench_size`](../rules/rules.md) |
+| `resolving` | Up to 2 Trainer cards being played, while their effect runs |
+| `stadium` | This player's Stadium in play, or `kNoCard`. At most one player has one |
 | `mulligans` | Mulligans taken during setup |
 
 ## `TurnFlags`
 
-`energy_attached`, `supporter_played`, `stadium_played`, `retreated`: the once-per-turn limits.
+`energy_attached`, `supporter_played`, `stadium_played`, `stadium_used`, `retreated`: the
+once-per-turn limits. `attacks_used` counts attacks this turn (Festival Lead allows two), and
+`abilities_used` lists the [Abilities used](../actions/abilities.md) as `AbilityUse{pokemon, card, index}`.
 They're reset at the start of every turn.
+
+## `AttackRef` and `EffectContext`
+
+| Type | Fields | Meaning |
+|---|---|---|
+| `AttackRef` | `text_from`, `index` | Which attack's text to use: the card it's printed on and its position on that card. Normally the attacker's own top card; a copied attack names another card |
+| `EffectContext` | `player`, `self`, `source` | Who an effect runs for. "This Pokémon" means `self` (an `id()`), not the card the text is printed on; `source` is the card that started it |
+
+A copied attack (N's Zoroark ex, Mew ex, Slowking) runs the other card's text with the copier as
+`self`, so the copier's type, Energy and Weakness interactions apply.
+
+## `EffectRun`
+
+An effect part way through: who it's for (`EffectContext`), which compiled program (`ProgramRef`:
+card, `ProgramKind` (`Attack` or `Trainer`), index), what to do when it finishes (`AfterEffect`), the next step (`pc`), and
+the choices made so far (`chosen`, `chosen_pokemon`), and two working numbers: the attack's
+`damage` so far and the latest `value` (heads, or cards moved), plus the chosen `targets` and
+`chosen_attack`. `GameState::effects` stacks up to 4. See the
+[interpreter](../effects/interpreter.md).
+
+## `LastingEffect`
+
+An effect that lasts for a turn: `kind`, the `player` it affects, the `pokemon` it's on (or
+`kNoCard` for the whole player), an `attack` (for "can't use this attack"), `amount` and `only_ex`
+(for a damage bonus), and the `turn` it applies during. `GameState::lasting` holds up to 8. See
+[lasting effects](../actions/lasting.md).
+
+## `GameHistory`
+
+Cards look back at earlier turns ("if any of your Pokémon were Knocked Out during your opponent's
+last turn"). `history.turns` keeps three `TurnRecord`s:
+
+| Accessor | Turn |
+|---|---|
+| `this_turn()` | The current turn |
+| `opponents_last_turn()` | The turn just before |
+| `your_last_turn()` | The current player's previous turn |
+
+A `TurnRecord` holds whose turn it was, how many of each player's Pokémon were Knocked Out
+(`knocked_out`) and how many of those were by an attack (`knocked_out_by_attack`, not counting
+Pokémon Checkup), and the attack used (`attacker` id and `AttackRef`; `kNoCard` if none).
+`begin_turn` shifts them along.
+More facts (cards played, once-per-game effects) join as the cards that need them arrive.
 
 ## `TurnPhase`
 
@@ -88,8 +139,8 @@ happens once every pending decision is answered. See [`continue_game`](../action
 |---|---|
 | `kind` | One of the `DecisionKind`s listed in the [engine overview](../README.md#every-choice-is-a-decision) |
 | `player` | Who decides |
-| `amount` | Extra number the decision needs: bonus cards allowed, Energy still to discard |
-| `target` | A `Slot`, e.g. the Benched Pokémon a retreat will bring in |
+| `amount` | Extra number the decision needs: bonus cards allowed, Energy still to discard, Benched Pokémon still to discard |
+| `target` | A `Slot`, e.g. the Benched Pokémon a retreat will bring in, or for `ExtraAttack` the `id()` of the Pokémon allowed to attack again |
 
 ## `GameResult`
 
@@ -106,7 +157,10 @@ same number of win conditions. The rulebook's tiebreaker game isn't modeled.
 | `turn` | 0 during setup; 1 is the first player's first turn, 2 the second player's |
 | `phase` | `TurnPhase` |
 | `flags` | `TurnFlags` for the current turn |
+| `history` | `GameHistory`: this turn and the two before |
 | `pending` | Stack of up to 8 open decisions; `back()` is decided first |
+| `effects` | Stack of up to 4 running effects ([`EffectRun`](#effectrun)) |
+| `lasting` | Up to 8 [lasting effects](#lastingeffect) |
 | `rng` | The game's random number generator |
 | `result` | `GameResult` |
 
@@ -114,7 +168,7 @@ Helpers: `player(p)`, `def(card)`, `decision()` (the top of `pending`), `is_over
 
 A `static_assert` requires `GameState` to be **trivially copyable**. Adding a `std::vector` or
 `std::string` to it stops the build, because copying the state is how search explores the game.
-A whole game is **1,488 bytes**.
+A whole game is **2,624 bytes** (1,920 before the Bench grew to 8 for Area Zero Underdepths).
 
 ## Tests
 

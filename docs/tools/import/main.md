@@ -54,7 +54,7 @@ Needs review:
   ...
 
 80 distinct cards, 0 network requests, 0 failures, 0 name mismatches
-80 cards load cleanly; 88 attacks/abilities/cards still need hand-written effects
+80 cards load cleanly; 0 attacks/abilities/cards still need hand-written effects
 
 Deck legality:
   legal    data/decks/basic-box.txt
@@ -63,6 +63,9 @@ Deck legality:
 ```
 
 A card that fails is shown as `FAIL` with the reason, and the import continues with the next card.
+
+Everything still needing effects is listed by name under the count. A Special Energy's review note
+is left out once its effects file sets `provides`, and a Tera note once it sets `rules`.
 
 ## Exit codes
 

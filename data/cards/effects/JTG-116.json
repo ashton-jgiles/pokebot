@@ -1,0 +1,1 @@
+{"attacks": {"Powerful Rage": {"effects": [{"op": "set_damage", "per": 20, "for_each": {"of": "damage_counters"}}, {"op": "damage"}]}}}

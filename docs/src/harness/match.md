@@ -11,7 +11,9 @@ GameRecord play_game(const CardTable& cards, std::uint64_t seed, Agent& player0,
 ```
 
 Plays one game from `seed`. At every decision it asks the agent whose decision it is, which may not
-be the current player (e.g. choosing a new Active after a Knock Out).
+be the current player (e.g. choosing a new Active after a Knock Out). The chosen action must be in
+the list the agent was given, or it throws `std::invalid_argument` naming the agent; then it's
+carried out with [`apply_legal`](../engine/engine.md), so the list isn't built twice.
 
 With `check_invariants` on, it runs [`check_invariants`](../engine/invariants/invariants.md) before the first
 action and after every action. If anything is inconsistent, it throws `std::logic_error` with:

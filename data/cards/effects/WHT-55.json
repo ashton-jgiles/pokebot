@@ -1,0 +1,1 @@
+{ "attacks": { "Invite Evil": { "effects": [{ "op": "search_deck", "count": 3, "filter": { "kind": "pokemon", "type": "darkness" } }] } } }

@@ -51,6 +51,20 @@ TEST_CASE("lists everything that still needs effects", "[card_db]") {
     CHECK(missing[0] == "TST-1 Testmon ex: attack Zap");
 }
 
+TEST_CASE("an Ability marked no_effect isn't missing, and the reason is kept", "[card_db]") {
+    auto pokemon = sample_pokemon();
+    pokemon["abilities"] = json::parse(R"([{"name": "Damp", "text": "Does nothing here.", "no_effect": "nothing it stops is in our pool"}])");
+    pokemon["attacks"][0]["effects"] = json::parse(R"([{"op": "draw", "count": 1}])");
+    const auto card = pokemon.get<CardDef>();
+    CHECK(card.abilities[0].no_effect == "nothing it stops is in our pool");
+    const json saved = card;
+    CHECK(saved.get<CardDef>().abilities[0].no_effect == card.abilities[0].no_effect);
+
+    CardDB db;
+    db.add(card);
+    CHECK(db.missing_effects().empty());
+}
+
 TEST_CASE("bad card data is reported, not silently accepted", "[card_db]") {
     auto bad = sample_pokemon();
     bad["kind"] = "pokemonn";

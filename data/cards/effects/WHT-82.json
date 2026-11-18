@@ -1,0 +1,1 @@
+{"requires": [{"discard_has": {"kind": "energy", "basic": true}}], "effects": [{"op": "from_discard", "count": 2, "up_to": true, "filter": {"kind": "energy", "basic": true}}]}

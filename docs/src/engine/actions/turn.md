@@ -6,8 +6,9 @@ Starting turns, ending them, and everything that happens between turns.
 
 ## `begin_turn(game, player)`
 
-1. `player` becomes the current player, `turn` goes up by 1, the once-per-turn flags reset, and
-   the phase becomes `Main`.
+1. `player` becomes the current player, `turn` goes up by 1, the once-per-turn flags reset, the
+   [history](../game/game_state.md#gamehistory) moves along one turn, [lasting effects](lasting.md) whose
+   turn has passed are removed, and the phase becomes `Main`.
 2. **If the deck is empty, `player` loses** (rulebook p. 8). Drawing because a *card* says so never
    loses; only this start-of-turn draw does.
 3. Draw 1 card and push the `MainPhase` decision.
@@ -25,7 +26,7 @@ Runs the game forward while **no decision is pending**:
 
 | Phase | What happens |
 |---|---|
-| `AfterMain` | Move to `Checkup`, run Pokémon Checkup, then resolve any Knock Outs |
+| `AfterMain` | Discard the current player's attached Energy marked `discard_at_end_of_turn` (Ignition Energy), raise `TurnEnding`, move to `Checkup`, run Pokémon Checkup, then resolve any Knock Outs |
 | `Checkup` | Start the opponent's turn |
 
 If resolving Knock Outs pushes a "choose a new Active" decision, the loop stops. Once that's
@@ -34,8 +35,10 @@ cover Knock Outs from Poison and Burn in Milestone 3.
 
 ## Pokémon Checkup
 
-Runs between every turn (rulebook pp. 15–16). It's **empty for now**: Special Conditions arrive in
-Milestone 3. `handle_knockouts` runs right after it either way.
+Runs between every turn (rulebook pp. 15–16). It raises the `Checkup` [event](../events/events.md),
+then applies both Active Pokémon's [Special Conditions](conditions.md): Poison and Burn damage, and
+the Asleep, Burned and Paralyzed recoveries. `handle_knockouts` runs right after, so a Pokémon
+Knocked Out by Poison gives up Prize cards like any other.
 
 ## Tests
 

@@ -8,6 +8,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "engine/engine.hpp"
+#include "engine/rules/rules.hpp"
 #include "support/test_cards.hpp"
 #include "support/test_game.hpp"
 
@@ -293,7 +294,9 @@ TEST_CASE("random games with the real decks keep every card accounted for", "[en
             INFO("seed " << seed << ", turn " << game.turn);
             for (int p = 0; p < 2; ++p) {
                 REQUIRE(test::cards_accounted_for(game.player(p)) == 60);
-                REQUIRE(game.player(p).bench.size() <= 5);
+                if (!game.is_over() && game.decision().kind != DecisionKind::DiscardBenched) {
+                    REQUIRE(game.player(p).bench.size() <= pokebot::rules::bench_size(game, p)); // 8 with Area Zero and a Tera Pokemon
+                }
             }
         }
         REQUIRE(game.is_over());

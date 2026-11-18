@@ -1,0 +1,1 @@
+{ "attacks": { "Collect": { "effects": [{ "op": "draw", "count": 1 }] } } }

@@ -1,0 +1,1 @@
+{"requires": [{"opponent_has_benched": true}], "effects": [{"op": "switch_active", "player": "opponent"}]}

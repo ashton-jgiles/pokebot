@@ -19,7 +19,7 @@ struct Action {
 ```cpp
 using Slot = std::uint8_t;
 constexpr Slot kActiveSlot = 0;
-constexpr Slot bench_slot(std::size_t bench_index);  // Bench position 0 -> slot 1, ... 4 -> slot 5
+constexpr Slot bench_slot(std::size_t bench_index);  // Bench position 0 -> slot 1, ... 7 -> slot 8
 ```
 
 ## Action kinds
@@ -39,6 +39,7 @@ constexpr Slot bench_slot(std::size_t bench_index);  // Bench position 0 -> slot
 | `EndTurn` | — | `MainPhase` |
 | `DiscardEnergy` | `card`: an Energy on the retreating Pokémon | `RetreatDiscard` |
 | `Promote` | `target`: the Benched Pokémon that becomes Active | `PromoteActive` |
+| `DiscardBenched` | `target`: a Benched Pokémon to discard | `DiscardBenched` |
 
 Actions compare with `==`. `apply` uses this to check that the chosen action is in the legal list.
 

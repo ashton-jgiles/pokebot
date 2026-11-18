@@ -24,7 +24,8 @@ Player 1 (went first): 6 Prize cards, 46 in deck, 6 in hand, 0 in discard
   Hand:   Crispin, Fire Energy, Psychic Energy, Risky Ruins, Drakloak, Ultra Ball
 ```
 
-Pokémon show remaining/maximum HP and attached Energy in brackets. When the game is over, the first
+Pokémon show remaining/maximum HP, attached Energy in brackets, and any Special Conditions, such
+as `(Asleep) (Poisoned)`. When the game is over, the first
 line ends with the result instead of the pending decision.
 
 ## An action

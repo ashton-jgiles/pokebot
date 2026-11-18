@@ -1,0 +1,1 @@
+{"abilities": {"Run Away Draw": {"effects": [{"op": "draw", "count": 3}, {"op": "if", "condition": {"drew_at_least": 1}, "then": [{"op": "shuffle_self_into_deck"}]}]}}}

@@ -1,0 +1,1 @@
+{"attacks": {"Rapid-Fire Combo": {"effects": [{"op": "flip_until_tails"}, {"op": "add_damage", "per": 50, "for_each": {"of": "heads"}}, {"op": "damage"}]}}, "abilities": {"Run Errand": {"active_only": true, "one_per_name": true, "effects": [{"op": "draw", "count": 2}]}}}

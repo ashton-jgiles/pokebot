@@ -1,3 +1,1 @@
-{
-  "rules": ["ex", "tera"]
-}
+{"rules": ["ex", "tera"], "attacks": {"Myriad Leaf Shower": {"effects": [{"op": "add_damage", "per": 30, "for_each": {"of": "active_energy", "player": "each"}}, {"op": "damage"}]}}, "abilities": {"Teal Dance": {"requires": [{"hand_has": {"kind": "energy", "basic": true, "type": "grass"}}], "effects": [{"op": "attach_from_hand", "filter": {"kind": "energy", "basic": true, "type": "grass"}}, {"op": "if", "condition": {"moved_at_least": 1}, "then": [{"op": "draw"}]}]}}}

@@ -28,24 +28,51 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 ## Stress test output
 
 ```
-Played 100000 games (biased vs biased) across 4 decks in 129.9 s
-  769.7 games/s, 0.1 million actions/s
-  average 65.5 turns, 101.6 actions per game
+Played 100000 games (biased vs biased) across 4 decks in 52.0 s
+  1924.2 games/s, 0.3 million actions/s
+  average 40.1 turns, 151.7 actions per game
 Ended by:
-  Prize cards        38714  (38.7%)
-  no Pokemon left    19640  (19.6%)
-  deck-out           41646  (41.6%)
-  draw                   0  (0.0%)
+  Prize cards        31067  (31.1%)
+  no Pokemon left    18325  (18.3%)
+  deck-out           50565  (50.6%)
+  draw                  43  (0.0%)
   action limit           0  (0.0%)
-Player who went first won 31.6% of decided games
+Player who went first won 51.0% of decided games
 Invariants checked after every action: no problems found
 ```
 
 If an invariant breaks, it stops with the seed, the broken rules and the game state (see
 [`play_game`](../../src/harness/match.md)).
 
-**Speed:** use the release build for real numbers. On the reference machine it ran about
-10,000 games/s (1 million actions/s) with `--no-check`, and about 4,100 games/s with checks.
+**Speed:** use the release build for real numbers. On the reference machine, `--games 20000
+--agent biased --seed 7`:
+
+| Version | `--no-check` | With checks |
+|---|---|---|
+| Milestone 2 (no effects) | about 10,000 games/s, 1.0 million actions/s | about 4,100 games/s |
+| Step 3.4 (attack and Trainer effects, Special Conditions) | about 5,100 games/s, 0.7 million actions/s | about 1,700 games/s |
+| Step 3.5a (damage formulas) | about 4,250 games/s, 0.6 million actions/s | about 1,650 games/s |
+| Step 3.7a (lasting and always-on effects) | about 4,340 games/s, 0.6 million actions/s | |
+| Step 3.7b (Abilities you use) | about 3,920 games/s, 0.6 million actions/s (games are 44.5 turns now: draw Abilities empty decks faster) | |
+| Step 3.8a (Special Energy, exact cost matching) | about 3,720 games/s, 0.6 million actions/s | |
+| Step 3.9 (one-of-a-kind cards, 8-space Bench) | about 3,130 games/s, 0.5 million actions/s | |
+| Step 3.10 (`apply_legal`, no heap use when listing main-phase actions) | about 5,480 games/s, 0.8 million actions/s | about 1,920 games/s |
+
+Games are longer now (about 145 actions each, up from about 100), so compare actions/s between
+versions. The release preset uses link-time optimization; without it the
+[rules](../../src/engine/rules/rules.md) questions cost about 15%.
+
+At the Milestone 3 sign-off, the main costs were:
+- **`apply` built the legal action list a second time** to check the action. The harness now calls
+  `apply_legal` with the list it already has.
+- **Merging duplicate choices** used a heap-allocated list four times per main phase. It now looks
+  through the actions already offered instead.
+- **Trainer requirements were checked once per copy** in hand. Three Rare Candy meant three searches
+  of every Stage 2 against every card in the game. Each card name is checked once now, and a
+  requirement stops at the first pair it finds.
+
+Together these took the simulator from about 3,130 to 5,480 games/s. Seeded runs end exactly as
+before, so no game plays differently.
 
 ```bash
 cmake --preset release

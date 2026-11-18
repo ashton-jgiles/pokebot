@@ -2,6 +2,8 @@
 
 #include <sstream>
 
+#include "engine/rules/rules.hpp"
+
 namespace pokebot {
 
     namespace {
@@ -23,9 +25,16 @@ namespace pokebot {
 
         std::string pokemon_summary(const GameState& game, const PokemonInPlay& pokemon) {
             const CardDef& def = game.def(pokemon.top());
-            std::string text = def.name + " " + std::to_string(def.hp - 10 * pokemon.damage_counters) + "/" + std::to_string(def.hp) + " HP";
+            std::string text = def.name + " " + std::to_string(rules::remaining_hp(game, pokemon)) + "/" + std::to_string(rules::max_hp(game, pokemon)) + " HP";
             if (!pokemon.energy.empty()) {
                 text += " [" + card_list(game, pokemon.energy) + "]";
+            }
+            const SpecialConditions& special = pokemon.special;
+            const std::pair<bool, const char*> names[] = {{special.asleep, "Asleep"}, {special.burned, "Burned"}, {special.confused, "Confused"}, {special.paralyzed, "Paralyzed"}, {special.poison > 0, "Poisoned"}};
+            for (const auto& [has, name] : names) {
+                if (has) {
+                    text += std::string(" (") + name + ")";
+                }
             }
             return text;
         }
@@ -56,6 +65,20 @@ namespace pokebot {
                     return "discard Energy to retreat";
                 case DecisionKind::PromoteActive:
                     return "choose a new Active Pokemon";
+                case DecisionKind::ExtraAttack:
+                    return "attack again or end the turn";
+                case DecisionKind::ChooseCards:
+                    return "choose cards for an effect";
+                case DecisionKind::ChoosePokemon:
+                    return "choose a Pokemon for an effect";
+                case DecisionKind::ChooseYesNo:
+                    return "decide whether to use an effect";
+                case DecisionKind::ChooseAttack:
+                    return "choose an attack to use";
+                case DecisionKind::CustomChoice:
+                    return "choose a card and a Pokemon for an effect";
+                case DecisionKind::DiscardBenched:
+                    return "discard Benched Pokemon down to the limit";
             }
             return "unknown decision";
         }
@@ -112,12 +135,37 @@ namespace pokebot {
                 const Attack& attack = attacks[action.amount];
                 return "attack with " + attack.name + " (" + std::to_string(attack.damage) + ")";
             }
+            case ActionKind::PlayTrainer:
+                return "play " + card();
+            case ActionKind::UseAbility:
+                return "use " + game.def(action.card).abilities[action.amount].name + " (" + slot_name(game, player, action.target) + ")";
+            case ActionKind::UseStadium:
+                return "use " + card();
+            case ActionKind::AttachTool:
+                return "attach " + card() + " to " + slot_name(game, player, action.target);
             case ActionKind::EndTurn:
                 return "end the turn";
             case ActionKind::DiscardEnergy:
                 return "discard " + card();
             case ActionKind::Promote:
                 return "promote " + slot_name(game, player, action.target);
+            case ActionKind::ChooseCard:
+                if (action.target != kActiveSlot || (!game.is_over() && game.decision().kind == DecisionKind::CustomChoice)) {
+                    return "choose " + card() + " for " + slot_name(game, player, action.target);
+                }
+                return "choose " + card();
+            case ActionKind::ChooseDone:
+                return "stop choosing";
+            case ActionKind::ChoosePokemon:
+                return "choose " + slot_name(game, player, action.target);
+            case ActionKind::AnswerYes:
+                return "yes";
+            case ActionKind::AnswerNo:
+                return "no";
+            case ActionKind::ChooseAttack:
+                return "use " + game.def(action.card).attacks[action.amount].name + " from " + card();
+            case ActionKind::DiscardBenched:
+                return "discard " + slot_name(game, player, action.target);
         }
         return "unknown action";
     }
@@ -148,6 +196,9 @@ namespace pokebot {
             }
             out << '\n';
             out << "  Hand:   " << card_list(game, player.hand) << '\n';
+        }
+        if (const CardIndex stadium = rules::stadium_in_play(game); stadium != kNoCard) {
+            out << "Stadium: " << game.def(stadium).name << '\n';
         }
         return out.str();
     }

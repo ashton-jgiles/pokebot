@@ -1,0 +1,1 @@
+{"requires": [{"knocked_out_last_turn": true}], "effects": [{"op": "shuffle_hand_into_deck", "player": "each"}, {"op": "draw", "count": 5}, {"op": "draw", "count": 2, "player": "opponent"}]}

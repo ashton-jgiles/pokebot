@@ -1,0 +1,1 @@
+{"requires": [{"hand_has": {"name": "Transformation Tome"}}, {"custom": "transformation_tome"}], "effects": [{"op": "custom", "name": "transformation_tome"}]}

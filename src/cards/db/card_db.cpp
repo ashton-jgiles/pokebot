@@ -81,6 +81,32 @@ namespace pokebot {
     }
 
     void CardDB::add(CardDef card) {
+        for (Attack& attack : card.attacks) {
+            try {
+                attack.program = compile_attack(attack.effects);
+            } catch (const CardDataError& e) {
+                throw CardDataError(card.id + " attack '" + attack.name + "': " + e.what());
+            }
+        }
+        try {
+            if (card.trainer_kind == TrainerKind::Item || card.trainer_kind == TrainerKind::Supporter || card.trainer_kind == TrainerKind::Stadium) {
+                card.program = compile_trainer(card.effects);
+            }
+            card.conditions = compile_conditions(card.requirements);
+            card.modifiers = compile_passive(card.passive);
+            card.conditional_provides = compile_provides_when(card.provides_when);
+        } catch (const CardDataError& e) {
+            throw CardDataError(card.id + ": " + e.what());
+        }
+        for (Ability& ability : card.abilities) {
+            try {
+                ability.modifiers = compile_passive(ability.passive);
+                ability.program = compile_trainer(ability.effects);
+                ability.conditions = compile_conditions(ability.requirements);
+            } catch (const CardDataError& e) {
+                throw CardDataError(card.id + " ability '" + ability.name + "': " + e.what());
+            }
+        }
         const std::string id = card.id;
         cards_.insert_or_assign(id, std::move(card));
     }
@@ -101,11 +127,11 @@ namespace pokebot {
         std::vector<std::string> missing;
         for (const auto& [id, c] : cards_) {
             const std::string label = id + " " + c.name;
-            if (!c.text.empty() && c.effects.empty()) {
+            if (!c.text.empty() && c.effects.empty() && c.passive.empty() && c.provides_when.empty()) {
                 missing.push_back(label);
             }
             for (const auto& a : c.abilities) {
-                if (!a.text.empty() && a.effects.empty()) {
+                if (!a.text.empty() && a.effects.empty() && a.passive.empty() && a.no_effect.empty()) {
                     missing.push_back(label + ": ability " + a.name);
                 }
             }

@@ -10,9 +10,10 @@
 | `GameState new_game(const CardTable& cards, std::uint64_t seed)` | Shuffles, deals, resolves mulligans, flips the coin. Returns a game waiting for the coin-flip winner to choose turn order. See [setup](setup/setup.md) |
 | `std::vector<Action> legal_actions(const GameState& game)` | Every choice for the pending decision. Empty once the game is over. Never empty otherwise |
 | `void apply(GameState& game, const Action& action)` | Carries out one action, then runs the game forward to the next decision |
+| `void apply_legal(GameState& game, const Action& action)` | The same without the legality check, for an action just taken from `legal_actions(game)`. Building the list again doubled the cost of every action |
 
 `apply` throws:
-- `std::invalid_argument` if the action isn't in `legal_actions(game)`;
+- `std::invalid_argument` if the action isn't in `legal_actions(game)` (`apply_legal` doesn't check: an illegal action there is a bug in the caller);
 - `std::logic_error` if the game is already over.
 
 A typical loop:
@@ -44,11 +45,14 @@ use them to set up positions.
 | Helper | Behavior |
 |---|---|
 | `is_basic_pokemon(game, card)` | A Pokémon card at the Basic stage |
-| `is_first_turn(game)` | `turn <= 2`: the current player's first turn |
 | `new_pokemon(card, turn)` | A fresh `PokemonInPlay` with `turn_played = turn` |
 | `pokemon_at(player, slot)` | The Pokémon in a slot (must be occupied) |
 | `in_play_slots(player)` | Every occupied slot, Active first |
+| `find_pokemon(game, id)` | The Pokémon in play with this [`id()`](game/game_state.md#pokemoninplay), or `nullptr` |
+| `raise(game, event)` | Announces an [event](events/events.md) |
 | `draw_cards(game, player, count)` | Draws up to `count`; returns how many. Running out here doesn't lose the game |
 | `set_winner(game, player)` | Ends the game and clears pending decisions |
 | `begin_turn`, `end_turn`, `continue_game` | Turn flow; see [turn](actions/turn.md) |
-| `can_pay_cost`, `attack_damage`, `handle_knockouts` | Combat; see [combat](actions/combat.md) |
+| `can_pay_cost`, `attack_damage`, `perform_attack`, `handle_knockouts`, `add_extra_attack_actions` | Combat; see [combat](actions/combat.md) |
+
+`is_first_turn` moved to [`rules`](rules/rules.md), since cards check it too.

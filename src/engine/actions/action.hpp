@@ -27,12 +27,23 @@ namespace pokebot {
         Evolve,
         AttachEnergy,
         Retreat,
+        PlayTrainer,
+        AttachTool,
+        UseAbility,
+        UseStadium,
         Attack,
         EndTurn,
 
         // decision answers
         DiscardEnergy,
         Promote,
+        ChooseCard,
+        ChooseDone,
+        ChoosePokemon,
+        AnswerYes,
+        AnswerNo,
+        ChooseAttack,
+        DiscardBenched,
     };
 
     struct Action {

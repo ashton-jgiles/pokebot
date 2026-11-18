@@ -226,3 +226,17 @@ TEST_CASE("an illegal action is rejected", "[engine][setup]") {
     GameState game = pokebot::new_game(table, 1);
     CHECK_THROWS_AS(pokebot::apply(game, Action{ActionKind::EndTurn}), std::invalid_argument);
 }
+
+TEST_CASE("apply_legal plays the same game as apply", "[engine][setup]") {
+    const CardDB db = sample_db();
+    const CardTable table(db, test::deck({{4, 1}, {56, 6}}), test::deck({{4, 1}, {56, 6}}));
+    GameState checked = pokebot::new_game(table, 3);
+    GameState trusted = checked;
+    for (int step = 0; step < 300 && !checked.is_over(); ++step) {
+        const auto actions = pokebot::legal_actions(checked);
+        const Action action = actions[static_cast<std::size_t>(step) % actions.size()];
+        pokebot::apply(checked, action);
+        pokebot::apply_legal(trusted, action);
+        REQUIRE(checked == trusted);
+    }
+}

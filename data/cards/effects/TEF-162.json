@@ -1,0 +1,1 @@
+{"provides": ["colorless"], "provides_when": [{"holder": {"stage": "stage2"}, "provides": ["any", "any"]}]}

@@ -1,0 +1,1 @@
+{"attacks": {"Love Resonance": {"effects": [{"op": "if", "condition": {"shares_type": true}, "then": [{"op": "add_damage", "amount": 120}]}, {"op": "damage"}]}}}

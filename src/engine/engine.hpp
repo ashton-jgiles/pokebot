@@ -12,5 +12,7 @@ namespace pokebot {
     std::vector<Action> legal_actions(const GameState& game);
 
     void apply(GameState& game, const Action& action);
+    // apply without checking legality, for an action the caller just took from legal_actions(game).
+    void apply_legal(GameState& game, const Action& action);
 
 } // namespace pokebot

@@ -1,8 +1,9 @@
 #include "engine/engine.hpp"
-#include "engine/internal.hpp"
 
 #include <algorithm>
 #include <stdexcept>
+
+#include "engine/internal.hpp"
 
 namespace pokebot {
 
@@ -26,10 +27,7 @@ namespace pokebot {
         void set_winner(GameState& game, int player) {
             game.result = player == 0 ? GameResult::Player0Wins : GameResult::Player1Wins;
             game.pending.clear();
-        }
-
-        bool is_first_turn(const GameState& game) {
-            return game.turn <= 2;
+            game.effects.clear();
         }
 
         PokemonInPlay new_pokemon(CardIndex card, std::uint16_t turn) {
@@ -53,8 +51,25 @@ namespace pokebot {
             return player.bench[static_cast<std::size_t>(slot) - 1];
         }
 
-        FixedVector<Slot, kBenchSize + 1> in_play_slots(const PlayerState& player) {
-            FixedVector<Slot, kBenchSize + 1> slots;
+        const PokemonInPlay* find_pokemon(const GameState& game, CardIndex id) {
+            const PlayerState& p = game.player(owner_of(id));
+            if (p.active && p.active->id() == id) {
+                return &*p.active;
+            }
+            for (const PokemonInPlay& pokemon : p.bench) {
+                if (pokemon.id() == id) {
+                    return &pokemon;
+                }
+            }
+            return nullptr;
+        }
+
+        PokemonInPlay* find_pokemon(GameState& game, CardIndex id) {
+            return const_cast<PokemonInPlay*>(find_pokemon(static_cast<const GameState&>(game), id));
+        }
+
+        FixedVector<Slot, kMaxBenchSize + 1> in_play_slots(const PlayerState& player) {
+            FixedVector<Slot, kMaxBenchSize + 1> slots;
             if (player.active) {
                 slots.push_back(kActiveSlot);
             }
@@ -80,6 +95,7 @@ namespace pokebot {
         if (game.is_over()) {
             return actions;
         }
+        actions.reserve(32);
 
         const DecisionKind kind = game.decision().kind;
         if (is_setup_decision(kind)) {
@@ -90,6 +106,12 @@ namespace pokebot {
             detail::add_retreat_discard_actions(game, actions);
         } else if (kind == DecisionKind::PromoteActive) {
             detail::add_promote_actions(game, actions);
+        } else if (kind == DecisionKind::DiscardBenched) {
+            detail::add_discard_benched_actions(game, actions);
+        } else if (kind == DecisionKind::ExtraAttack) {
+            detail::add_extra_attack_actions(game, actions);
+        } else if (detail::is_effect_decision(kind)) {
+            detail::add_effect_choice_actions(game, actions);
         } else {
             throw std::logic_error("unknown decision");
         }
@@ -105,16 +127,23 @@ namespace pokebot {
         if (std::find(legal.begin(), legal.end(), action) == legal.end()) {
             throw std::invalid_argument("apply: that action isn't legal right now");
         }
+        apply_legal(game, action);
+    }
 
+    void apply_legal(GameState& game, const Action& action) {
         const DecisionKind kind = game.decision().kind;
         if (is_setup_decision(kind)) {
             detail::apply_setup_action(game, action);
-        } else if (kind == DecisionKind::MainPhase) {
+        } else if (kind == DecisionKind::MainPhase || kind == DecisionKind::ExtraAttack) {
             detail::apply_main_phase_action(game, action);
         } else if (kind == DecisionKind::RetreatDiscard) {
             detail::apply_retreat_discard(game, action);
         } else if (kind == DecisionKind::PromoteActive) {
             detail::apply_promote(game, action);
+        } else if (kind == DecisionKind::DiscardBenched) {
+            detail::apply_discard_benched(game, action);
+        } else if (detail::is_effect_decision(kind)) {
+            detail::apply_effect_choice(game, action);
         } else {
             throw std::logic_error("unknown decision");
         }

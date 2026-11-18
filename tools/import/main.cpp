@@ -35,13 +35,13 @@ namespace {
 
     // True if the card's effects file already states its rules (e.g. ["ex", "tera"]),
     // meaning someone has checked the card. A broken file is reported later by CardDB::load.
-    bool effects_file_sets_rules(const std::filesystem::path& effects_dir, const std::string& id) {
+    bool effects_file_sets(const std::filesystem::path& effects_dir, const std::string& id, const char* key) {
         std::ifstream in(effects_dir / (id + ".json"), std::ios::binary);
         if (!in) {
             return false;
         }
         try {
-            return nlohmann::json::parse(in).contains("rules");
+            return nlohmann::json::parse(in).contains(key);
         } catch (const nlohmann::json::exception&) {
             return false;
         }
@@ -114,10 +114,14 @@ int main(int argc, char** argv) {
                     std::filesystem::create_directories(generated_dir);
                     std::ofstream(generated_dir / (id + ".json"), std::ios::binary)
                         << nlohmann::json(conversion.card).dump(2) << '\n';
+                    const bool provides_written = effects_file_sets(effects_dir, id, "provides");
                     for (const auto& note : conversion.notes) {
+                        if (provides_written && conversion.card.kind == CardKind::Energy) {
+                            continue; // the effects file already says what this Energy provides
+                        }
                         review[id + " " + api_name].push_back(note);
                     }
-                    if (conversion.tera_unknown && !effects_file_sets_rules(effects_dir, id)) {
+                    if (conversion.tera_unknown && !effects_file_sets(effects_dir, id, "rules")) {
                         review[id + " " + api_name].push_back("Pokemon ex: check whether it's Tera, then add effects/" + id + ".json with its rules");
                     }
                 } catch (const std::exception& e) {
@@ -146,6 +150,9 @@ int main(int argc, char** argv) {
         const auto missing = db.missing_effects();
         std::cout << db.size() << " cards load cleanly; " << missing.size()
                   << " attacks/abilities/cards still need hand-written effects\n";
+        for (const auto& item : missing) {
+            std::cout << "  needs effects: " << item << '\n';
+        }
 
         // Check every deck against the deck-building rules.
         std::cout << "\nDeck legality:\n";

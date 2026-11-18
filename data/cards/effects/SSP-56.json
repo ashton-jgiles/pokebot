@@ -1,0 +1,1 @@
+{"attacks": {"Icicle Loop": {"effects": [{"op": "move_attached_energy", "count": 1, "to": "hand"}]}}, "abilities": {"Snow Sink": {"trigger": "played_to_bench", "requires": [{"stadium_in_play": true}], "effects": [{"op": "may", "effects": [{"op": "discard_stadium"}]}]}}}

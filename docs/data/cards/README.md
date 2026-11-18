@@ -102,10 +102,8 @@ generated card when the card database loads (see [`merge_effects`](../../src/car
 {
   "rules": ["ex", "tera"],
   "attacks": {
-    "Phantom Dive": {
-      "effects": [
-        { "op": "place_damage_counters", "count": 6, "targets": "opponent_bench", "split": "any" }
-      ]
+    "Shinobi Blade": {
+      "effects": [{ "op": "may", "effects": [{ "op": "search_deck", "count": 1 }] }]
     }
   }
 }
@@ -133,8 +131,81 @@ TWM-130 Dragapult ex, TWM-106 Greninja ex, TWM-25 Teal Mask Ogerpon ex, PRE-27 W
 Ogerpon ex and ASC-121 Koraidon ex.
 - An effects file with no matching generated card is an error, which catches typos in file names.
 
-The `effects` contents aren't interpreted yet. The effect format gets designed in Milestone 3;
-until then, the importer reports how many attacks, abilities and cards still have none.
+Attack `effects` are lists of building blocks (`draw`, `search_deck`, `may`, …), listed with
+their fields in [the effect language](../../src/cards/effects/program.md). They're compiled when
+the cards load, so a typo is an error naming the card and attack. Ability, Trainer and Energy
+effects come in later Milestone 3 steps; the importer reports how many still have none.
+
+Attacks with effects so far: Froakie's Collect, Frogadier's Summoning Jutsu, Purrloin's Invite
+Evil, Greninja ex's Shinobi Blade, Raging Bolt ex's Burst Roar, Chien-Pao's Icicle Loop and
+Dunsparce's Trading Places, Mega Froslass ex's Absolute Snow (Asleep) and Munkidori's Mind Bend
+(Confused), and the damage formulas of Mega Froslass ex (Resentful Refrain), N's Reshiram
+(Powerful Rage), N's Darmanitan (Back Draft), Lillie's Clefairy ex (Full Moon Rondo), Pecharunt ex
+(Irritated Outburst), Teal Mask Ogerpon ex (Myriad Leaf Shower), Koraidon ex (Orichalcum Fang),
+Enamorus (Love Resonance), Mega Greninja ex (Ninja Spinner), Mega Kangaskhan ex (Rapid-Fire Combo)
+and Raging Bolt ex (Bellowing Thunder). With targets and copying: Dragapult ex (Phantom Dive),
+N's Darmanitan (Flamebody Cannon), Wellspring Mask Ogerpon ex (Torrential Pump), Greninja ex
+(Mirage Barrage, Stealthy Slash), Fezandipiti ex (Cruel Arrow), Meowth ex (Tuck Tail) and N's
+Zoroark ex (Night Joker). With lasting effects: Koraidon ex (Impact Blow), N's Zekrom (Rampaging
+Thunder), Latias ex (Eon Blade), Iron Leaves ex (Prism Edge), Yveltal (Clutch), Wellspring Mask
+Ogerpon ex (Sob) and Budew (Itchy Pollen). N's Zekrom's Shred ignores effects on the Defending Pokémon.
+
+A Tool, a Stadium or a passive Ability has a [`"passive"`](../../src/cards/effects/program.md#always-on-effects-passive)
+list instead:
+
+```json
+{ "passive": [{ "modify": "retreat_cost", "add": -2 }] }
+```
+
+With passive effects so far: Air Balloon, Hero's Cape and Binding Mochi (Tools), N's Castle
+(Stadium), and Latias ex's Skyliner and Lillie's Clefairy ex's Fairy Zone (Abilities).
+
+An Ability you choose to use has `effects`, optional `requires`, and `active_only`, `one_per_name`
+or `once_per_turn` (see [Abilities](../../src/engine/actions/abilities.md)). So far: N's Zoroark ex
+(Trade), Mega Kangaskhan ex (Run Errand), Fezandipiti ex (Flip the Script), Pecharunt ex
+(Subjugating Chains), Dudunsparce (Run Away Draw), Drakloak (Recon Directive), Teal Mask Ogerpon ex
+(Teal Dance), Munkidori (Adrena-Brain) and Mega Greninja ex (Mortal Shuriken), plus Surfing Beach's
+switch. Adrena-Brain always moves as many counters as it can, up to 3.
+
+Triggered (`"trigger"`): Meowth ex (Last-Ditch Catch), Chien-Pao (Snow Sink) and Iron Leaves ex
+(Rapid Vernier) when played to the Bench, and Risky Ruins.
+
+Special Energy ([`provides` and `provides_when`](../../src/cards/effects/program.md#special-energy)):
+Neo Upper Energy (two of any type on a Stage 2) and Ignition Energy ({C}{C}{C} on an Evolution
+Pokémon, discarded at the end of your turn).
+
+One-of-a-kind cards name their [C++ code](../../src/engine/effects/custom.md) with `"custom"`:
+Rare Candy and Transformation Tome. Area Zero Underdepths is a `bench_size` passive with
+`"if_tera_in_play": true`.
+
+An Ability that can't change anything with the cards we have says why with `no_effect`, and
+doesn't count as missing. Only Psyduck's Damp does: no card in our pool has an Ability that Knocks
+Out its own Pokémon.
+
+```json
+{ "abilities": { "Damp": { "no_effect": "No Ability in our card pool requires its Pokemon to Knock Out itself" } } }
+```
+
+
+An Item or Supporter has a top-level `effects` list, and optionally `requires`: the
+[conditions](../../src/cards/effects/program.md#conditions) that must hold before it can be played.
+
+```json
+{
+  "requires": [{ "hand_besides": 2 }],
+  "effects": [
+    { "op": "discard_from_hand", "count": 2 },
+    { "op": "search_deck", "count": 1, "filter": { "kind": "pokemon" } }
+  ]
+}
+```
+
+Trainers with effects so far: Switch, Boss's Orders, Ultra Ball, Night Stretcher, Energy
+Retrieval, Poké Pad (ASC and POR), Cyrano, Lillie's Determination, Judge, Unfair Stamp, Hilda, Dawn,
+Secret Box, Buddy-Buddy Poffin, Lana's Aid, Special Red Card, Ciphermaniac's Codebreaking and
+Crushing Hammer, Black Belt's Training, and the Energy Trainers: N's PP Up, Rosa's Encouragement,
+Glass Trumpet, Janine's Secret Art, Energy Switch and Crispin. Crispin's two Energy aren't checked to
+be of different types.
 
 ## `raw/`
 

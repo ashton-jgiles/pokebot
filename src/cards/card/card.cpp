@@ -67,6 +67,10 @@ namespace pokebot {
         return parse_enum<EnergyType>(kEnergyTypes, name, "energy type");
     }
 
+    CardKind card_kind_from_string(std::string_view name) {
+        return parse_enum<CardKind>(kCardKinds, name, "card kind");
+    }
+
     int CardDef::prize_value() const {
         if (rules.ex && rules.mega) {
             return 3;
@@ -105,7 +109,29 @@ namespace pokebot {
 
             json abilities = json::array();
             for (const auto& a : c.abilities) {
-                abilities.push_back({{"name", a.name}, {"text", a.text}, {"effects", a.effects}});
+                json ability = {{"name", a.name}, {"text", a.text}, {"effects", a.effects}};
+                if (!a.passive.empty()) {
+                    ability["passive"] = a.passive;
+                }
+                if (!a.requirements.empty()) {
+                    ability["requires"] = a.requirements;
+                }
+                if (!a.once_per_turn) {
+                    ability["once_per_turn"] = false;
+                }
+                if (a.one_per_name) {
+                    ability["one_per_name"] = true;
+                }
+                if (a.active_only) {
+                    ability["active_only"] = true;
+                }
+                if (a.trigger != Trigger::None) {
+                    ability["trigger"] = to_string(a.trigger);
+                }
+                if (!a.no_effect.empty()) {
+                    ability["no_effect"] = a.no_effect;
+                }
+                abilities.push_back(ability);
             }
             j["abilities"] = abilities;
 
@@ -130,6 +156,22 @@ namespace pokebot {
             }
             j["text"] = c.text;
             j["effects"] = c.effects;
+
+            if (!c.requirements.empty()) {
+                j["requires"] = c.requirements;
+            }
+            if (!c.passive.empty()) {
+                j["passive"] = c.passive;
+            }
+            if (c.trigger != Trigger::None) {
+                j["trigger"] = to_string(c.trigger);
+            }
+            if (!c.provides_when.empty()) {
+                j["provides_when"] = c.provides_when;
+            }
+            if (c.discard_at_end_of_turn) {
+                j["discard_at_end_of_turn"] = true;
+            }
         }
     }
 
@@ -169,7 +211,18 @@ namespace pokebot {
                 }
                 c.retreat = j.value("retreat", 0);
                 for (const auto& a : j.value("abilities", json::array())) {
-                    c.abilities.push_back({required<std::string>(a, "name"), a.value("text", ""), effects_or_empty(a)});
+                    Ability ability;
+                    ability.name = required<std::string>(a, "name");
+                    ability.text = a.value("text", "");
+                    ability.effects = effects_or_empty(a);
+                    ability.passive = a.value("passive", json::array());
+                    ability.requirements = a.value("requires", json::array());
+                    ability.once_per_turn = a.value("once_per_turn", true);
+                    ability.one_per_name = a.value("one_per_name", false);
+                    ability.active_only = a.value("active_only", false);
+                    ability.trigger = trigger_from_string(a.value("trigger", "none"));
+                    ability.no_effect = a.value("no_effect", "");
+                    c.abilities.push_back(std::move(ability));
                 }
                 for (const auto& a : j.value("attacks", json::array())) {
                     Attack atk;
@@ -191,6 +244,11 @@ namespace pokebot {
                 }
                 c.text = j.value("text", "");
                 c.effects = effects_or_empty(j);
+                c.requirements = j.value("requires", json::array());
+                c.passive = j.value("passive", json::array());
+                c.trigger = trigger_from_string(j.value("trigger", "none"));
+                c.provides_when = j.value("provides_when", json::array());
+                c.discard_at_end_of_turn = j.value("discard_at_end_of_turn", false);
             }
         } catch (const json::exception& e) {
             throw CardDataError(std::string("bad card data: ") + e.what());

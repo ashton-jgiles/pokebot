@@ -1,0 +1,1 @@
+{"requires": [{"bench_not_full": true}], "effects": [{"op": "search_deck", "count": 2, "to": "bench", "filter": {"kind": "pokemon", "stage": "basic", "max_hp": 70}}]}

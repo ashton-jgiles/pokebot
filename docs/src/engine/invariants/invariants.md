@@ -20,11 +20,17 @@ for.
 | Cards are only in their owner's zones | `card 70 is in player 0's hand but belongs to player 1` |
 | Every Pokémon in play has at least one card | `player 0's Bench 2 has no cards` |
 | Its bottom card is a Basic Pokémon | `player 1's Active Pokemon doesn't start with a Basic Pokemon: …` |
-| Each evolution matches the card below it by name | `…: Testmon doesn't evolve from Testmon` |
+| Each evolution matches the card below it by name; a Stage 2 may sit straight on a Basic (Rare Candy) | `…: Testmon doesn't evolve from Testmon` |
 | Only Energy cards are attached as Energy | `… has a non-Energy card attached as Energy: …` |
-| No Pokémon has damage ≥ its HP (it should have been Knocked Out) | `… has 990 damage on 60 HP and should have been Knocked Out` |
+| No Pokémon has damage ≥ its HP (it should have been Knocked Out), except while an effect is still running | `… has 990 damage on 60 HP and should have been Knocked Out` |
+| No Bench is bigger than `rules::bench_size`, unless that player is choosing what to discard | `player 0's Bench has 6 Pokemon, more than 5, and no discard is pending` |
 | A game in progress has a decision pending, for player 0 or 1 | `the game isn't over but no decision is pending` |
-| A finished game has no pending decisions | `the game is over but a decision is still pending` |
+| A finished game has no pending decisions or effects | `the game is over but a decision or effect is still pending` |
+| An effect's decision has an effect running | `an effect's decision is pending but no effect is running` |
+| A card being played has an effect running | `… card is still being played but no effect is running` |
+| A Stadium in play is a Stadium card, and at most one is in play | `… Stadium in play isn't a stadium card`, `two Stadiums are in play` |
+| No lasting effect from a past turn is left over | `a lasting effect for turn 4 is still there on turn 5` |
+| Only the Active has Special Conditions, and at most one of Asleep, Confused and Paralyzed | `… Bench 2 has a Special Condition, but only the Active Pokemon can`, `… more than one of Asleep, Confused and Paralyzed` |
 | A main-phase decision is the current player's, during the main phase | |
 | After setup, each player has an Active, unless they're choosing a new one | `player 0 has no Active Pokemon and isn't choosing one` |
 
