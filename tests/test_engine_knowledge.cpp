@@ -106,7 +106,9 @@ namespace {
     std::size_t seen_of(const GameState& game, int viewer, int owner) {
         std::size_t count = 0;
         for (std::size_t i = 0; i < pokebot::kDeckSize; ++i) {
-            count += has_seen(game, viewer, static_cast<CardIndex>(static_cast<std::size_t>(owner) * pokebot::kDeckSize + i)) ? 1 : 0;
+            if (has_seen(game, viewer, static_cast<CardIndex>(static_cast<std::size_t>(owner) * pokebot::kDeckSize + i))) {
+                ++count;
+            }
         }
         return count;
     }
