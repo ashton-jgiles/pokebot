@@ -16,23 +16,25 @@ These are the formal model's *Legal* and *δ* (transition) functions.
 
 ## What the engine covers (Milestone 3)
 
-| Covered | Not yet (Milestone 3) |
-|---|---|
-| Setup: coin flip, opening hands, mulligans with bonus draws, Active/Bench, 6 Prize cards | |
-| Trainers: Items, Supporters, Stadiums, Tools, their limits and `"requires"`; 16 with effects | |
-| Turn loop: draw, main phase, end of turn, Pokémon Checkup step | |
-| Benching, evolving, attaching Energy, retreating, and attaching Energy from the deck or discard pile | |
-| [Triggered effects](actions/abilities.md#triggered-effects): "when you play this Pokémon", Risky Ruins | |
-| [Abilities you choose to use](actions/abilities.md), and Stadium actions | |
-| [Lasting effects](actions/lasting.md): can't attack, can't use an attack, can't retreat, Item lock, damage bonus | |
-| Attacks: Energy costs, Weakness, Resistance, damage, and [effects](effects/interpreter.md): draw, search, switch, "you may", damage formulas, Bench damage, damage counters, copy attacks | |
-| [Special Conditions](actions/conditions.md) and the full Pokémon Checkup | |
-| Knock Outs, Prize cards (1 / 2 ex / 3 Mega ex), new Active | |
-| Winning: Prize cards, no Pokémon left, deck-out, both at once | |
-| Special Energy, Energy counted in units, exact cost matching, Retreat paid in Energy provided | |
-| [Always-on effects](rules/rules.md#always-on-effects) from Tools, Stadiums and passive Abilities: HP, Retreat Cost, Weakness, damage bonuses | |
-| Tera Bench protection | |
-| [One-of-a-kind cards](effects/custom.md): Rare Candy, Transformation Tome, Area Zero Underdepths and the Bench limit | |
+| Covered |
+|---|
+| Setup: coin flip, opening hands, mulligans with bonus draws, Active/Bench, 6 Prize cards |
+| Trainers: Items, Supporters, Stadiums, Tools, their limits and `"requires"`; every one in our decks has effects |
+| Turn loop: draw, main phase, end of turn, Pokémon Checkup step |
+| Benching, evolving, attaching Energy, retreating, and attaching Energy from the deck or discard pile |
+| [Triggered effects](actions/abilities.md#triggered-effects): "when you play this Pokémon", Risky Ruins |
+| [Abilities you choose to use](actions/abilities.md), and Stadium actions |
+| [Lasting effects](actions/lasting.md): can't attack, can't use an attack, can't retreat, Item lock, damage bonus |
+| Attacks: Energy costs, Weakness, Resistance, damage, and [effects](effects/interpreter.md): draw, search, switch, "you may", damage formulas, Bench damage, damage counters, copy attacks |
+| [Special Conditions](actions/conditions.md) and the full Pokémon Checkup |
+| Knock Outs, Prize cards (1 / 2 ex / 3 Mega ex), new Active |
+| Winning: Prize cards, no Pokémon left, deck-out, both at once |
+| Special Energy, Energy counted in units, exact cost matching, Retreat paid in Energy provided |
+| [Always-on effects](rules/rules.md#always-on-effects) from Tools, Stadiums and passive Abilities: HP, Retreat Cost, Weakness, damage bonuses |
+| Tera Bench protection |
+| [One-of-a-kind cards](effects/custom.md): Rare Candy, Transformation Tome, Area Zero Underdepths and the Bench limit |
+
+Not covered yet: effects for cards outside our four decks. Turning card text into effects files is M3b.
 
 ## Key ideas
 

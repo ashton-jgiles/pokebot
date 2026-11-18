@@ -8,7 +8,7 @@ The milestone plan from the project proposal, with the current status of each.
 | M0 | Project setup | ✅ Done |
 | M1 | Card data, decklist parser, deck validator | ✅ Done |
 | M2 | Basic engine | ✅ Done |
-| M3 | Effects system and every card in the four decks | 🟨 In progress |
+| M3 | Effects system and every card in the four decks | ✅ Done |
 | M3b | Standard coverage: card-text translator and coverage report | ⬜ Not started |
 | M4 | Observation layer, command-line client, replays | ⬜ Not started |
 | M5 | Greedy agent, match harness, profiling | ⬜ Not started |
@@ -69,7 +69,7 @@ invariant checker after every action (about 10 million actions): **no problems f
 Tools added: `pokebot-sim` (run many games, or `--print` one game move by move), random and biased random
 agents, the invariant checker, and text descriptions of any state or action.
 
-## M3 — Effects system 🟨 (in progress)
+## M3 — Effects system ✅
 
 **Done when:** `pokebot-import` reports 0 attacks, abilities and cards still needing effects (88 today,
 across all four decks), every card has a test, and the 100,000-game stress test still passes.
@@ -102,7 +102,23 @@ The 88 texts come in five shapes:
 | 3.7 | Abilities (once per turn, triggers on events, passive modifiers that change the rule questions), Tools and Stadiums in play, Festival Lead. *3.7a done: always-on effects (Tools, N's Castle, Skyliner, Fairy Zone) and Shred. 3.7b done: Abilities you use (9) and Surfing Beach. 3.7c done: triggered effects (3 Abilities, Risky Ruins). Festival Lead isn't in our decks; the extra-attack flow is ready for it. Area Zero Underdepths moves to 3.9; Psyduck's Damp waits until a Standard card needs it* | ✅ |
 | 3.8 | Special Energy and full Energy cost matching. *Done: Energy units, exact cost matching, Retreat paid in Energy, Neo Upper and Ignition Energy (3.8a); attaching and moving Energy, 6 Trainers (3.8b)* | ✅ |
 | 3.9 | One-of-a-kind cards in custom C++ (Night Joker, Transformation Tome, Rare Candy, Area Zero, …). *Done: [custom effects](src/engine/effects/custom.md) for Rare Candy and Transformation Tome, Area Zero Underdepths as a `bench_size` passive, the 8-space Bench and forced discards down to the limit. Night Joker was done in 3.5b. Only Psyduck's Damp is left unwritten* | ✅ |
-| 3.10 | Sign-off: 0 missing, a test per card, test-only cards for unused mechanics, 100k-game stress test, and profiling the engine (speed fell from 1.0 to 0.5 million actions/s with effects; a game is now 2,624 bytes, up from 1,920). *Done: 0 missing (Damp marked `no_effect`), a [coverage test](tests/README.md#every-card-is-tested) that uses every chosen effect in random games, the unused mechanics listed with their tests, and `apply_legal` plus fewer allocations for speed. Waiting on the 100,000-game run* | 🟨 |
+| 3.10 | Sign-off: 0 missing, a test per card, test-only cards for unused mechanics, 100k-game stress test, and profiling the engine (speed fell from 1.0 to 0.5 million actions/s with effects; a game is now 2,624 bytes, up from 1,920). *Done: 0 missing (Damp marked `no_effect`), a [coverage test](tests/README.md#every-card-is-tested) that uses every chosen effect in random games, the unused mechanics listed with their tests, and `apply_legal` plus fewer allocations for speed (0.5 → 0.8 million actions/s). 100,000 games with checks: no problems* | ✅ |
+
+**Sign-off run (2026-11-18):** `pokebot-sim --games 100000 --agent biased` on all four decks, with the
+invariant checker after every action (about 15 million actions): **no problems found, every game finished.**
+`pokebot-import` reports 0 attacks, abilities and cards still needing effects, and 218 tests pass.
+
+| Measure | Result |
+|---|---|
+| How games ended (biased random agents) | Prize cards 31.1%, no Pokémon left 18.3%, deck-out 50.6%, draws 43 (0.04%) |
+| Speed, release build, no checks | about 5,480 games/s, 0.8 million actions/s (151.7 actions a game, up from about 100 in M2) |
+| Speed, release build, checking every action | about 1,920 games/s |
+| Player who went first won | 51.0% of decided games (Supporters and Abilities make up for not attacking on turn 1) |
+
+Known approximations, each documented where it lives: Adrena-Brain always moves as many damage counters
+as it can; Crispin doesn't check that its two Energy are different types; damage formulas count Energy
+cards, not units; Psyduck's Damp does nothing with our cards; Chien-Pao's Icicle Loop can't be paid for
+in `basic-box`, so it's only tested with a made-up card.
 
 **Designed for all of Standard (2026-11-16).** A [scan of every Standard-legal card](research/standard-scan.md)
 (TEF–DLR: 2,213 distinct cards, 1,455 distinct effect texts) found that 97.6% of texts use known, templated
