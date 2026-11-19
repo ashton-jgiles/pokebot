@@ -12,11 +12,13 @@
 #include <vector>
 
 #include "agents/greedy_agent.hpp"
+#include "agents/planner_agent.hpp"
 #include "agents/random_agent.hpp"
 #include "cards/db/card_db.hpp"
 #include "core/decklist.hpp"
 #include "harness/arena.hpp"
 #include "harness/match.hpp"
+#include "harness/planner_lab.hpp"
 #include "harness/replay.hpp"
 
 #ifdef _WIN32
@@ -46,14 +48,19 @@ namespace {
         std::vector<std::string> agents; // --agents A,B: A against B on every pairing
         int threads = 0;                 // with --agents: games at once; 0 = one per hardware thread
         int replay_every = 0;            // with --agents: save every Nth game
+        PlannerOptions planner;
+        int lab_games = 0;
+        int every = 5;
     };
 
     void print_usage() {
-        std::cerr << "usage: pokebot-sim [--games N] [--agent random|biased|greedy] [--seed S] [--no-check]\n"
+        std::cerr << "usage: pokebot-sim [--games N] [--agent random|biased|greedy|planner] [--seed S] [--no-check]\n"
                      "                   [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]\n"
                      "                   [--agents A,B [--threads N] [--save-replays K]]\n"
+                     "                   [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]\n"
+                     "                   [--planner-lab N [--every K]]\n"
                      "  --games N            games to play (default 1000)\n"
-                     "  --agent A            random, biased or greedy (default biased)\n"
+                     "  --agent A            random, biased, greedy or planner (default biased)\n"
                      "  --seed S             first game's seed; game i uses S + i (default 1)\n"
                      "  --no-check           skip the invariant check after every action (faster)\n"
                      "  --print              play one game with seed S and print every action\n"
@@ -66,6 +73,11 @@ namespace {
                      "                       A in each seat; --games is then the number of games per pairing\n"
                      "  --threads N          with --agents: games played at once (default: one per hardware thread)\n"
                      "  --save-replays K     with --agents: save every Kth game to replays/arena/\n"
+                     "  --planner-samples M      the planner's sampled worlds for a plan that ends in chance (default 1)\n"
+                     "  --planner-or-budget N    the planner's nodes for its win search (default 200)\n"
+                     "  --planner-and-budget N   the planner's nodes for its best-plan search (default 300)\n"
+                     "  --planner-lab N          play N greedy games and measure the planner's searches at every Kth\n"
+                     "                           main-phase decision (--every K, default 5)\n"
                      "If an invariant breaks, the game is saved to replays/invariant-seed-S.json.\n";
     }
 
@@ -86,6 +98,16 @@ namespace {
                 options.threads = std::stoi(argv[++i]);
             } else if (arg == "--save-replays" && has_value) {
                 options.replay_every = std::stoi(argv[++i]);
+            } else if (arg == "--planner-samples" && has_value) {
+                options.planner.samples = std::stoi(argv[++i]);
+            } else if (arg == "--planner-or-budget" && has_value) {
+                options.planner.or_budget = std::stoi(argv[++i]);
+            } else if (arg == "--planner-and-budget" && has_value) {
+                options.planner.and_budget = std::stoi(argv[++i]);
+            } else if (arg == "--planner-lab" && has_value) {
+                options.lab_games = std::stoi(argv[++i]);
+            } else if (arg == "--every" && has_value) {
+                options.every = std::stoi(argv[++i]);
             } else if (arg == "--seed" && has_value) {
                 options.seed = std::stoull(argv[++i]);
             } else if (arg == "--no-check") {
@@ -112,8 +134,14 @@ namespace {
             return false;
         }
         const auto known = [](const std::string& name) {
-            return name == "random" || name == "biased" || name == "greedy";
+            return name == "random" || name == "biased" || name == "greedy" || name == "planner";
         };
+        if (options.planner.samples < 1 || options.planner.or_budget < 1 || options.planner.and_budget < 1 || options.every < 1) {
+            return false;
+        }
+        if (options.lab_games < 0 || (options.lab_games > 0 && (!options.agents.empty() || options.print || options.check_replays))) {
+            return false;
+        }
         if (options.agents.empty()) {
             if (options.threads != 0 || options.replay_every != 0) {
                 return false;
@@ -125,12 +153,15 @@ namespace {
         return options.games > 0 && known(options.agent);
     }
 
-    std::unique_ptr<Agent> make_agent(const std::string& name, std::uint64_t seed) {
+    std::unique_ptr<Agent> make_agent(const std::string& name, std::uint64_t seed, const PlannerOptions& planner) {
         if (name == "random") {
             return std::make_unique<RandomAgent>(seed);
         }
         if (name == "greedy") {
             return std::make_unique<GreedyAgent>(seed);
+        }
+        if (name == "planner") {
+            return std::make_unique<PlannerAgent>(seed, planner);
         }
         return std::make_unique<BiasedRandomAgent>(seed);
     }
@@ -162,8 +193,8 @@ namespace {
     template <class MakeReplay>
     GameRecord play_saving_failures(const CardTable& table, std::uint64_t seed, const Options& options, MakeReplay make_replay,
                                     GameState* end = nullptr) {
-        const auto agent0 = make_agent(options.agent, seed * 2);
-        const auto agent1 = make_agent(options.agent, seed * 2 + 1);
+        const auto agent0 = make_agent(options.agent, seed * 2, options.planner);
+        const auto agent1 = make_agent(options.agent, seed * 2 + 1, options.planner);
         MatchOptions match_options;
         match_options.check_invariants = options.check;
         match_options.final_state = end;
@@ -218,6 +249,49 @@ namespace {
         return percent_text(tally.score()) + " (95% CI " + percent_text(ci.low) + " to " + percent_text(ci.high) + ")";
     }
 
+    int run_lab(const CardDB& db, const std::vector<std::filesystem::path>& files, const std::vector<Decklist>& decks, const Options& options) {
+        std::vector<ArenaDeck> arena_decks;
+        for (std::size_t i = 0; i < files.size(); ++i) {
+            arena_decks.push_back(ArenaDeck{files[i].filename().string(), decks[i]});
+        }
+        PlannerLabOptions lab;
+        lab.games = options.lab_games;
+        lab.seed = options.seed;
+        lab.every = options.every;
+        lab.or_budget = options.planner.or_budget;
+        lab.samples = options.planner.samples;
+        const auto started = std::chrono::steady_clock::now();
+        lab.on_progress = [started](long long done, long long total) {
+            const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+            const double left = seconds * static_cast<double>(total - done) / static_cast<double>(done);
+            std::cerr << "  " << done << " of " << total << " games, " << std::fixed << std::setprecision(0) << seconds << " s, about "
+                      << left << " s left\n";
+        };
+        const PlannerLabResult r = run_planner_lab(db, arena_decks, lab);
+
+        const auto per = [&](long long total) {
+            return r.finished == 0 ? 0.0 : static_cast<double>(total) / static_cast<double>(r.finished);
+        };
+        std::cout << std::fixed << std::setprecision(1);
+        std::cout << "Planner lab: " << r.games << " greedy games, one in every " << lab.every << " main-phase decisions: " << r.positions
+                  << " positions, " << r.finished << " searched to the end (" << lab.limit << " nodes at most)\n";
+        std::cout << "Win this turn (or-tree): " << r.wins << " positions have one; the planner's " << lab.or_budget << "-node search found "
+                  << r.wins_found << " (" << percent(r.wins_found, r.wins) << "%); " << r.false_wins << " false wins\n";
+        if (r.wins > 0) {
+            std::cout << "  nodes to reach a win: " << static_cast<double>(r.win_nodes) / static_cast<double>(r.wins) << " on average, "
+                      << r.win_nodes_max << " at most\n";
+        }
+        std::cout << "  nodes per position: " << per(r.or_closed) << " with the closed set, " << per(r.or_open) << " without\n";
+        std::cout << "Best plan (and-tree), nodes per position:\n";
+        std::cout << "  closed set and f_bound  " << std::setw(10) << per(r.and_both) << "  (" << per(r.pruned) << " children pruned)\n";
+        std::cout << "  closed set only         " << std::setw(10) << per(r.and_closed) << '\n';
+        std::cout << "  f_bound only            " << std::setw(10) << per(r.and_bound) << '\n';
+        std::cout << "  neither                 " << std::setw(10) << per(r.and_neither) << '\n';
+        std::cout << "  f_bound changed the best plan's value in " << r.bound_changed << " of " << r.finished << " positions\n";
+        std::cout << "Took " << r.seconds << " s\n";
+        return r.false_wins == 0 ? 0 : 1;
+    }
+
     // --agents A,B: A against B on every deck pairing, with win rates and their confidence intervals.
     int run_match(const CardDB& db, const std::vector<std::filesystem::path>& files, const std::vector<Decklist>& decks,
                   const Options& options) {
@@ -228,7 +302,7 @@ namespace {
         // The same agent on both sides is labelled with its side, such as random-A and random-B.
         const bool same = options.agents[0] == options.agents[1];
         const auto contestant = [&](const std::string& name, const char* side) {
-            return Contestant{same ? name + "-" + side : name, [name](std::uint64_t seed) { return make_agent(name, seed); }};
+            return Contestant{same ? name + "-" + side : name, [name, planner = options.planner](std::uint64_t seed) { return make_agent(name, seed, planner); }};
         };
         const Contestant a = contestant(options.agents[0], "A");
         const Contestant b = contestant(options.agents[1], "B");
@@ -238,6 +312,13 @@ namespace {
         arena.threads = options.threads;
         arena.check_invariants = options.check;
         arena.replay_every = options.replay_every;
+        const auto started = std::chrono::steady_clock::now();
+        arena.on_progress = [started](long long done, long long total) {
+            const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+            const double left = seconds * static_cast<double>(total - done) / static_cast<double>(done);
+            std::cerr << "  " << done << " of " << total << " games, " << std::fixed << std::setprecision(0) << seconds << " s, about "
+                      << left << " s left\n";
+        };
 
         ArenaResult result;
         try {
@@ -254,6 +335,10 @@ namespace {
         std::cout << std::fixed << std::setprecision(1);
         std::cout << a.name << " vs " << b.name << ": " << n << " decks, " << n * n << " pairings, " << per_pairing
                   << " games each (every seed once with " << a.name << " in each seat), " << result.threads << " threads\n";
+        if (options.agents[0] == "planner" || options.agents[1] == "planner") {
+            std::cout << "  planner: " << options.planner.samples << " sampled worlds, or-tree budget " << options.planner.or_budget
+                      << ", and-tree budget " << options.planner.and_budget << '\n';
+        }
         std::cout << "Played " << result.games << " games in " << result.seconds << " s: "
                   << static_cast<double>(result.games) / result.seconds << " games/s, "
                   << static_cast<double>(result.actions) / result.seconds / 1e6 << " million actions/s, "
@@ -283,6 +368,20 @@ namespace {
                       << std::setw(8) << result.a_losses_by[i] << '\n';
         }
         std::cout << "  (won by deck-out: " << b.name << "'s deck ran out; lost by deck-out: " << a.name << "'s did)\n";
+        const auto print_counters = [&](const std::string& name, const std::vector<std::pair<std::string, double>>& counters) {
+            if (counters.empty()) {
+                return;
+            }
+            std::cout << name << " per game:" << std::setprecision(2);
+            const char* separator = " ";
+            for (const auto& [label, total] : counters) {
+                std::cout << separator << label << ' ' << total / static_cast<double>(result.games);
+                separator = ", ";
+            }
+            std::cout << std::setprecision(1) << '\n';
+        };
+        print_counters(a.name, result.a_counters);
+        print_counters(b.name, result.b_counters);
         std::cout << (options.check ? "Invariants checked after every action: no problems found\n"
                                     : "Invariant checks were off (--no-check)\n");
         for (std::size_t i = 0; i < result.replays.size(); ++i) {
@@ -330,6 +429,9 @@ int main(int argc, char** argv) {
         }
         if (!options.agents.empty()) {
             return run_match(db, files, decks, options);
+        }
+        if (options.lab_games > 0) {
+            return run_lab(db, files, decks, options);
         }
 
         if (options.print) {

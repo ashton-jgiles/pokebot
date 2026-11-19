@@ -62,9 +62,16 @@ legal actions.
 | | [world.md](src/agents/world.md) | `World`: a game state consistent with an observation, to try actions on |
 | | [evaluation.md](src/agents/evaluation.md) | The evaluation function e: features, weights, utility |
 | | [greedy_agent.md](src/agents/greedy_agent.md) | The greedy agent: one action ahead in a few worlds |
+| | [action_class.md](src/agents/action_class.md) | Det, Fin and the rest of Bnd: which actions the turn planner searches through |
+| | [state_hash.md](src/agents/state_hash.md) | State hashes and the turn planner's closed set |
+| | [plan.md](src/agents/plan.md) | Plans (macro-actions), δ*, plan values and follow-up choices |
+| | [or_tree.md](src/agents/or_tree.md) | The turn planner's or-tree mode: a line this turn that reaches a goal |
+| | [and_tree.md](src/agents/and_tree.md) | The turn planner's and-tree mode: the best plans this turn, by branch-and-bound |
+| | [planner_agent.md](src/agents/planner_agent.md) | The Planner agent: Model 1 playing a game |
 | `src/harness` | [match.md](src/harness/match.md) | `play_game`, how games end |
 | | [replay.md](src/harness/replay.md) | Saving games and playing them back, as either player |
 | | [arena.md](src/harness/arena.md) | The match harness: one agent against another, in parallel, with confidence intervals |
+| | [planner_lab.md](src/harness/planner_lab.md) | Measuring the turn planner: wins found, and nodes with and without the closed set and f_bound |
 | `src/client` | [main.md](src/client/main.md) | The `pokebot` command: `play`, `watch`, `replay` |
 | `tools/import` | [main.md](tools/import/main.md) | The `pokebot-import` command |
 | | [tcgdex.md](tools/import/tcgdex.md) | TCGdex lookup, cache, retries |

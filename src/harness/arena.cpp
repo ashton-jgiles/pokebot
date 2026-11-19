@@ -27,6 +27,25 @@ namespace pokebot {
             return GameSlot{static_cast<std::size_t>(g / per), first_seed + within / 2, static_cast<int>(within % 2)};
         }
 
+        using Counters = std::vector<std::pair<std::string, double>>;
+
+        struct Played {
+            GameRecord record;
+            Counters a;
+            Counters b;
+        };
+
+        void add_counters(Counters& total, const Counters& one) {
+            for (const auto& [name, value] : one) {
+                const auto at = std::find_if(total.begin(), total.end(), [&](const auto& entry) { return entry.first == name; });
+                if (at == total.end()) {
+                    total.emplace_back(name, value);
+                } else {
+                    at->second += value;
+                }
+            }
+        }
+
     } // namespace
 
     double Tally::score() const {
@@ -100,7 +119,7 @@ namespace pokebot {
                 if (options.replay_every <= 0 || game % options.replay_every != 0) {
                     record.moves = {};
                 }
-                return record;
+                return Played{std::move(record), agent_a->counters(), agent_b->counters()};
             } catch (const InvariantError& e) {
                 Replay replay = replay_of(slot);
                 replay.actions = e.moves;
@@ -109,8 +128,11 @@ namespace pokebot {
             }
         };
 
-        std::vector<GameRecord> records(static_cast<std::size_t>(total));
+        std::vector<Played> played(static_cast<std::size_t>(total));
         std::atomic<long long> next{0};
+        std::atomic<long long> finished{0};
+        const long long report_every = std::max<long long>(total / 20, 1);
+        std::mutex progress_lock;
         std::atomic<bool> stop{false};
         std::mutex failure_lock;
         std::exception_ptr failure;
@@ -121,7 +143,12 @@ namespace pokebot {
                     return;
                 }
                 try {
-                    records[static_cast<std::size_t>(game)] = play(game);
+                    played[static_cast<std::size_t>(game)] = play(game);
+                    const long long done = ++finished;
+                    if (options.on_progress && (done % report_every == 0 || done == total)) {
+                        const std::lock_guard<std::mutex> lock(progress_lock);
+                        options.on_progress(done, total);
+                    }
                 } catch (...) {
                     const std::lock_guard<std::mutex> lock(failure_lock);
                     if (!failure) {
@@ -154,7 +181,9 @@ namespace pokebot {
             result.pairings.push_back(PairingResult{pairing / n, pairing % n, Tally{}});
         }
         for (long long game = 0; game < total; game++) {
-            const GameRecord& record = records[static_cast<std::size_t>(game)];
+            const GameRecord& record = played[static_cast<std::size_t>(game)].record;
+            add_counters(result.a_counters, played[static_cast<std::size_t>(game)].a);
+            add_counters(result.b_counters, played[static_cast<std::size_t>(game)].b);
             const GameSlot slot = slot_of(game, per_pairing, options.seed);
             result.pairings[slot.pairing].tally.add(record.result, slot.a_seat);
             result.overall.add(record.result, slot.a_seat);

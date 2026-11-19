@@ -35,9 +35,7 @@ namespace pokebot {
             void take_prizes(GameState& game, int player, int count) {
                 PlayerState& p = game.player(player);
                 for (int i = 0; i < count && !p.prizes.empty(); ++i) {
-                    const std::size_t pick = game.rng.below(static_cast<std::uint32_t>(p.prizes.size()));
-                    p.hand.push_back(p.prizes[pick]);
-                    p.prizes.erase_at(pick);
+                    p.hand.push_back(p.prizes.pop_back());
                 }
             }
 

@@ -47,6 +47,11 @@ shared read-only; every game copies its own state.
 | `a_wins_by`, `a_losses_by` | A's wins and losses by how the game ended. Prize cards and no Pokémon left are the winner's doing and deck-out the loser's, so a win by `DeckOut` means B's deck ran out and a loss by `DeckOut` means A's did |
 | `games`, `turns`, `actions`, `seconds`, `threads` | For speed |
 | `replays` | Every `replay_every`-th game as a [replay](replay.md), with the decks' and agents' names |
+| `a_counters`, `b_counters` | Each side's agent [counters](../agents/agent.md), added up over every game, by name in the order the agent gives them |
+
+**Progress:** `ArenaOptions::on_progress(finished, total)` is called about every 5% of the games, and
+at the end, from whichever thread finished the game (one call at a time). `pokebot-sim` uses it to
+print a line to the error stream, so long runs show they're alive.
 
 A `Tally`'s `score()` is A's points per game: 1 for a win, ½ for a draw. A game stopped by the
 action limit counts as a draw.

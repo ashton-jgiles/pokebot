@@ -3,6 +3,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <catch2/catch_approx.hpp>
@@ -43,6 +44,21 @@ namespace {
     Contestant random_named(const std::string& name) {
         return Contestant{name, [](std::uint64_t seed) { return std::make_unique<pokebot::RandomAgent>(seed); }};
     }
+
+    class CountingAgent final : public pokebot::Agent {
+    public:
+        explicit CountingAgent(std::uint64_t seed) : random_(seed) {}
+        std::string name() const override { return "counting"; }
+        pokebot::Action choose(const pokebot::Observation& observation, const std::vector<pokebot::Action>& actions) override {
+            ++decisions_;
+            return random_.choose(observation, actions);
+        }
+        std::vector<std::pair<std::string, double>> counters() const override { return {{"games", 1.0}, {"decisions", static_cast<double>(decisions_)}}; }
+
+    private:
+        pokebot::RandomAgent random_;
+        long long decisions_ = 0;
+    };
 
     // An agent that gives up at its first decision.
     class FailingAgent final : public pokebot::Agent {
@@ -180,4 +196,25 @@ TEST_CASE("an agent's failure in one game stops the arena and is passed on", "[a
     options.games = 4;
     options.threads = 4;
     CHECK_THROWS_WITH(pokebot::run_arena(db, sample_decks(), random_named("A"), failing, options), "this agent always fails");
+}
+
+TEST_CASE("an arena reports its progress and adds up each side's counters", "[arena]") {
+    const CardDB db = sample_db();
+    const Contestant counting{"counting", [](std::uint64_t seed) { return std::make_unique<CountingAgent>(seed); }};
+    ArenaOptions options;
+    options.games = 4;
+    options.threads = 3;
+    std::vector<std::pair<long long, long long>> progress;
+    options.on_progress = [&](long long done, long long total) {
+        progress.emplace_back(done, total);
+    };
+    const ArenaResult result = pokebot::run_arena(db, sample_decks(), counting, random_named("B"), options);
+
+    REQUIRE(!progress.empty());
+    CHECK(progress.back() == std::pair<long long, long long>{16, 16});
+    REQUIRE(result.a_counters.size() == 2);
+    CHECK(result.a_counters[0] == std::pair<std::string, double>{"games", 16.0});
+    CHECK(result.a_counters[1].first == "decisions");
+    CHECK(result.a_counters[1].second > 16.0);
+    CHECK(result.b_counters.empty());
 }

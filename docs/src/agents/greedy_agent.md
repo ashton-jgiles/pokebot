@@ -39,6 +39,7 @@ using Trade with an empty deck looked as good as doing nothing, because the disc
 choice. So after an action, while the next decision is still the agent's and isn't a new main-phase
 decision (`MainPhase` or `ExtraAttack`), it makes that choice too, taking the option that scores
 best right after it (the first of any tied), up to 64 choices. Only then is the action scored.
+The rule lives in [plans](plan.md) (`finish_choices`), where the turn planner uses it too.
 
 **A single legal action** is taken without building any world.
 

@@ -12,7 +12,7 @@ The milestone plan from the project proposal, with the current status of each.
 | M3b | Standard coverage: card-text translator and coverage report | ⬜ Not started |
 | M4 | Observation layer, command-line client, replays | ✅ Done |
 | M5 | Greedy agent, match harness, profiling | ✅ Done |
-| M6 | Model 1: turn planner (or-tree and and-tree modes) | ⬜ Not started |
+| M6 | Model 1: turn planner (or-tree and and-tree modes) | ✅ Done |
 | M7 | Determinization and flat Monte Carlo | ⬜ Not started |
 | M8 | Model 2: IS-MCTS | ⬜ Not started |
 | M9 | Model 3: endgame solver (expectiminimax) | ⬜ Not started |
@@ -248,6 +248,65 @@ Known limits, each documented where it lives:
 - **Greedy is slow** for what it does (about 9 ms a game on one thread), which matters once M7
   uses it for playouts: profiling it is a good first task there.
 - **The weights θ are set by hand,** two of them adjusted in 5.6b after measuring; M10 learns them.
+
+## M6 — Model 1: turn planner ✅
+
+**Done when:** the or-tree mode finds the win in every position of a hand-built test suite, and the
+and-tree mode's Planner beats Greedy. The suite also reports the nodes expanded with and without the
+closed set, and with and without f_bound.
+
+The planner searches the certain part of the current turn: Det actions, ending in one Bnd action.
+The or-tree mode looks for the first plan that reaches a goal (a win, a Knock Out, k Prize cards); the
+and-tree mode finds the best plans by branch-and-bound. Until IS-MCTS (M8), the Planner plays the
+or-tree's winning plan if there is one, and the and-tree's best plan otherwise.
+
+**How actions are classed (decided 2026-11-19):** by applying the action once: Det if it uses no
+chance (the random number generator didn't move), reveals nothing (the player knows the place of no
+new card) and leaves the player in their main phase; Fin if only the last fails. A Prize card taken
+for a Knock Out doesn't count as revealing for Fin, and the engine now takes Prize cards from the end
+of the pile rather than at random, so a Knock Out needs no chance.
+
+| Step | Builds | Status |
+|---|---|---|
+| 6.1 | **Action classes** Det, Fin and the rest of Bnd, by applying the action once. See [action classes](src/agents/action_class.md) | ✅ |
+| 6.2 | **State hash and closed set:** a 64-bit hash of everything but the random number generator and the hand's order, so equivalent orders of the same actions hash the same. See [state hash](src/agents/state_hash.md) | ✅ |
+| 6.3 | **Plans and plan value:** δ*, and e (or u) at the end after the player's follow-up choices, averaged over m sampled worlds when the last action is uncertain, with the same worlds for every action at one state. See [plans](src/agents/plan.md) | ✅ |
+| 6.4 | **Or-tree mode:** goals γ_win, γ_KO and γ_prize^k, best-first by h_KO, children ordered by action class, node budget B_or. See [or-tree](src/agents/or_tree.md) | ✅ |
+| 6.5 | **And-tree mode:** branch-and-bound for the top-K plans (one per end state), depth-first with the best child first, f_bound from a relaxed problem, node budget B_tp. Plan values now deal each state's sampled worlds from its hash, so they don't depend on the search's order. See [and-tree](src/agents/and_tree.md) | ✅ |
+| 6.6 | **Planner agent:** in its main phase, the or-tree's win, else the and-tree's best plan, followed while its observation is what the plan expected and planned again when not; Greedy for every other decision; `--agent planner`. See [planner](src/agents/planner_agent.md). *First run, 100 games per pairing: Planner 73.2% (95% CI 71.0% to 75.3%) against Greedy, but ns-zoroark against mega-greninja only 41.0%, and 7.5 games/s on 16 threads. So the Planner now times its parts, agents report counters to the match harness, and `pokebot-sim` shows progress. With one sampled world instead of three: 73.8% (95% CI 71.6% to 75.9%) at 38.0 games/s, so one is now the default (`--planner-samples` and `--planner-or-budget`/`--planner-and-budget` change the settings). The weak pairing is the deck, not the Planner: with Greedy on both sides ns-zoroark wins only 21% (95% CI 14.2% to 30.0%) against mega-greninja, and 22% to 30% against the other decks, so the Planner's 38% there is still 17 points better than Greedy's* | ✅ |
+| 6.7 | **Test positions:** the win found in every one, and nodes expanded with and without the closed set and f_bound. The [planner lab](src/harness/planner_lab.md) measures both on positions from Greedy-against-Greedy games (`pokebot-sim --planner-lab N`), besides the hand-built positions in the tests. *64 games, 928 positions searched to the end: no false wins, but the 200-node win search found only 9 of 12 wins (the deepest took 1,420 nodes); the closed set cuts both searches by about 2.3 times; f_bound never changed the best value but saves only 3%. With a 2,000-node win search the Planner scores 74.2% (95% CI 72.1% to 76.3%) against Greedy at 23.3 games/s, no better than 73.8% at 200 nodes and 38.0 games/s: the and-tree's best plan is worth 1 when it wins, so it finds most of the wins the or-tree misses. The budget stays 200* | ✅ |
+| 6.8 | **Sign-off:** Planner against Greedy on every deck pairing, and speed | ✅ |
+
+**Sign-off run (2026-11-19):** `pokebot-sim --agents planner,greedy --games 1000` on all 16 deck
+pairings (16,000 games, every seed once with the Planner in each seat; 1 sampled world, or-tree
+budget 200, and-tree budget 300), with the invariant checker after every action: **no problems
+found**.
+
+| Measure | Result |
+|---|---|
+| The Planner's score against Greedy | **73.8%** (95% CI 73.1% to 74.4%): 11,800 won, 4,200 lost, 0 drawn |
+| By who went first | Planner first 75.5% (74.5% to 76.4%), Greedy first 72.0% (71.0% to 73.0%) |
+| Every deck pairing | 40.5% to 92.6%; only ns-zoroark against mega-greninja is below 56.5% |
+| How the Planner won | Prize cards 10,036, Greedy's deck ran out 953, no Pokémon left 811 |
+| How the Planner lost | Prize cards 3,268, its own deck ran out 740, no Pokémon left 192 |
+| Per game | 22.3 plans, 0.63 wins found by the or-tree, 57.0 actions from plans and 10.1 from Greedy; 2,293 or-tree and 3,035 and-tree nodes; 10,187 plan endings scored, 8,821 of them uncertain |
+| Speed, Planner against Greedy | about 33.9 games/s on 16 threads without checks (32.5 with), 3.5 on one |
+
+The Planner beats Greedy on every pairing but one, and that one is the deck: with Greedy on both
+sides, ns-zoroark wins only 21% against mega-greninja (step 6.6), so the Planner's 40.5% there is
+still about 20 points better than Greedy's.
+
+Known limits, each documented where it lives:
+- **The or-tree's 200-node budget misses some wins** (9 of 12 in the [planner lab](src/harness/planner_lab.md)),
+  but the and-tree's best plan finds most of them, and 2,000 nodes scored no better.
+- **f_bound saves little:** 3% of and-tree nodes. It never changed the best value in 928 positions,
+  but it isn't proven sound.
+- **The Planner is slow** for what it adds: about 290 ms a game on one thread, against about 11 ms
+  for a game of Greedy against Random. Two thirds of that is scoring plan endings in sampled worlds.
+- **e barely sees what a deck is built to do:** ns-zoroark's Abilities and copied attacks are worth
+  little to its 10 features, which is why that deck gains least. M10 learns the weights.
+- **The opponent's unseen cards are a placeholder** in the worlds until M7 deals them from a
+  guessed decklist.
 
 ## M5 onward
 
