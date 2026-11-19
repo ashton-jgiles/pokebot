@@ -201,8 +201,8 @@ can't use hidden cards either. The turn planner (M6) needs the same states.
 
 | Step | Builds | Status |
 |---|---|---|
-| 5.1 | **The engine's stack in `Observation`:** every pending decision, and the effects resolving with their chosen cards hidden from a viewer who can't place them. See [observation](src/engine/observation/observation.md) | 🔄 |
-| 5.2 | **Consistent states:** a `GameState` built from an observation, which observes back to the same observation | ⬜ |
+| 5.1 | **The engine's stack in `Observation`:** every pending decision, and the effects resolving with their chosen cards hidden from a viewer who can't place them. See [observation](src/engine/observation/observation.md) | ✅ |
+| 5.2 | **Consistent states:** a [`World`](src/agents/world.md), a `GameState` built from an observation that observes back to the same observation, with the viewer's own hidden cards dealt from their known contents and the opponent's unseen cards a placeholder | 🔄 |
 | 5.3 | **The evaluation function** `e` (features φ1–φ8, hand-set weights) computed from an observation | ⬜ |
 | 5.4 | **Greedy agent:** one action ahead, averaged over a few sampled states | ⬜ |
 | 5.5 | **Match harness:** seeded games in parallel, seats swapped, win rates with 95% confidence intervals per deck pairing, replays kept | ⬜ |

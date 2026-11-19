@@ -50,8 +50,8 @@ Each `PlayerView` has:
   deck can't be read off the card table.
 - **`opponent_seen` is what deck guessing will use** (M7): a Dreepy seen once still says Dragapult,
   even after it's shuffled back into the deck.
-- **The engine's stack is in it** (`pending` and `effects`), so a game state consistent with an observation
-  can be built from it (for the greedy agent and search, M5 on), even partway through an effect. Everything in them is public
+- **The engine's stack is in it** (`pending` and `effects`), so a [`World`](../../agents/world.md), a game state
+  consistent with an observation, can be built from it, even partway through an effect. Everything in them is public
   except the cards an effect has chosen, which are hidden as above. The rest of an `EffectRun` (its
   damage so far, coins flipped, Pokémon targeted, how many cards it moved) is seen at the table.
 - **Two games that differ only in cards the viewer can't see give equal observations.** That's the

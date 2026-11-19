@@ -40,6 +40,7 @@ points to it.
 
 ```cpp
 CardTable(const CardDB& db, const Decklist& deck0, const Decklist& deck1);
+explicit CardTable(const std::array<const CardDef*, kMaxCards>& defs);
 const CardDef& def(CardIndex card) const;
 CardTable shuffled(std::uint64_t seed) const;
 ```
@@ -47,6 +48,9 @@ CardTable shuffled(std::uint64_t seed) const;
 Cards are numbered in decklist order. `shuffled(seed)` returns a copy with each player's cards in a
 random order instead (player 0 keeps 0–59, player 1 60–119), so card numbers don't give a deck away.
 See [knowledge](../knowledge/knowledge.md#card-numbers).
+
+The constructor from an array of definitions is for a [`World`](../../agents/world.md), which fills
+in the cards a player hasn't seen with a placeholder.
 
 The constructor runs the [deck validator](../../cards/validator/deck_validator.md) on both decks and throws
 `std::invalid_argument`, listing every problem, if either is illegal, so a game can never start

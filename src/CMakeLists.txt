@@ -26,6 +26,7 @@ add_library(pokebot_lib
   engine/describe/describe.cpp
   agents/random_agent.cpp
   agents/human_agent.cpp
+  agents/world.cpp
   harness/match.cpp
   harness/replay.cpp
 )
