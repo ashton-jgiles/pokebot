@@ -17,3 +17,6 @@ CMakeUserPresets.json
 # OS
 Thumbs.db
 .DS_Store
+
+# Replays the sim saves when an invariant breaks
+replays/

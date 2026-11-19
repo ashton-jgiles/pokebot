@@ -26,6 +26,7 @@ add_library(pokebot_lib
   engine/describe/describe.cpp
   agents/random_agent.cpp
   harness/match.cpp
+  harness/replay.cpp
 )
 target_include_directories(pokebot_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 # card.hpp includes nlohmann/json, so anything using pokebot_lib needs it too.

@@ -73,9 +73,22 @@ Described from the point of view of the player making the pending decision:
 
 `pokebot-sim --print` uses both functions to narrate a whole game; see [`tools/sim`](../../../tools/sim/main.md).
 
+## An action, as one player saw it
+
+```cpp
+std::string describe(const GameState& before, const Action& action, const GameState& after, int viewer);
+```
+
+The same text, but a card `viewer` knew the place of neither before nor after the action is
+"an unseen card", or "a face-down Pokemon" when it's put down during setup. So the opponent's
+search that doesn't reveal reads `choose an unseen card`, while one that reveals names the card.
+[Replays](../../harness/replay.md) use it to show a game as one player saw it.
+
 ## Tests
 
 [`tests/test_stress.cpp`](../../../../tests/test_stress.cpp), tag `[describe]`: across 20 full games
 on the real decks, every state and every legal action is described, with no "unknown". A new
 action kind without a description fails this test. [`tests/test_observation.cpp`](../../../../tests/test_observation.cpp)
 describes every observation in its random games, and checks the opponent's hand shows as a count.
+[`tests/test_replay.cpp`](../../../../tests/test_replay.cpp) checks, across 30 random games, that each player's
+description of an action hides exactly the cards they don't know.

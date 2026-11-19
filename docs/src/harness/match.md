@@ -17,7 +17,8 @@ the list the agent was given, or it throws `std::invalid_argument` naming the ag
 carried out with [`apply_legal`](../engine/engine.md), so the list isn't built twice.
 
 With `check_invariants` on, it runs [`check_invariants`](../engine/invariants/invariants.md) before the first
-action and after every action. If anything is inconsistent, it throws `std::logic_error` with:
+action and after every action. If anything is inconsistent, it throws `InvariantError` (a
+`std::logic_error`) with `seed` and `moves`, so the game can be saved as a [replay](replay.md), and a message with:
 - the **seed**, so the game can be replayed;
 - how many actions in it broke;
 - every broken rule;
@@ -38,6 +39,7 @@ action and after every action. If anything is inconsistent, it throws `std::logi
 | `end` | `GameEnd`: how it ended |
 | `first_player` | Who went first |
 | `turns`, `actions` | Length of the game |
+| `moves` | Every action taken, in order: what a [replay](replay.md) needs |
 
 ## `ask`
 
@@ -50,7 +52,7 @@ Asks `agent` to make the game's current decision, showing it
 player can see. `play_game`, `pokebot-sim --print` and the tests that run agents all go through it.
 
 Building the observation costs about 1.2 µs per decision in the release build, about as much as
-carrying out the action. With the random agents that roughly halves the sim's speed. Real agents
+carrying out the action. With the random agents it takes the sim from about 4,460 to about 2,860 games/s. Real agents
 will spend far longer than that thinking about each decision.
 
 ## How a game ended
@@ -70,5 +72,6 @@ A game that isn't over is `ActionLimit`.
 
 ## Used by
 
-- [`pokebot-sim`](../../tools/sim/main.md), for the 100,000-game stress test and speed numbers.
+- [`pokebot-sim`](../../tools/sim/main.md), for the 100,000-game stress test and speed numbers. It saves a
+  replay of any game that breaks an invariant.
 - [`tests/test_stress.cpp`](../../../tests/test_stress.cpp): 2,000 real-deck games on every `ctest` run.

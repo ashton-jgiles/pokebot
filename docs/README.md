@@ -58,6 +58,7 @@ see the engine through `legal_actions` and `apply`.
 | `src/agents` | [agent.md](src/agents/agent.md) | The `Agent` interface |
 | | [random_agent.md](src/agents/random_agent.md) | Random and biased random agents |
 | `src/harness` | [match.md](src/harness/match.md) | `play_game`, how games end |
+| | [replay.md](src/harness/replay.md) | Saving games and playing them back, as either player |
 | `src/client` | [main.md](src/client/main.md) | Command-line client (placeholder) |
 | `tools/import` | [main.md](tools/import/main.md) | The `pokebot-import` command |
 | | [tcgdex.md](tools/import/tcgdex.md) | TCGdex lookup, cache, retries |

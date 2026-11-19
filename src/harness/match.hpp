@@ -1,6 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include <stdexcept>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "agents/agent.hpp"
@@ -35,6 +38,18 @@ namespace pokebot {
         int first_player = 0;
         int turns = 0;
         int actions = 0;
+        std::vector<Action> moves; // every action taken, in order: what a replay needs
+    };
+
+    // An invariant broke during play_game. It carries the game's seed and moves, so the game can be
+    // saved as a replay.
+    class InvariantError : public std::logic_error {
+    public:
+        InvariantError(const std::string& message, std::uint64_t game_seed, std::vector<Action> taken)
+            : std::logic_error(message), seed(game_seed), moves(std::move(taken)) {}
+
+        std::uint64_t seed;
+        std::vector<Action> moves; // up to and including the action after which it broke
     };
 
     GameRecord play_game(const CardTable& cards, std::uint64_t seed, Agent& player0, Agent& player1, const MatchOptions& options = {});

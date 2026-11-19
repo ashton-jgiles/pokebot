@@ -2,6 +2,7 @@
 
 #include <sstream>
 
+#include "engine/knowledge/knowledge.hpp"
 #include "engine/rules/rules.hpp"
 
 namespace pokebot {
@@ -130,75 +131,94 @@ namespace pokebot {
 
     } // namespace
 
-    std::string describe(const GameState& game, const Action& action) {
-        const int player = game.is_over() ? game.current_player : game.decision().player;
-        const auto card = [&game, &action]() {
-            return game.def(action.card).name;
-        };
+    namespace {
 
-        switch (action.kind) {
-            case ActionKind::ChooseTurnOrder:
-                return action.amount == 0 ? "go first" : "go second";
-            case ActionKind::SetupPlaceActive:
-                return "make " + card() + " the Active Pokemon";
-            case ActionKind::SetupPlaceBench:
-            case ActionKind::PlayBasic:
-                return "put " + card() + " on the Bench";
-            case ActionKind::SetupDone:
-                return "finish setting up";
-            case ActionKind::DrawMulliganCards:
-                return "draw " + std::to_string(action.amount) + " extra card(s)";
-            case ActionKind::Evolve:
-                return "evolve " + slot_name(game, player, action.target) + " into " + card();
-            case ActionKind::AttachEnergy:
-                return "attach " + card() + " to " + slot_name(game, player, action.target);
-            case ActionKind::Retreat:
-                return "retreat, bringing in " + slot_name(game, player, action.target);
-            case ActionKind::Attack: {
-                const PlayerState& p = game.player(player);
-                if (!p.active) {
-                    return "attack";
+        template <class Name>
+        std::string action_text(const GameState& game, const Action& action, Name name) {
+            const int player = game.is_over() ? game.current_player : game.decision().player;
+            const auto card = [&]() {
+                return name(action.card);
+            };
+
+            switch (action.kind) {
+                case ActionKind::ChooseTurnOrder:
+                    return action.amount == 0 ? "go first" : "go second";
+                case ActionKind::SetupPlaceActive:
+                    return "make " + card() + " the Active Pokemon";
+                case ActionKind::SetupPlaceBench:
+                case ActionKind::PlayBasic:
+                    return "put " + card() + " on the Bench";
+                case ActionKind::SetupDone:
+                    return "finish setting up";
+                case ActionKind::DrawMulliganCards:
+                    return "draw " + std::to_string(action.amount) + " extra card(s)";
+                case ActionKind::Evolve:
+                    return "evolve " + slot_name(game, player, action.target) + " into " + card();
+                case ActionKind::AttachEnergy:
+                    return "attach " + card() + " to " + slot_name(game, player, action.target);
+                case ActionKind::Retreat:
+                    return "retreat, bringing in " + slot_name(game, player, action.target);
+                case ActionKind::Attack: {
+                    const PlayerState& p = game.player(player);
+                    if (!p.active) {
+                        return "attack";
+                    }
+                    const auto& attacks = game.def(p.active->top()).attacks;
+                    if (action.amount >= attacks.size()) {
+                        return "attack " + std::to_string(action.amount);
+                    }
+                    const Attack& attack = attacks[action.amount];
+                    return "attack with " + attack.name + " (" + std::to_string(attack.damage) + ")";
                 }
-                const auto& attacks = game.def(p.active->top()).attacks;
-                if (action.amount >= attacks.size()) {
-                    return "attack " + std::to_string(action.amount);
-                }
-                const Attack& attack = attacks[action.amount];
-                return "attack with " + attack.name + " (" + std::to_string(attack.damage) + ")";
+                case ActionKind::PlayTrainer:
+                    return "play " + card();
+                case ActionKind::UseAbility:
+                    return "use " + game.def(action.card).abilities[action.amount].name + " (" + slot_name(game, player, action.target) + ")";
+                case ActionKind::UseStadium:
+                    return "use " + card();
+                case ActionKind::AttachTool:
+                    return "attach " + card() + " to " + slot_name(game, player, action.target);
+                case ActionKind::EndTurn:
+                    return "end the turn";
+                case ActionKind::DiscardEnergy:
+                    return "discard " + card();
+                case ActionKind::Promote:
+                    return "promote " + slot_name(game, player, action.target);
+                case ActionKind::ChooseCard:
+                    if (action.target != kActiveSlot || (!game.is_over() && game.decision().kind == DecisionKind::CustomChoice)) {
+                        return "choose " + card() + " for " + slot_name(game, player, action.target);
+                    }
+                    return "choose " + card();
+                case ActionKind::ChooseDone:
+                    return "stop choosing";
+                case ActionKind::ChoosePokemon:
+                    return "choose " + slot_name(game, player, action.target);
+                case ActionKind::AnswerYes:
+                    return "yes";
+                case ActionKind::AnswerNo:
+                    return "no";
+                case ActionKind::ChooseAttack:
+                    return "use " + game.def(action.card).attacks[action.amount].name + " from " + card();
+                case ActionKind::DiscardBenched:
+                    return "discard " + slot_name(game, player, action.target);
             }
-            case ActionKind::PlayTrainer:
-                return "play " + card();
-            case ActionKind::UseAbility:
-                return "use " + game.def(action.card).abilities[action.amount].name + " (" + slot_name(game, player, action.target) + ")";
-            case ActionKind::UseStadium:
-                return "use " + card();
-            case ActionKind::AttachTool:
-                return "attach " + card() + " to " + slot_name(game, player, action.target);
-            case ActionKind::EndTurn:
-                return "end the turn";
-            case ActionKind::DiscardEnergy:
-                return "discard " + card();
-            case ActionKind::Promote:
-                return "promote " + slot_name(game, player, action.target);
-            case ActionKind::ChooseCard:
-                if (action.target != kActiveSlot || (!game.is_over() && game.decision().kind == DecisionKind::CustomChoice)) {
-                    return "choose " + card() + " for " + slot_name(game, player, action.target);
-                }
-                return "choose " + card();
-            case ActionKind::ChooseDone:
-                return "stop choosing";
-            case ActionKind::ChoosePokemon:
-                return "choose " + slot_name(game, player, action.target);
-            case ActionKind::AnswerYes:
-                return "yes";
-            case ActionKind::AnswerNo:
-                return "no";
-            case ActionKind::ChooseAttack:
-                return "use " + game.def(action.card).attacks[action.amount].name + " from " + card();
-            case ActionKind::DiscardBenched:
-                return "discard " + slot_name(game, player, action.target);
+            return "unknown action";
         }
-        return "unknown action";
+
+    } // namespace
+
+    std::string describe(const GameState& game, const Action& action) {
+        return action_text(game, action, [&](CardIndex card) { return game.def(card).name; });
+    }
+
+    std::string describe(const GameState& before, const Action& action, const GameState& after, int viewer) {
+        const bool setup = action.kind == ActionKind::SetupPlaceActive || action.kind == ActionKind::SetupPlaceBench;
+        return action_text(before, action, [&](CardIndex card) {
+            if (knows_where(before, viewer, card) || knows_where(after, viewer, card)) {
+                return before.def(card).name;
+            }
+            return std::string(setup ? "a face-down Pokemon" : "an unseen card");
+        });
     }
 
     std::string describe(const GameState& game) {

@@ -13,17 +13,17 @@ namespace pokebot {
 
     namespace {
 
-        void require_invariants(const GameState& game, std::uint64_t seed, int actions) {
+        void require_invariants(const GameState& game, std::uint64_t seed, const std::vector<Action>& moves) {
             const auto problems = check_invariants(game);
             if (problems.empty()) {
                 return;
             }
-            std::string message = "invariant broken in game " + std::to_string(seed) + " after " + std::to_string(actions) + " actions:";
+            std::string message = "invariant broken in game " + std::to_string(seed) + " after " + std::to_string(moves.size()) + " actions:";
             for (const auto& problem : problems) {
                 message += "\n  - " + problem;
             }
             message += "\n" + describe(game);
-            throw std::logic_error(message);
+            throw InvariantError(message, seed, moves);
         }
 
     } // namespace
@@ -73,12 +73,13 @@ namespace pokebot {
         const CardTable table = cards.shuffled(~seed); // numbered in decklist order, cards would give the decks away
         GameState game = new_game(table, seed);
         const std::array<Agent*, kPlayers> agents{&player0, &player1};
-        int actions = 0;
+        GameRecord record;
+        record.moves.reserve(256);
         if (options.check_invariants) {
-            require_invariants(game, seed, actions);
+            require_invariants(game, seed, record.moves);
         }
 
-        while (!game.is_over() && actions < options.max_actions) {
+        while (!game.is_over() && record.moves.size() < static_cast<std::size_t>(options.max_actions)) {
             const auto legal = legal_actions(game);
             Agent& agent = *agents[game.decision().player];
             const Action action = ask(agent, game, legal);
@@ -86,12 +87,17 @@ namespace pokebot {
                 throw std::invalid_argument("play_game: the " + agent.name() + " agent chose an action that isn't legal");
             }
             apply_legal(game, action); // the list was just built, so apply needn't build it again
-            ++actions;
+            record.moves.push_back(action);
             if (options.check_invariants) {
-                require_invariants(game, seed, actions);
+                require_invariants(game, seed, record.moves);
             }
         }
-        return GameRecord{game.result, how_game_ended(game), game.first_player, game.turn, actions};
+        record.result = game.result;
+        record.end = how_game_ended(game);
+        record.first_player = game.first_player;
+        record.turns = game.turn;
+        record.actions = static_cast<int>(record.moves.size());
+        return record;
     }
 
 } // namespace pokebot
