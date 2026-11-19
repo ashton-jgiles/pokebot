@@ -269,8 +269,8 @@ of the pile rather than at random, so a Knock Out needs no chance.
 | Step | Builds | Status |
 |---|---|---|
 | 6.1 | **Action classes** Det, Fin and the rest of Bnd, by applying the action once. See [action classes](src/agents/action_class.md) | ✅ |
-| 6.2 | **State hash and closed set:** a 64-bit hash of everything but the random number generator and the hand's order, so equivalent orders of the same actions hash the same. See [state hash](src/agents/state_hash.md) | 🔄 |
-| 6.3 | **Plans and plan value:** δ*, e (or u) at the end, averaged over m sampled worlds when the last action is uncertain | ⬜ |
+| 6.2 | **State hash and closed set:** a 64-bit hash of everything but the random number generator and the hand's order, so equivalent orders of the same actions hash the same. See [state hash](src/agents/state_hash.md) | ✅ |
+| 6.3 | **Plans and plan value:** δ*, and e (or u) at the end after the player's follow-up choices, averaged over m sampled worlds when the last action is uncertain, with the same worlds for every action at one state. See [plans](src/agents/plan.md) | 🔄 |
 | 6.4 | **Or-tree mode:** goals γ_win, γ_KO and γ_prize^k, best-first by h_KO, children ordered by action class, node budget B_or | ⬜ |
 | 6.5 | **And-tree mode:** branch-and-bound for the top-K plans, f_bound from a relaxed problem, node budget B_tp | ⬜ |
 | 6.6 | **Planner agent:** the or-tree's win, else the and-tree's best plan, planning again after each boundary | ⬜ |

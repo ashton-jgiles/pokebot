@@ -31,6 +31,7 @@ add_library(pokebot_lib
   agents/greedy_agent.cpp
   agents/action_class.cpp
   agents/state_hash.cpp
+  agents/plan.cpp
   harness/match.cpp
   harness/replay.cpp
   harness/arena.cpp
