@@ -31,11 +31,14 @@ add_library(pokebot_lib
   agents/greedy_agent.cpp
   harness/match.cpp
   harness/replay.cpp
+  harness/arena.cpp
 )
 target_include_directories(pokebot_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 # card.hpp includes nlohmann/json, so anything using pokebot_lib needs it too.
+# The match harness plays games on several threads.
+find_package(Threads REQUIRED)
 target_link_libraries(pokebot_lib
-  PUBLIC nlohmann_json::nlohmann_json
+  PUBLIC nlohmann_json::nlohmann_json Threads::Threads
   PRIVATE pokebot_warnings)
 
 # Command-line client (play against the bot, run matches).

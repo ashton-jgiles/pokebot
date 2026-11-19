@@ -2,9 +2,10 @@
 
 **File:** [`tools/sim/main.cpp`](../../../tools/sim/main.cpp) · **Executable:** `pokebot-sim`
 
-Plays many games between random agents on the real decks, either to stress-test the engine and
-measure its speed, or to narrate one game move by move. It also saves and prints
-[replays](../../src/harness/replay.md).
+Plays many games on the real decks: one kind of agent against itself, to stress-test the engine
+and measure its speed; one agent against another (`--agents A,B`), to measure win rates through
+the [match harness](../../src/harness/arena.md); or one game narrated move by move. It also saves
+and prints [replays](../../src/harness/replay.md).
 
 ## Usage
 
@@ -14,6 +15,7 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 ```bash
 ./build/debug/tools/sim/pokebot-sim.exe [--games N] [--agent random|biased|greedy] [--seed S] [--no-check]
                                         [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]
+                                        [--agents A,B [--threads N] [--save-replays K]]
 ```
 
 | Option | Default | Meaning |
@@ -27,9 +29,28 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 | `--check-replays` | | Save every game as replay text, load it and play it back, checking it ends in exactly the same state. A game that doesn't is saved to `replays/mismatch-seed-S.json`, and the run exits with 1 |
 | `--replay FILE` | | Print a saved replay instead of playing |
 | `--as 0\|1\|all` | `all` | With `--print` or `--replay`: show only what that player saw |
+| `--agents A,B` | | Play agent `A` against agent `B` instead (see [below](#one-agent-against-another)). `--games` is then the number of games **per deck pairing** |
+| `--threads N` | one per hardware thread | With `--agents`: games played at once |
+| `--save-replays K` | | With `--agents`: save every `K`th game to `replays/arena/` |
 
 **Pairings:** decks are sorted by file name. Game `i` plays deck `i mod n` against deck
 `(i / n) mod n`, so every pairing, including mirrors, comes up equally often.
+
+## One agent against another
+
+`--agents A,B` runs [`run_arena`](../../src/harness/arena.md): `A` against `B` on all 16 deck
+pairings (A's deck, B's deck), each seed played once with `A` in each seat, on several threads.
+`--games N` is per pairing, so `--games 1000` plays 16,000 games. `--no-check` makes it faster, as
+for the stress test. It can't be combined with `--print` or `--check-replays`.
+
+```
+./build/release/tools/sim/pokebot-sim.exe --agents greedy,random --games 1000 --no-check
+```
+
+It prints the speed, A's score (wins, plus half the draws, per game) with its 95% confidence
+interval, the same split by who went first and by deck pairing, and how the games ended. Results
+don't depend on `--threads`. Replays saved with `--save-replays` are named
+`NNNNN-seed-S-<player 0's agent>-<deck>-vs-<player 1's agent>-<deck>.json`; print one with `--replay`.
 
 ## Stress test output
 
