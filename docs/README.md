@@ -67,6 +67,7 @@ legal actions.
 | | [plan.md](src/agents/plan.md) | Plans (macro-actions), δ*, plan values and follow-up choices |
 | | [or_tree.md](src/agents/or_tree.md) | The turn planner's or-tree mode: a line this turn that reaches a goal |
 | | [and_tree.md](src/agents/and_tree.md) | The turn planner's and-tree mode: the best plans this turn, by branch-and-bound |
+| | [planner_agent.md](src/agents/planner_agent.md) | The Planner agent: Model 1 playing a game |
 | `src/harness` | [match.md](src/harness/match.md) | `play_game`, how games end |
 | | [replay.md](src/harness/replay.md) | Saving games and playing them back, as either player |
 | | [arena.md](src/harness/arena.md) | The match harness: one agent against another, in parallel, with confidence intervals |

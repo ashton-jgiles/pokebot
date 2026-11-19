@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "agents/greedy_agent.hpp"
+#include "agents/planner_agent.hpp"
 #include "agents/random_agent.hpp"
 #include "cards/db/card_db.hpp"
 #include "core/decklist.hpp"
@@ -49,11 +50,11 @@ namespace {
     };
 
     void print_usage() {
-        std::cerr << "usage: pokebot-sim [--games N] [--agent random|biased|greedy] [--seed S] [--no-check]\n"
+        std::cerr << "usage: pokebot-sim [--games N] [--agent random|biased|greedy|planner] [--seed S] [--no-check]\n"
                      "                   [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]\n"
                      "                   [--agents A,B [--threads N] [--save-replays K]]\n"
                      "  --games N            games to play (default 1000)\n"
-                     "  --agent A            random, biased or greedy (default biased)\n"
+                     "  --agent A            random, biased, greedy or planner (default biased)\n"
                      "  --seed S             first game's seed; game i uses S + i (default 1)\n"
                      "  --no-check           skip the invariant check after every action (faster)\n"
                      "  --print              play one game with seed S and print every action\n"
@@ -112,7 +113,7 @@ namespace {
             return false;
         }
         const auto known = [](const std::string& name) {
-            return name == "random" || name == "biased" || name == "greedy";
+            return name == "random" || name == "biased" || name == "greedy" || name == "planner";
         };
         if (options.agents.empty()) {
             if (options.threads != 0 || options.replay_every != 0) {
@@ -131,6 +132,9 @@ namespace {
         }
         if (name == "greedy") {
             return std::make_unique<GreedyAgent>(seed);
+        }
+        if (name == "planner") {
+            return std::make_unique<PlannerAgent>(seed);
         }
         return std::make_unique<BiasedRandomAgent>(seed);
     }
