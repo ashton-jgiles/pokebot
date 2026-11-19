@@ -45,6 +45,7 @@ A node is (w, γ) with a solution of yes, no or unknown.
   attack possible (none was legal before, one is after) first, then evolving, attaching Energy,
   Items, Supporters, any other action (Abilities, Tools, Stadiums, the choices an action leads to),
   benching, and retreating. Among leaves with the same h and depth, that order decides.
+  `action_order` gives it, and the [and-tree](and_tree.md) uses it too.
 
 **Open leaves aren't kept as states.** A leaf is its parent's index and the action, and is applied only
 when it's chosen; only expanded nodes keep a state. A budget of 2,000 nodes holds at most 2,000 states

@@ -52,7 +52,7 @@ namespace pokebot {
     }
 
     PlanScorer::PlanScorer(int player, std::uint64_t seed, int samples, const Weights& weights)
-        : player_(player), samples_(std::max(samples, 1)), weights_(weights), rng_(seed) {}
+        : player_(player), samples_(std::max(samples, 1)), weights_(weights), seed_(seed) {}
 
     double PlanScorer::value(const GameState& game, const Action& action, const TriedAction& tried) {
         if (tried.kind != ActionClass::Uncertain) {
@@ -64,8 +64,9 @@ namespace pokebot {
         if (worlds_.empty() || key != worlds_for_) {
             worlds_.clear();
             const Observation view = observe(game, player_);
+            Rng rng(seed_ ^ key);
             for (int i = 0; i < samples_; ++i) {
-                worlds_.push_back(std::make_unique<World>(view, rng_));
+                worlds_.push_back(std::make_unique<World>(view, rng));
             }
             worlds_for_ = key;
         }

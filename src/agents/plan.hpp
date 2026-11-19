@@ -35,7 +35,7 @@ namespace pokebot {
             int player_;
             int samples_;
             Weights weights_;
-            Rng rng_;
+            std::uint64_t seed_;
             std::uint64_t worlds_for_ = 0;
             std::vector<std::unique_ptr<World>> worlds_;
     };

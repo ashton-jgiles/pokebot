@@ -50,6 +50,7 @@ add_executable(pokebot_tests
   test_state_hash.cpp
   test_plan.cpp
   test_or_tree.cpp
+  test_and_tree.cpp
 )
 target_link_libraries(pokebot_tests PRIVATE
   pokebot_lib pokebot_import_lib pokebot_warnings Catch2::Catch2WithMain)

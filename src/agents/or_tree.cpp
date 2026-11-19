@@ -59,31 +59,6 @@ namespace pokebot {
             std::uint8_t knocked_out_at_start_ = 0;
         };
 
-        int class_order(const GameState& game, const Action& action, bool enables_attack) {
-            if (enables_attack) {
-                return 0;
-            }
-            switch (action.kind) {
-                case ActionKind::Evolve:
-                    return 1;
-                case ActionKind::AttachEnergy:
-                    return 2;
-                case ActionKind::PlayTrainer: {
-                    const TrainerKind kind = game.def(action.card).trainer_kind;
-                    if (kind == TrainerKind::Item) {
-                        return 3;
-                    }
-                    return kind == TrainerKind::Supporter ? 4 : 5;
-                }
-                case ActionKind::PlayBasic:
-                    return 6;
-                case ActionKind::Retreat:
-                    return 7;
-                default:
-                    return 5;
-            }
-        }
-
         struct Node {
             GameState state;
             int parent = -1;
@@ -135,6 +110,31 @@ namespace pokebot {
             consider(pokemon);
         }
         return std::max(0, rules::remaining_hp(game, target) - most);
+    }
+
+    int action_order(const GameState& game, const Action& action, bool enables_attack) {
+        if (enables_attack) {
+            return 0;
+        }
+        switch (action.kind) {
+            case ActionKind::Evolve:
+                return 1;
+            case ActionKind::AttachEnergy:
+                return 2;
+            case ActionKind::PlayTrainer: {
+                const TrainerKind kind = game.def(action.card).trainer_kind;
+                if (kind == TrainerKind::Item) {
+                    return 3;
+                }
+                return kind == TrainerKind::Supporter ? 4 : 5;
+            }
+            case ActionKind::PlayBasic:
+                return 6;
+            case ActionKind::Retreat:
+                return 7;
+            default:
+                return 5;
+        }
     }
 
     OrTreeResult or_tree_search(const GameState& game, int player, const Goal& goal, const OrTreeOptions& options) {
@@ -200,7 +200,7 @@ namespace pokebot {
                 }
                 if (tried.kind == ActionClass::Deterministic) {
                     const bool enables = !can_attack && has_attack(legal_actions(tried.after));
-                    children.push_back(Child{class_order(state, action, enables), action, knock_out_distance(tried.after, player)});
+                    children.push_back(Child{action_order(state, action, enables), action, knock_out_distance(tried.after, player)});
                 }
             }
             std::stable_sort(children.begin(), children.end(), [](const Child& a, const Child& b) { return a.order < b.order; });

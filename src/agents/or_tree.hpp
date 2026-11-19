@@ -36,4 +36,6 @@ namespace pokebot {
 
     int knock_out_distance(const GameState& game, int player);
 
+    int action_order(const GameState& game, const Action& action, bool enables_attack);
+
 } // namespace pokebot

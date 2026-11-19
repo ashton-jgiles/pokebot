@@ -37,6 +37,9 @@ otherwise; a finished game is scored with u_i instead of e_i ([evaluation](evalu
 - **The worlds dealt for one state are kept** until a different state is scored. A planner scores
   every way of ending a plan at one state together, so they're all tried with the same luck: common
   random numbers, as in the [greedy agent](greedy_agent.md).
+- **The worlds for a state depend only on the scorer's seed and the state** (its
+  [hash](state_hash.md)), not on what was scored before. So a plan has the same value however a search
+  reaches it, and two searches (with f_bound on and off, say) can be compared plan for plan.
 - **Follow-up choices come first.** After the last action, the player's own choices that follow from
   it (the Pokémon Seek takes, the cards Ultra Ball discards) are made with `finish_choices`, as Greedy
   does, and only then is the state scored. Otherwise a search would be scored partway through.
