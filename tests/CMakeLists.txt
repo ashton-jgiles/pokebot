@@ -39,6 +39,7 @@ add_executable(pokebot_tests
   test_invariants.cpp
   test_agents.cpp
   test_replay.cpp
+  test_client.cpp
   test_stress.cpp
   test_coverage.cpp
 )

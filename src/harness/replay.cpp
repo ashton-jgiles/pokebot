@@ -205,7 +205,7 @@ namespace pokebot {
         return game;
     }
 
-    void print_replay(std::ostream& out, const CardTable& table, const Replay& replay, int viewer) {
+    void print_replay(std::ostream& out, const CardTable& table, const Replay& replay, int viewer, const std::function<void()>& at_turn) {
         const auto board = [&](const GameState& game) {
             return viewer == kEveryone ? describe(game) : describe(observe(game, viewer));
         };
@@ -219,6 +219,9 @@ namespace pokebot {
         const GameState end = play_back(table, replay, [&](const GameState& before, const Action& action, const GameState& after) {
             if (before.turn != last_turn) {
                 last_turn = before.turn;
+                if (at_turn) {
+                    at_turn();
+                }
                 out << '\n'
                     << board(before);
             }

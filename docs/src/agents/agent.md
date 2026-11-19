@@ -39,5 +39,6 @@ you'd looked through the deck (see [knowledge](../engine/knowledge/knowledge.md#
 | Agent | Doc |
 |---|---|
 | `RandomAgent`, `BiasedRandomAgent` | [random_agent.md](random_agent.md) |
+| `HumanAgent` (a person typing their choices) | [human_agent.md](human_agent.md) |
 
 Games between agents are played by [`play_game`](../harness/match.md).

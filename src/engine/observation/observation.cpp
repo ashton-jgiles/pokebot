@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "engine/engine.hpp"
 #include "engine/knowledge/knowledge.hpp"
 #include "engine/rules/rules.hpp"
 
@@ -74,6 +75,7 @@ namespace pokebot {
         view.lasting = game.lasting;
         if (!game.is_over()) {
             view.decision = game.decision();
+            view.choice_owner = static_cast<std::uint8_t>(choice_owner(game));
         }
         if (!game.effects.empty()) {
             view.effect = game.effects.back().program;

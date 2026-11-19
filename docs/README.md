@@ -57,9 +57,10 @@ see the engine through `legal_actions` and `apply`.
 | | [fixed_vector.md](src/engine/shared/fixed_vector.md), [rng.md](src/engine/shared/rng.md) | Fixed-capacity list, seeded RNG |
 | `src/agents` | [agent.md](src/agents/agent.md) | The `Agent` interface |
 | | [random_agent.md](src/agents/random_agent.md) | Random and biased random agents |
+| | [human_agent.md](src/agents/human_agent.md) | A person typing their choices |
 | `src/harness` | [match.md](src/harness/match.md) | `play_game`, how games end |
 | | [replay.md](src/harness/replay.md) | Saving games and playing them back, as either player |
-| `src/client` | [main.md](src/client/main.md) | Command-line client (placeholder) |
+| `src/client` | [main.md](src/client/main.md) | The `pokebot` command: `play`, `watch`, `replay` |
 | `tools/import` | [main.md](tools/import/main.md) | The `pokebot-import` command |
 | | [tcgdex.md](tools/import/tcgdex.md) | TCGdex lookup, cache, retries |
 | | [convert.md](tools/import/convert.md) | TCGdex → our card format |

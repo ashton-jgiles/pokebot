@@ -52,13 +52,14 @@ namespace pokebot {
         TurnFlags flags;
         GameHistory history;
         FixedVector<LastingEffect, 8> lasting;
-        Decision decision; 
-        ProgramRef effect; 
+        Decision decision;
+        std::uint8_t choice_owner = 0;
+        ProgramRef effect;
         GameResult result = GameResult::Ongoing;
         std::array<PlayerView, kPlayers> players;
-        FixedVector<CardIndex, kDeckSize> deck_or_prizes; 
-        FixedVector<CardIndex, kDeckSize> opponent_seen;  
-        std::array<const CardDef*, kMaxCards> defs{}; 
+        FixedVector<CardIndex, kDeckSize> deck_or_prizes;
+        FixedVector<CardIndex, kDeckSize> opponent_seen;
+        std::array<const CardDef*, kMaxCards> defs{};
 
         const CardDef* def(CardIndex card) const { return defs[card]; }
         const PlayerView& player(int p) const { return players[static_cast<std::size_t>(p)]; }

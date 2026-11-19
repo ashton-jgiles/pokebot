@@ -11,7 +11,7 @@ Observation observe(const GameState& game, int viewer);
 ```
 
 It's built from what [knowledge](../knowledge/knowledge.md) says the viewer knows. Like `GameState`,
-it's a plain value (trivially copyable, 3,432 bytes) with `==`.
+it's a plain value (trivially copyable, about 3.4 KB) with `==`.
 
 ## What's in it
 
@@ -20,6 +20,7 @@ it's a plain value (trivially copyable, 3,432 bytes) with `==`.
 | `viewer` | Whose view this is. `me()` and `opponent()` pick out the two `PlayerView`s |
 | `turn`, `current_player`, `first_player`, `phase`, `flags`, `history`, `lasting`, `result` | Copied from the game: all public |
 | `decision` | What's being decided and by whom (not meaningful once the game is over) |
+| `choice_owner` | Whose Pokémon the actions' slots mean, from [`choice_owner`](../engine.md): the opponent's for Boss's Orders |
 | `effect` | The attack, Trainer or Ability resolving, if any (`effect.card` is `kNoCard` if none) |
 | `players` | Each side of the table, as below |
 | `deck_or_prizes` | The viewer's own cards whose place they don't know, **sorted**: their deck and Prize cards as one list |

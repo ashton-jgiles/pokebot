@@ -57,10 +57,11 @@ List every test:
 | [`test_invariants.cpp`](../../tests/test_invariants.cpp) | `[invariants]` | 5 | The checker catches duplicated, missing and misplaced cards, missed Knock Outs, bad evolutions and Energy, and a missing Active |
 | [`test_agents.cpp`](../../tests/test_agents.cpp) | `[agents]` | 3 | Random choices stay legal and cover every option, the biased agent attacks, seeds repeat (given an empty observation) |
 | [`test_replay.cpp`](../../tests/test_replay.cpp) | `[replay]` | 9 | Saving and loading, playing back to the same `GameState` and ending (sample and real decks), illegal actions and wrong results caught, bad files rejected, actions described to each player without the cards they don't know, `print_replay` |
+| [`test_client.cpp`](../../tests/test_client.cpp) | `[client]` | 10 | The human agent: the typed number taken, anything else asked again, `b` and `q`, a single choice not asked, no repeated board partway through an effect, a whole game through `play_game`; actions described from an observation reading the same as from the game (sample and real decks); the opponent's Pokémon named as theirs; `print_replay` stopping before each turn |
 | [`test_coverage.cpp`](../../tests/test_coverage.cpp) | `[coverage]` | 3 | Every card in our decks has its effects written, every search whose text says "reveal" sets `reveal`, and 2,000 biased random games use every attack (copied ones too), every Ability you choose to use, every Trainer, every Stadium action and every Special Energy in our decks, listing whatever was never used |
 | [`test_stress.cpp`](../../tests/test_stress.cpp) | `[stress]` | 3 | 1,000 biased and 1,000 uniform random real-deck games with invariant checks, and every state and action can be described. More than 300 of the biased games must end by Knock Out (random players burn through their decks with draw and search Trainers, so deck-outs are common) |
 
-**252 tests in total.** Tests that need the real card data skip themselves if `data/cards/generated/`
+**262 tests in total.** Tests that need the real card data skip themselves if `data/cards/generated/`
 doesn't exist yet; run `pokebot-import` first.
 
 ## Every card is tested

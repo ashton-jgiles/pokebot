@@ -1,7 +1,9 @@
 #include "engine/describe/describe.hpp"
 
+#include <functional>
 #include <sstream>
 
+#include "engine/engine.hpp"
 #include "engine/knowledge/knowledge.hpp"
 #include "engine/rules/rules.hpp"
 
@@ -133,11 +135,53 @@ namespace pokebot {
 
     namespace {
 
-        template <class Name>
-        std::string action_text(const GameState& game, const Action& action, Name name) {
-            const int player = game.is_over() ? game.current_player : game.decision().player;
+        // What action_text needs, from the game itself.
+        struct GameSource {
+            const GameState& game;
+            std::function<std::string(CardIndex)> name;
+
+            int player() const { return game.is_over() ? game.current_player : game.decision().player; }
+            int owner() const { return choice_owner(game); }
+            bool custom_choice() const { return !game.is_over() && game.decision().kind == DecisionKind::CustomChoice; }
+            const CardDef* def(CardIndex card) const { return &game.def(card); }
+            CardIndex active(int p) const { return game.player(p).active ? game.player(p).active->top() : kNoCard; }
+            std::string slot(int p, Slot target) const { return slot_name(game, p, target); }
+        };
+
+        // What action_text needs, from one player's observation.
+        struct ObservationSource {
+            const Observation& view;
+
+            int player() const { return view.is_over() ? view.current_player : view.decision.player; }
+            int owner() const { return view.choice_owner; }
+            bool custom_choice() const { return !view.is_over() && view.decision.kind == DecisionKind::CustomChoice; }
+            const CardDef* def(CardIndex card) const { return view.def(card); }
+            std::string name(CardIndex card) const { return name_of(view, card); }
+
+            CardIndex active(int p) const {
+                const auto& pokemon = view.player(p).active;
+                return pokemon ? pokemon->pokemon.top() : kNoCard;
+            }
+
+            std::string slot(int p, Slot target) const {
+                const PlayerView& side = view.player(p);
+                if (target == kActiveSlot) {
+                    return side.active ? "Active " + name_of(view, side.active->pokemon.top()) : "the Active Spot";
+                }
+                const std::size_t index = static_cast<std::size_t>(target) - 1;
+                const std::string text = "Bench " + std::to_string(target);
+                return index < side.bench.size() ? text + " " + name_of(view, side.bench[index].pokemon.top()) : text;
+            }
+        };
+
+        template <class Source>
+        std::string action_text(const Source& source, const Action& action) {
+            const int player = source.player();
             const auto card = [&]() {
-                return name(action.card);
+                return source.name(action.card);
+            };
+            const auto slot = [&](Slot target) {
+                return source.slot(player, target);
             };
 
             switch (action.kind) {
@@ -153,54 +197,62 @@ namespace pokebot {
                 case ActionKind::DrawMulliganCards:
                     return "draw " + std::to_string(action.amount) + " extra card(s)";
                 case ActionKind::Evolve:
-                    return "evolve " + slot_name(game, player, action.target) + " into " + card();
+                    return "evolve " + slot(action.target) + " into " + card();
                 case ActionKind::AttachEnergy:
-                    return "attach " + card() + " to " + slot_name(game, player, action.target);
+                    return "attach " + card() + " to " + slot(action.target);
                 case ActionKind::Retreat:
-                    return "retreat, bringing in " + slot_name(game, player, action.target);
+                    return "retreat, bringing in " + slot(action.target);
                 case ActionKind::Attack: {
-                    const PlayerState& p = game.player(player);
-                    if (!p.active) {
+                    const CardIndex active = source.active(player);
+                    const CardDef* def = active == kNoCard ? nullptr : source.def(active);
+                    if (def == nullptr) {
                         return "attack";
                     }
-                    const auto& attacks = game.def(p.active->top()).attacks;
-                    if (action.amount >= attacks.size()) {
+                    if (action.amount >= def->attacks.size()) {
                         return "attack " + std::to_string(action.amount);
                     }
-                    const Attack& attack = attacks[action.amount];
+                    const Attack& attack = def->attacks[action.amount];
                     return "attack with " + attack.name + " (" + std::to_string(attack.damage) + ")";
                 }
                 case ActionKind::PlayTrainer:
                     return "play " + card();
-                case ActionKind::UseAbility:
-                    return "use " + game.def(action.card).abilities[action.amount].name + " (" + slot_name(game, player, action.target) + ")";
+                case ActionKind::UseAbility: {
+                    const CardDef* def = source.def(action.card);
+                    const std::string ability = def != nullptr && action.amount < def->abilities.size() ? def->abilities[action.amount].name : "an Ability";
+                    return "use " + ability + " (" + slot(action.target) + ")";
+                }
                 case ActionKind::UseStadium:
                     return "use " + card();
                 case ActionKind::AttachTool:
-                    return "attach " + card() + " to " + slot_name(game, player, action.target);
+                    return "attach " + card() + " to " + slot(action.target);
                 case ActionKind::EndTurn:
                     return "end the turn";
                 case ActionKind::DiscardEnergy:
                     return "discard " + card();
                 case ActionKind::Promote:
-                    return "promote " + slot_name(game, player, action.target);
+                    return "promote " + slot(action.target);
                 case ActionKind::ChooseCard:
-                    if (action.target != kActiveSlot || (!game.is_over() && game.decision().kind == DecisionKind::CustomChoice)) {
-                        return "choose " + card() + " for " + slot_name(game, player, action.target);
+                    if (action.target != kActiveSlot || source.custom_choice()) {
+                        return "choose " + card() + " for " + slot(action.target);
                     }
                     return "choose " + card();
                 case ActionKind::ChooseDone:
                     return "stop choosing";
-                case ActionKind::ChoosePokemon:
-                    return "choose " + slot_name(game, player, action.target);
+                case ActionKind::ChoosePokemon: {
+                    const int owner = source.owner();
+                    return "choose " + (owner == player ? slot(action.target) : "the opponent's " + source.slot(owner, action.target));
+                }
                 case ActionKind::AnswerYes:
                     return "yes";
                 case ActionKind::AnswerNo:
                     return "no";
-                case ActionKind::ChooseAttack:
-                    return "use " + game.def(action.card).attacks[action.amount].name + " from " + card();
+                case ActionKind::ChooseAttack: {
+                    const CardDef* def = source.def(action.card);
+                    const std::string attack = def != nullptr && action.amount < def->attacks.size() ? def->attacks[action.amount].name : "an attack";
+                    return "use " + attack + " from " + card();
+                }
                 case ActionKind::DiscardBenched:
-                    return "discard " + slot_name(game, player, action.target);
+                    return "discard " + slot(action.target);
             }
             return "unknown action";
         }
@@ -208,17 +260,34 @@ namespace pokebot {
     } // namespace
 
     std::string describe(const GameState& game, const Action& action) {
-        return action_text(game, action, [&](CardIndex card) { return game.def(card).name; });
+        return action_text(GameSource{game, [&](CardIndex card) { return game.def(card).name; }}, action);
     }
 
     std::string describe(const GameState& before, const Action& action, const GameState& after, int viewer) {
         const bool setup = action.kind == ActionKind::SetupPlaceActive || action.kind == ActionKind::SetupPlaceBench;
-        return action_text(before, action, [&](CardIndex card) {
+        const auto name = [&](CardIndex card) {
             if (knows_where(before, viewer, card) || knows_where(after, viewer, card)) {
                 return before.def(card).name;
             }
             return std::string(setup ? "a face-down Pokemon" : "an unseen card");
-        });
+        };
+        return action_text(GameSource{before, name}, action);
+    }
+
+    std::string describe(const Observation& observation, const Action& action) {
+        return action_text(ObservationSource{observation}, action);
+    }
+
+    std::string describe_decision(const Observation& observation) {
+        if (observation.is_over()) {
+            return std::string("game over: ") + result_name(observation.result);
+        }
+        std::string text = decision_name(observation.decision.kind);
+        const CardDef* source = observation.effect.card == kNoCard ? nullptr : observation.def(observation.effect.card);
+        if (source != nullptr && observation.decision.kind != DecisionKind::MainPhase) {
+            text += " (" + source->name + ")";
+        }
+        return text;
     }
 
     std::string describe(const GameState& game) {

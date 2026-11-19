@@ -86,7 +86,13 @@ namespace pokebot {
             if (std::find(legal.begin(), legal.end(), action) == legal.end()) {
                 throw std::invalid_argument("play_game: the " + agent.name() + " agent chose an action that isn't legal");
             }
-            apply_legal(game, action); // the list was just built, so apply needn't build it again
+            if (options.on_action) {
+                const GameState before = game;
+                apply_legal(game, action);
+                options.on_action(before, action, game);
+            } else {
+                apply_legal(game, action); // the list was just built, so apply needn't build it again
+            }
             record.moves.push_back(action);
             if (options.check_invariants) {
                 require_invariants(game, seed, record.moves);

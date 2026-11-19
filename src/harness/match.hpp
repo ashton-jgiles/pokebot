@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -30,6 +31,8 @@ namespace pokebot {
     struct MatchOptions {
         int max_actions = 20000;
         bool check_invariants = true;
+        // Called after every action with the state before and after it, such as to show the game as it's played.
+        std::function<void(const GameState& before, const Action& action, const GameState& after)> on_action;
     };
 
     struct GameRecord {

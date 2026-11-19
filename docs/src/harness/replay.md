@@ -30,7 +30,7 @@ struct Replay {
 | `save_replay(replay, path)`, `load_replay(path)` | Write and read a file. Saving creates the folder if needed |
 | `replay_table(db, replay)` | The card table the game was played on, numbered as [`play_game`](match.md) numbers it (`shuffled(~seed)`) |
 | `play_back(table, replay, each)` | Plays every action again and returns the final state. `each(before, action, after)` is called for every action |
-| `print_replay(out, table, replay, viewer)` | Writes the board at the start of each turn and every action, as `viewer` saw them, or everything for `kEveryone` |
+| `print_replay(out, table, replay, viewer, at_turn)` | Writes the board at the start of each turn and every action, as `viewer` saw them, or everything for `kEveryone`. `at_turn`, if given, is called before each turn, such as to wait for Enter |
 
 Anything wrong throws `ReplayError` (a `std::runtime_error`):
 - a file that isn't a replay or is from another version;
@@ -82,6 +82,8 @@ a card the viewer didn't know the place of before or after the action is "an uns
 - [`pokebot-sim`](../../tools/sim/main.md) saves a game with `--print --save-replay FILE`, saves one to
   `replays/invariant-seed-S.json` whenever an invariant breaks, and prints one with `--replay FILE
   [--as 0|1|all]`. The `replays/` folder is in `.gitignore`.
+- [`pokebot`](../client/main.md) saves a game you play or watch with `--save-replay`, and plays one back
+  with `pokebot replay FILE`.
 
 ## Tests
 

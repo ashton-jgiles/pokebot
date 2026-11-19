@@ -73,6 +73,30 @@ Described from the point of view of the player making the pending decision:
 
 `pokebot-sim --print` uses both functions to narrate a whole game; see [`tools/sim`](../../../tools/sim/main.md).
 
+## An action from an observation
+
+```cpp
+std::string describe(const Observation& observation, const Action& action);
+```
+
+The same text, made only from what `observation.viewer` can see, for showing a player their
+choices (see [`HumanAgent`](../../agents/human_agent.md)). For the deciding player it reads the same as
+`describe(game, action)`; a test checks this on every action of 30 sample games and 50 real-deck
+games.
+
+A choice of one of the opponent's Pokémon says so, from [`choice_owner`](../engine.md):
+`choose the opponent's Bench 2 Dreepy`. This applies to `describe(game, action)` too, which
+used to say only `choose Bench 2 Dreepy`.
+
+## A decision
+
+```cpp
+std::string describe_decision(const Observation& observation);
+```
+
+What the viewer is being asked, with the card whose effect asks it: `main phase`,
+`choose cards for an effect (Ultra Ball)`, `choose a Pokemon for an effect (Boss's Orders)`.
+
 ## An action, as one player saw it
 
 ```cpp

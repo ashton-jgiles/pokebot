@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include "engine/engine.hpp"
 #include "engine/internal.hpp"
 
 namespace pokebot {
@@ -1025,5 +1026,21 @@ namespace pokebot {
         }
 
     } // namespace detail
+
+    int choice_owner(const GameState& game) {
+        if (game.is_over()) {
+            return game.current_player;
+        }
+        const Decision decision = game.decision();
+        if (decision.kind != DecisionKind::ChoosePokemon || game.effects.empty()) {
+            return decision.player;
+        }
+        const EffectRun& run = game.effects.back();
+        const Step& step = detail::current_step(game);
+        if (step.op == Op::ChooseCounterSource || step.op == Op::ChooseDestination) {
+            return run.who.player;
+        }
+        return detail::player_on(step.side, run.who.player);
+    }
 
 } // namespace pokebot

@@ -30,6 +30,7 @@ action and after every action. If anything is inconsistent, it throws `Invariant
 |---|---|---|
 | `max_actions` | 20000 | Safety net: a game this long stops and counts as `ActionLimit`, which is treated as a bug |
 | `check_invariants` | `true` | Check after every action (about 2.5× slower) |
+| `on_action` | none | Called after every action with the state before and after it. [`pokebot play`](../client/main.md) uses it to show the game as it's played. It costs a copy of the state per action, so it's off unless set |
 
 ### `GameRecord`
 

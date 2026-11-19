@@ -61,7 +61,9 @@ namespace pokebot {
     inline constexpr int kEveryone = -1;
 
     // Writes the game out: the board at the start of each turn and every action, as `viewer` saw them
-    // (or everything, for kEveryone).
-    void print_replay(std::ostream& out, const CardTable& table, const Replay& replay, int viewer = kEveryone);
+    // (or everything, for kEveryone). `at_turn`, if given, is called before each turn is written, such
+    // as to wait for Enter.
+    void print_replay(std::ostream& out, const CardTable& table, const Replay& replay, int viewer = kEveryone,
+                      const std::function<void()>& at_turn = {});
 
 } // namespace pokebot
