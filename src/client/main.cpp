@@ -14,6 +14,7 @@
 
 #include "agents/human_agent.hpp"
 #include "agents/random_agent.hpp"
+#include "agents/greedy_agent.hpp"
 #include "cards/db/card_db.hpp"
 #include "core/decklist.hpp"
 #include "engine/describe/describe.hpp"
@@ -42,8 +43,8 @@ namespace {
 
     void print_usage() {
         std::cerr << "usage:\n"
-                     "  pokebot play   [--deck D] [--against D] [--agent random|biased] [--seat 0|1] [--seed S] [--save-replay FILE]\n"
-                     "  pokebot watch  [--deck D] [--against D] [--agent random|biased] [--seed S] [--as 0|1|all] [--step] [--save-replay FILE]\n"
+                     "  pokebot play   [--deck D] [--against D] [--agent random|biased|greedy] [--seat 0|1] [--seed S] [--save-replay FILE]\n"
+                     "  pokebot watch  [--deck D] [--against D] [--agent random|biased|greedy] [--seed S] [--as 0|1|all] [--step] [--save-replay FILE]\n"
                      "  pokebot replay FILE [--as 0|1|all] [--step]\n"
                      "\n"
                      "play     you against an agent, seeing only what your player can see\n"
@@ -53,7 +54,7 @@ namespace {
                      "  --deck D         your deck (or player 0's when watching): a file, or a name in data/decks\n"
                      "                   such as dragapult (default: the first deck there)\n"
                      "  --against D      the other deck (default: the second deck in data/decks)\n"
-                     "  --agent A        the agent to play: random or biased (default biased)\n"
+                     "  --agent A        the agent to play: random, biased or greedy (default biased)\n"
                      "  --seat P         play as player 0 or 1 (default 0)\n"
                      "  --seed S         the game's seed (default: a random one, printed so the game can be replayed)\n"
                      "  --as P           show what player 0 or 1 saw, or all (default all)\n"
@@ -128,7 +129,10 @@ namespace {
         if (name == "biased") {
             return std::make_unique<BiasedRandomAgent>(seed);
         }
-        throw UsageError("unknown agent '" + name + "' (try random or biased)");
+        if (name == "greedy") {
+            return std::make_unique<GreedyAgent>(seed);
+        }
+        throw UsageError("unknown agent '" + name + "' (try random, biased or greedy)");
     }
 
     std::vector<std::filesystem::path> deck_files() {

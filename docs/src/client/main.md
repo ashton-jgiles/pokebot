@@ -6,8 +6,8 @@ Play against an agent, watch two agents play, or play back a saved game. Run it 
 root, after `pokebot-import`: it reads `data/cards/generated`, `data/cards/effects` and `data/decks`.
 
 ```
-pokebot play   [--deck D] [--against D] [--agent random|biased] [--seat 0|1] [--seed S] [--save-replay FILE]
-pokebot watch  [--deck D] [--against D] [--agent random|biased] [--seed S] [--as 0|1|all] [--step] [--save-replay FILE]
+pokebot play   [--deck D] [--against D] [--agent random|biased|greedy] [--seat 0|1] [--seed S] [--save-replay FILE]
+pokebot watch  [--deck D] [--against D] [--agent random|biased|greedy] [--seed S] [--as 0|1|all] [--step] [--save-replay FILE]
 pokebot replay FILE [--as 0|1|all] [--step]
 ```
 
@@ -15,7 +15,7 @@ pokebot replay FILE [--as 0|1|all] [--step]
 |---|---|---|
 | `--deck D` | the first deck in `data/decks` | Your deck (player 0's when watching): a file, or a name there such as `dragapult` |
 | `--against D` | the second deck in `data/decks` | The other deck |
-| `--agent A` | `biased` | The agent to play: `random` or `biased` ([random agents](../agents/random_agent.md)) |
+| `--agent A` | `biased` | The agent to play: `random` or `biased` ([random agents](../agents/random_agent.md)), or `greedy` ([greedy agent](../agents/greedy_agent.md)) |
 | `--seat P` | 0 | Play as player 0 or 1 |
 | `--seed S` | a random one | The game's seed, printed at the start |
 | `--as P` | `all` | Show what player 0 or 1 saw, or everything |

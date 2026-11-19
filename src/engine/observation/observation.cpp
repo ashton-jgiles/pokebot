@@ -75,10 +75,16 @@ namespace pokebot {
         view.lasting = game.lasting;
         if (!game.is_over()) {
             view.decision = game.decision();
+            view.pending = game.pending;
             view.choice_owner = static_cast<std::uint8_t>(choice_owner(game));
         }
-        if (!game.effects.empty()) {
-            view.effect = game.effects.back().program;
+        for (EffectRun run : game.effects) {
+            for (CardIndex& card : run.chosen) {
+                if (!knows_where(game, viewer, card)) {
+                    card = kNoCard;
+                }
+            }
+            view.effects.push_back(run);
         }
         view.result = game.result;
         for (int p = 0; p < kPlayers; ++p) {

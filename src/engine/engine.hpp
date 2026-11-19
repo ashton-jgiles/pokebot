@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -18,5 +19,6 @@ namespace pokebot {
     // Whose Pokemon the slots in the pending decision's actions mean. Usually the deciding player's,
     // but an effect such as Boss's Orders has them choose one of the opponent's.
     int choice_owner(const GameState& game);
+    bool can_pay_attack(const GameState& game, const PokemonInPlay& pokemon, std::size_t attack);
 
 } // namespace pokebot

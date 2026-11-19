@@ -135,6 +135,13 @@ namespace {
                 in_play(pokemon);
             }
         }
+        for (const auto& run : view.effects) {
+            for (const CardIndex card : run.chosen) {
+                if (card != pokebot::kNoCard) {
+                    visit(card);
+                }
+            }
+        }
     }
 
     // Swaps the first two cards, one from each zone, that `viewer` doesn't know the place of and that
@@ -258,6 +265,43 @@ TEST_CASE("cards put on the bottom of the deck are shown where they are", "[obse
     CHECK(view.me().deck[1] == pokebot::DeckCard{deck[0], static_cast<std::uint8_t>(deck.size() - 1)});
     CHECK_FALSE(view.deck_or_prizes.contains(deck[0]));
     CHECK(view.opponent().deck.empty());
+}
+
+TEST_CASE("an effect's chosen cards show only to a viewer who knows where they are", "[observation]") {
+    CardDB db = sample_db();
+    db.add(item("TST-11", "Seek Two", R"([{"op": "search_deck", "count": 2, "filter": {"kind": "pokemon"}}])"));
+    const pokebot::Decklist deck = test::deck({{4, 1}, {4, 8}, {4, 9}, {4, 10}, {4, 11}, {40, 2}});
+    const CardTable table(db, deck, deck);
+    GameState game = pokebot::new_game(table, 5);
+    test::play_setup(game);
+    test::end_turns(game, 3);
+    const int me = game.current_player;
+    const int them = pokebot::opponent_of(me);
+    auto& p = game.player(me);
+    for (const auto card : p.hand) {
+        p.deck.push_back(card);
+    }
+    p.hand.clear();
+    test::put_in_hand(game, me, "TST-11");
+    pokebot::apply(game, test::find_action(game, ActionKind::PlayTrainer, "TST-11"));
+    const Action choose = test::find_action(game, ActionKind::ChooseCard);
+    pokebot::apply(game, choose);
+    REQUIRE(game.decision().kind == DecisionKind::ChooseCards); // one more may be taken
+    REQUIRE(game.effects.size() == 1);
+
+    const Observation mine = observe(game, me);
+    REQUIRE(mine.effects.size() == 1);
+    CHECK(mine.effects[0] == game.effects[0]);
+    CHECK(mine.effect() == game.effects[0].program);
+    CHECK(mine.pending == game.pending);
+    CHECK(mine.decision == mine.pending.back());
+
+    const Observation theirs = observe(game, them);
+    REQUIRE(theirs.effects.size() == 1);
+    CHECK(theirs.effects[0].chosen == pokebot::FixedVector<CardIndex, pokebot::kDeckSize>{kNoCard});
+    CHECK(theirs.effects[0].program == game.effects[0].program);
+    CHECK(theirs.effects[0].pc == game.effects[0].pc);
+    CHECK(theirs.pending == game.pending);
 }
 
 TEST_CASE("the opponent's setup Pokemon are face down until both players have set up", "[observation]") {

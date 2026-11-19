@@ -37,6 +37,7 @@ namespace pokebot {
         CardTable(const CardDB& db, const Decklist& deck0, const Decklist& deck1);
 
         const CardDef& def(CardIndex card) const { return *defs_[card]; }
+        explicit CardTable(const std::array<const CardDef*, kMaxCards>& defs) : defs_(defs) {}
 
         // A copy with each player's cards numbered in a random order (each player keeps their range).
         // Players see card numbers, so decklist order would tell them what the opponent's deck holds.

@@ -2,9 +2,10 @@
 
 **File:** [`tools/sim/main.cpp`](../../../tools/sim/main.cpp) · **Executable:** `pokebot-sim`
 
-Plays many games between random agents on the real decks, either to stress-test the engine and
-measure its speed, or to narrate one game move by move. It also saves and prints
-[replays](../../src/harness/replay.md).
+Plays many games on the real decks: one kind of agent against itself, to stress-test the engine
+and measure its speed; one agent against another (`--agents A,B`), to measure win rates through
+the [match harness](../../src/harness/arena.md); or one game narrated move by move. It also saves
+and prints [replays](../../src/harness/replay.md).
 
 ## Usage
 
@@ -12,14 +13,15 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 `data/decks/*.txt`, so run `pokebot-import` first.
 
 ```bash
-./build/debug/tools/sim/pokebot-sim.exe [--games N] [--agent random|biased] [--seed S] [--no-check]
+./build/debug/tools/sim/pokebot-sim.exe [--games N] [--agent random|biased|greedy] [--seed S] [--no-check]
                                         [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]
+                                        [--agents A,B [--threads N] [--save-replays K]]
 ```
 
 | Option | Default | Meaning |
 |---|---|---|
 | `--games N` | 1000 | Games to play |
-| `--agent A` | `biased` | `random` or `biased` (see [random agents](../../src/agents/random_agent.md)) |
+| `--agent A` | `biased` | `random`, `biased` (see [random agents](../../src/agents/random_agent.md)) or `greedy` ([greedy agent](../../src/agents/greedy_agent.md)); both players get the same kind |
 | `--seed S` | 1 | Game `i` uses seed `S + i`; agents are seeded from it too |
 | `--no-check` | | Skip the invariant check after every action (about 2.5× faster) |
 | `--print` | | Play **one** game with seed `S` and print every action |
@@ -27,9 +29,45 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 | `--check-replays` | | Save every game as replay text, load it and play it back, checking it ends in exactly the same state. A game that doesn't is saved to `replays/mismatch-seed-S.json`, and the run exits with 1 |
 | `--replay FILE` | | Print a saved replay instead of playing |
 | `--as 0\|1\|all` | `all` | With `--print` or `--replay`: show only what that player saw |
+| `--agents A,B` | | Play agent `A` against agent `B` instead (see [below](#one-agent-against-another)). `--games` is then the number of games **per deck pairing** |
+| `--threads N` | one per hardware thread | With `--agents`: games played at once |
+| `--save-replays K` | | With `--agents`: save every `K`th game to `replays/arena/` |
 
 **Pairings:** decks are sorted by file name. Game `i` plays deck `i mod n` against deck
 `(i / n) mod n`, so every pairing, including mirrors, comes up equally often.
+
+## One agent against another
+
+`--agents A,B` runs [`run_arena`](../../src/harness/arena.md): `A` against `B` on all 16 deck
+pairings (A's deck, B's deck), each seed played once with `A` in each seat, on several threads.
+`--games N` is per pairing, so `--games 1000` plays 16,000 games. `--no-check` makes it faster, as
+for the stress test. It can't be combined with `--print` or `--check-replays`.
+
+```
+./build/release/tools/sim/pokebot-sim.exe --agents greedy,random --games 1000 --no-check
+```
+
+It prints the speed, A's score (wins, plus half the draws, per game) with its 95% confidence
+interval, the same split by who went first and by deck pairing, how the games ended, and how A won
+and lost: by Prize cards, by the loser having no Pokémon left, or by the loser's deck running out
+(a loss by deck-out is A's own deck running out). Results
+don't depend on `--threads`. With the same agent on both sides (`--agents random,random`) they're
+labelled `random-A` and `random-B`. Replays saved with `--save-replays` are named
+`NNNNN-seed-S-<player 0's agent>-<deck>-vs-<player 1's agent>-<deck>.json`; print one with `--replay`.
+
+**Match speed** (Milestone 5 sign-off, release build, `--agents A,B --games 1000 --no-check`, 16,000
+games; the reference machine has 16 hardware threads):
+
+| Match | 16 threads | 1 thread (`--threads 1`, `--games 100`) |
+|---|---|---|
+| `random,random` | about 21,700 games/s, 4.5 million actions/s | |
+| `greedy,random` after step 5.6b (Greedy scores each action as it stands) | about 2,810 games/s | |
+| `greedy,random` at sign-off (Greedy also plays out its follow-up choices) | about 856 games/s; 840 with invariant checks | about 92 games/s |
+| `greedy,biased` at sign-off | about 892 games/s | |
+
+Greedy builds 3 worlds per decision and tries every action in each, so it costs about 9 ms per game
+on one thread against Random. Playing out follow-up choices (step 5.6c) made it about 3.3 times
+slower.
 
 ## Stress test output
 
@@ -68,6 +106,7 @@ back with `--replay` to see every action up to the one that broke it.
 | Step 4.3 (each agent is shown an observation, built at every decision) | about 2,860 games/s, 0.4 million actions/s | |
 | Step 4.4 (every action recorded for replays) | about 2,860 games/s: no measurable cost | |
 | Milestone 4 sign-off | about 2,860 games/s, 0.4 million actions/s | about 1,420 games/s; about 1,090 with `--check-replays` and no invariant checks |
+| Milestone 5 sign-off (`Observation` carries the engine's stack) | about 2,880 games/s, 0.4 million actions/s: no measurable cost | |
 
 Games are longer now (about 145 actions each, up from about 100), so compare actions/s between
 versions. The release preset uses link-time optimization; without it the

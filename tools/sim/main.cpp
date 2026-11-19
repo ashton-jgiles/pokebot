@@ -7,12 +7,15 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <vector>
 
+#include "agents/greedy_agent.hpp"
 #include "agents/random_agent.hpp"
 #include "cards/db/card_db.hpp"
 #include "core/decklist.hpp"
+#include "harness/arena.hpp"
 #include "harness/match.hpp"
 #include "harness/replay.hpp"
 
@@ -35,18 +38,22 @@ namespace {
         std::string agent = "biased";
         std::uint64_t seed = 1;
         bool check = true;
-        bool print = false;         // narrate one game instead of running many
-        std::string save_replay;    // with --print: where to save that game
-        std::string replay;         // print this saved game instead of playing
-        int as = kEveryone;         // whose view --print and --replay show
-        bool check_replays = false; // save, load and play back every game
+        bool print = false;              // narrate one game instead of running many
+        std::string save_replay;         // with --print: where to save that game
+        std::string replay;              // print this saved game instead of playing
+        int as = kEveryone;              // whose view --print and --replay show
+        bool check_replays = false;      // save, load and play back every game
+        std::vector<std::string> agents; // --agents A,B: A against B on every pairing
+        int threads = 0;                 // with --agents: games at once; 0 = one per hardware thread
+        int replay_every = 0;            // with --agents: save every Nth game
     };
 
     void print_usage() {
-        std::cerr << "usage: pokebot-sim [--games N] [--agent random|biased] [--seed S] [--no-check]\n"
+        std::cerr << "usage: pokebot-sim [--games N] [--agent random|biased|greedy] [--seed S] [--no-check]\n"
                      "                   [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]\n"
+                     "                   [--agents A,B [--threads N] [--save-replays K]]\n"
                      "  --games N            games to play (default 1000)\n"
-                     "  --agent A            random or biased (default biased)\n"
+                     "  --agent A            random, biased or greedy (default biased)\n"
                      "  --seed S             first game's seed; game i uses S + i (default 1)\n"
                      "  --no-check           skip the invariant check after every action (faster)\n"
                      "  --print              play one game with seed S and print every action\n"
@@ -55,6 +62,10 @@ namespace {
                      "  --as 0|1|all         with --print or --replay: show what that player saw (default all)\n"
                      "  --check-replays      save every game as a replay, load it and play it back, checking it\n"
                      "                       ends in exactly the same state (slower)\n"
+                     "  --agents A,B         play agent A against agent B on every deck pairing, each seed once with\n"
+                     "                       A in each seat; --games is then the number of games per pairing\n"
+                     "  --threads N          with --agents: games played at once (default: one per hardware thread)\n"
+                     "  --save-replays K     with --agents: save every Kth game to replays/arena/\n"
                      "If an invariant breaks, the game is saved to replays/invariant-seed-S.json.\n";
     }
 
@@ -66,6 +77,15 @@ namespace {
                 options.games = std::stoll(argv[++i]);
             } else if (arg == "--agent" && has_value) {
                 options.agent = argv[++i];
+            } else if (arg == "--agents" && has_value) {
+                std::stringstream names(argv[++i]);
+                for (std::string name; std::getline(names, name, ',');) {
+                    options.agents.push_back(name);
+                }
+            } else if (arg == "--threads" && has_value) {
+                options.threads = std::stoi(argv[++i]);
+            } else if (arg == "--save-replays" && has_value) {
+                options.replay_every = std::stoi(argv[++i]);
             } else if (arg == "--seed" && has_value) {
                 options.seed = std::stoull(argv[++i]);
             } else if (arg == "--no-check") {
@@ -91,12 +111,26 @@ namespace {
         if (!options.save_replay.empty() && !options.print) {
             return false;
         }
-        return options.games > 0 && (options.agent == "random" || options.agent == "biased");
+        const auto known = [](const std::string& name) {
+            return name == "random" || name == "biased" || name == "greedy";
+        };
+        if (options.agents.empty()) {
+            if (options.threads != 0 || options.replay_every != 0) {
+                return false;
+            }
+        } else if (options.agents.size() != 2 || !known(options.agents[0]) || !known(options.agents[1]) || options.print ||
+                   options.check_replays || options.threads < 0 || options.replay_every < 0) {
+            return false;
+        }
+        return options.games > 0 && known(options.agent);
     }
 
     std::unique_ptr<Agent> make_agent(const std::string& name, std::uint64_t seed) {
         if (name == "random") {
             return std::make_unique<RandomAgent>(seed);
+        }
+        if (name == "greedy") {
+            return std::make_unique<GreedyAgent>(seed);
         }
         return std::make_unique<BiasedRandomAgent>(seed);
     }
@@ -172,6 +206,99 @@ namespace {
         return whole == 0 ? 0.0 : 100.0 * static_cast<double>(part) / static_cast<double>(whole);
     }
 
+    std::string percent_text(double rate) {
+        std::ostringstream out;
+        out << std::fixed << std::setprecision(1) << 100.0 * rate << '%';
+        return out.str();
+    }
+
+    // "96.9% (95% CI 96.6% to 97.2%)"
+    std::string score_text(const Tally& tally) {
+        const Interval ci = score_interval(tally);
+        return percent_text(tally.score()) + " (95% CI " + percent_text(ci.low) + " to " + percent_text(ci.high) + ")";
+    }
+
+    // --agents A,B: A against B on every deck pairing, with win rates and their confidence intervals.
+    int run_match(const CardDB& db, const std::vector<std::filesystem::path>& files, const std::vector<Decklist>& decks,
+                  const Options& options) {
+        std::vector<ArenaDeck> arena_decks;
+        for (std::size_t i = 0; i < files.size(); ++i) {
+            arena_decks.push_back(ArenaDeck{files[i].filename().string(), decks[i]});
+        }
+        // The same agent on both sides is labelled with its side, such as random-A and random-B.
+        const bool same = options.agents[0] == options.agents[1];
+        const auto contestant = [&](const std::string& name, const char* side) {
+            return Contestant{same ? name + "-" + side : name, [name](std::uint64_t seed) { return make_agent(name, seed); }};
+        };
+        const Contestant a = contestant(options.agents[0], "A");
+        const Contestant b = contestant(options.agents[1], "B");
+        ArenaOptions arena;
+        arena.games = static_cast<int>(options.games);
+        arena.seed = options.seed;
+        arena.threads = options.threads;
+        arena.check_invariants = options.check;
+        arena.replay_every = options.replay_every;
+
+        ArenaResult result;
+        try {
+            result = run_arena(db, arena_decks, a, b, arena);
+        } catch (const ArenaError& e) {
+            const std::string path = "replays/invariant-seed-" + std::to_string(e.replay.seed) + ".json";
+            save_replay(e.replay, path);
+            std::cerr << "saved the game as a replay: " << path << '\n';
+            throw;
+        }
+
+        const std::size_t n = decks.size();
+        const long long per_pairing = result.games / static_cast<long long>(n * n);
+        std::cout << std::fixed << std::setprecision(1);
+        std::cout << a.name << " vs " << b.name << ": " << n << " decks, " << n * n << " pairings, " << per_pairing
+                  << " games each (every seed once with " << a.name << " in each seat), " << result.threads << " threads\n";
+        std::cout << "Played " << result.games << " games in " << result.seconds << " s: "
+                  << static_cast<double>(result.games) / result.seconds << " games/s, "
+                  << static_cast<double>(result.actions) / result.seconds / 1e6 << " million actions/s, "
+                  << static_cast<double>(result.turns) / static_cast<double>(result.games) << " turns and "
+                  << static_cast<double>(result.actions) / static_cast<double>(result.games) << " actions per game\n";
+        std::cout << a.name << "'s score: " << score_text(result.overall) << ": " << result.overall.wins << " won, "
+                  << result.overall.losses << " lost, " << result.overall.draws << " drawn\n";
+        std::cout << "  " << a.name << " went first:  " << score_text(result.a_first) << " over " << result.a_first.games() << " games\n";
+        std::cout << "  " << b.name << " went first:  " << score_text(result.b_first) << " over " << result.b_first.games() << " games\n";
+        std::cout << "By deck pairing (" << a.name << "'s deck against " << b.name << "'s):\n";
+        for (const PairingResult& pairing : result.pairings) {
+            std::cout << "  " << std::setw(16) << std::left << files[pairing.deck_a].stem().string() << std::setw(16)
+                      << files[pairing.deck_b].stem().string() << std::right << std::setw(7) << pairing.tally.games() << "  "
+                      << score_text(pairing.tally) << '\n';
+        }
+        std::cout << "Ended by:\n";
+        for (std::size_t end = 0; end < result.ends.size(); ++end) {
+            std::cout << "  " << std::setw(16) << std::left << to_string(static_cast<GameEnd>(end)) << std::right
+                      << std::setw(8) << result.ends[end] << "  (" << percent(result.ends[end], result.games) << "%)\n";
+        }
+        // Prize cards and no Pokemon left are the winner's doing, deck-out the loser's.
+        std::cout << "How " << a.name << " won and lost:\n";
+        std::cout << "  " << std::setw(16) << std::left << "" << std::right << std::setw(8) << "won" << std::setw(8) << "lost" << '\n';
+        for (const GameEnd end : {GameEnd::PrizeCards, GameEnd::NoPokemon, GameEnd::DeckOut}) {
+            const auto i = static_cast<std::size_t>(end);
+            std::cout << "  " << std::setw(16) << std::left << to_string(end) << std::right << std::setw(8) << result.a_wins_by[i]
+                      << std::setw(8) << result.a_losses_by[i] << '\n';
+        }
+        std::cout << "  (won by deck-out: " << b.name << "'s deck ran out; lost by deck-out: " << a.name << "'s did)\n";
+        std::cout << (options.check ? "Invariants checked after every action: no problems found\n"
+                                    : "Invariant checks were off (--no-check)\n");
+        for (std::size_t i = 0; i < result.replays.size(); ++i) {
+            const Replay& replay = result.replays[i];
+            std::ostringstream path;
+            path << "replays/arena/" << std::setw(5) << std::setfill('0') << i << "-seed-" << replay.seed << '-'
+                 << replay.players[0].agent << '-' << std::filesystem::path(replay.players[0].deck_name).stem().string() << "-vs-"
+                 << replay.players[1].agent << '-' << std::filesystem::path(replay.players[1].deck_name).stem().string() << ".json";
+            save_replay(replay, path.str());
+        }
+        if (!result.replays.empty()) {
+            std::cout << "Saved " << result.replays.size() << " replays to replays/arena/\n";
+        }
+        return result.ends[static_cast<std::size_t>(GameEnd::ActionLimit)] == 0 ? 0 : 1;
+    }
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -200,6 +327,9 @@ int main(int argc, char** argv) {
         std::vector<Decklist> decks;
         for (const auto& file : files) {
             decks.push_back(load_decklist(file));
+        }
+        if (!options.agents.empty()) {
+            return run_match(db, files, decks, options);
         }
 
         if (options.print) {

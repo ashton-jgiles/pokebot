@@ -59,8 +59,12 @@ legal actions.
 | `src/agents` | [agent.md](src/agents/agent.md) | The `Agent` interface |
 | | [random_agent.md](src/agents/random_agent.md) | Random and biased random agents |
 | | [human_agent.md](src/agents/human_agent.md) | A person typing their choices |
+| | [world.md](src/agents/world.md) | `World`: a game state consistent with an observation, to try actions on |
+| | [evaluation.md](src/agents/evaluation.md) | The evaluation function e: features, weights, utility |
+| | [greedy_agent.md](src/agents/greedy_agent.md) | The greedy agent: one action ahead in a few worlds |
 | `src/harness` | [match.md](src/harness/match.md) | `play_game`, how games end |
 | | [replay.md](src/harness/replay.md) | Saving games and playing them back, as either player |
+| | [arena.md](src/harness/arena.md) | The match harness: one agent against another, in parallel, with confidence intervals |
 | `src/client` | [main.md](src/client/main.md) | The `pokebot` command: `play`, `watch`, `replay` |
 | `tools/import` | [main.md](tools/import/main.md) | The `pokebot-import` command |
 | | [tcgdex.md](tools/import/tcgdex.md) | TCGdex lookup, cache, retries |

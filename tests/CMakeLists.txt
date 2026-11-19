@@ -38,6 +38,10 @@ add_executable(pokebot_tests
   test_observation.cpp
   test_invariants.cpp
   test_agents.cpp
+  test_world.cpp
+  test_evaluation.cpp
+  test_greedy.cpp
+  test_arena.cpp
   test_replay.cpp
   test_client.cpp
   test_stress.cpp

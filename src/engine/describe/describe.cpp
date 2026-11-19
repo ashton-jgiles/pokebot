@@ -283,7 +283,8 @@ namespace pokebot {
             return std::string("game over: ") + result_name(observation.result);
         }
         std::string text = decision_name(observation.decision.kind);
-        const CardDef* source = observation.effect.card == kNoCard ? nullptr : observation.def(observation.effect.card);
+        const CardIndex effect_card = observation.effect().card;
+        const CardDef* source = effect_card == kNoCard ? nullptr : observation.def(effect_card);
         if (source != nullptr && observation.decision.kind != DecisionKind::MainPhase) {
             text += " (" + source->name + ")";
         }
