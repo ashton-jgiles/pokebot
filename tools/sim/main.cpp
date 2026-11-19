@@ -18,6 +18,7 @@
 #include "core/decklist.hpp"
 #include "harness/arena.hpp"
 #include "harness/match.hpp"
+#include "harness/planner_lab.hpp"
 #include "harness/replay.hpp"
 
 #ifdef _WIN32
@@ -48,6 +49,8 @@ namespace {
         int threads = 0;                 // with --agents: games at once; 0 = one per hardware thread
         int replay_every = 0;            // with --agents: save every Nth game
         PlannerOptions planner;
+        int lab_games = 0;
+        int every = 5;
     };
 
     void print_usage() {
@@ -55,6 +58,7 @@ namespace {
                      "                   [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]\n"
                      "                   [--agents A,B [--threads N] [--save-replays K]]\n"
                      "                   [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]\n"
+                     "                   [--planner-lab N [--every K]]\n"
                      "  --games N            games to play (default 1000)\n"
                      "  --agent A            random, biased, greedy or planner (default biased)\n"
                      "  --seed S             first game's seed; game i uses S + i (default 1)\n"
@@ -72,6 +76,8 @@ namespace {
                      "  --planner-samples M      the planner's sampled worlds for a plan that ends in chance (default 1)\n"
                      "  --planner-or-budget N    the planner's nodes for its win search (default 200)\n"
                      "  --planner-and-budget N   the planner's nodes for its best-plan search (default 300)\n"
+                     "  --planner-lab N          play N greedy games and measure the planner's searches at every Kth\n"
+                     "                           main-phase decision (--every K, default 5)\n"
                      "If an invariant breaks, the game is saved to replays/invariant-seed-S.json.\n";
     }
 
@@ -98,6 +104,10 @@ namespace {
                 options.planner.or_budget = std::stoi(argv[++i]);
             } else if (arg == "--planner-and-budget" && has_value) {
                 options.planner.and_budget = std::stoi(argv[++i]);
+            } else if (arg == "--planner-lab" && has_value) {
+                options.lab_games = std::stoi(argv[++i]);
+            } else if (arg == "--every" && has_value) {
+                options.every = std::stoi(argv[++i]);
             } else if (arg == "--seed" && has_value) {
                 options.seed = std::stoull(argv[++i]);
             } else if (arg == "--no-check") {
@@ -126,7 +136,10 @@ namespace {
         const auto known = [](const std::string& name) {
             return name == "random" || name == "biased" || name == "greedy" || name == "planner";
         };
-        if (options.planner.samples < 1 || options.planner.or_budget < 1 || options.planner.and_budget < 1) {
+        if (options.planner.samples < 1 || options.planner.or_budget < 1 || options.planner.and_budget < 1 || options.every < 1) {
+            return false;
+        }
+        if (options.lab_games < 0 || (options.lab_games > 0 && (!options.agents.empty() || options.print || options.check_replays))) {
             return false;
         }
         if (options.agents.empty()) {
@@ -234,6 +247,37 @@ namespace {
     std::string score_text(const Tally& tally) {
         const Interval ci = score_interval(tally);
         return percent_text(tally.score()) + " (95% CI " + percent_text(ci.low) + " to " + percent_text(ci.high) + ")";
+    }
+
+    int run_lab(const CardDB& db, const std::vector<std::filesystem::path>& files, const std::vector<Decklist>& decks, const Options& options) {
+        std::vector<ArenaDeck> arena_decks;
+        for (std::size_t i = 0; i < files.size(); ++i) {
+            arena_decks.push_back(ArenaDeck{files[i].filename().string(), decks[i]});
+        }
+        PlannerLabOptions lab;
+        lab.games = options.lab_games;
+        lab.seed = options.seed;
+        lab.every = options.every;
+        lab.or_budget = options.planner.or_budget;
+        const PlannerLabResult r = run_planner_lab(db, arena_decks, lab);
+
+        const auto per = [&](long long total) {
+            return r.finished == 0 ? 0.0 : static_cast<double>(total) / static_cast<double>(r.finished);
+        };
+        std::cout << std::fixed << std::setprecision(1);
+        std::cout << "Planner lab: " << r.games << " greedy games, one in every " << lab.every << " main-phase decisions: " << r.positions
+                  << " positions, " << r.finished << " searched to the end (" << lab.limit << " nodes at most)\n";
+        std::cout << "Win this turn (or-tree): " << r.wins << " positions have one; the planner's " << lab.or_budget << "-node search found "
+                  << r.wins_found << " (" << percent(r.wins_found, r.wins) << "%); " << r.false_wins << " false wins\n";
+        std::cout << "  nodes per position: " << per(r.or_closed) << " with the closed set, " << per(r.or_open) << " without\n";
+        std::cout << "Best plan (and-tree), nodes per position:\n";
+        std::cout << "  closed set and f_bound  " << std::setw(10) << per(r.and_both) << "  (" << per(r.pruned) << " children pruned)\n";
+        std::cout << "  closed set only         " << std::setw(10) << per(r.and_closed) << '\n';
+        std::cout << "  f_bound only            " << std::setw(10) << per(r.and_bound) << '\n';
+        std::cout << "  neither                 " << std::setw(10) << per(r.and_neither) << '\n';
+        std::cout << "  f_bound changed the best plan's value in " << r.bound_changed << " of " << r.finished << " positions\n";
+        std::cout << "Took " << r.seconds << " s\n";
+        return r.false_wins == 0 ? 0 : 1;
     }
 
     // --agents A,B: A against B on every deck pairing, with win rates and their confidence intervals.
@@ -373,6 +417,9 @@ int main(int argc, char** argv) {
         }
         if (!options.agents.empty()) {
             return run_match(db, files, decks, options);
+        }
+        if (options.lab_games > 0) {
+            return run_lab(db, files, decks, options);
         }
 
         if (options.print) {

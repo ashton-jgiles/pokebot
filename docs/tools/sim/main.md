@@ -17,6 +17,7 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
                                         [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]
                                         [--agents A,B [--threads N] [--save-replays K]]
                                         [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]
+                                        [--planner-lab N [--every K]]
 ```
 
 | Option | Default | Meaning |
@@ -36,6 +37,8 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 | `--planner-samples M` | 1 | The [planner](../../src/agents/planner_agent.md)'s sampled worlds for a plan that ends in chance or hidden cards |
 | `--planner-or-budget N` | 200 | The planner's node budget for its win search (the or-tree) |
 | `--planner-and-budget N` | 300 | The planner's node budget for its best-plan search (the and-tree) |
+| `--planner-lab N` | | Play `N` Greedy-against-Greedy games and measure the planner's searches at one in every `K` main-phase decisions ([planner lab](../../src/harness/planner_lab.md)). Uses `--seed` and `--planner-or-budget` |
+| `--every K` | 5 | With `--planner-lab`: which main-phase decisions to measure |
 
 **Pairings:** decks are sorted by file name. Game `i` plays deck `i mod n` against deck
 `(i / n) mod n`, so every pairing, including mirrors, comes up equally often.

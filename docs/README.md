@@ -71,6 +71,7 @@ legal actions.
 | `src/harness` | [match.md](src/harness/match.md) | `play_game`, how games end |
 | | [replay.md](src/harness/replay.md) | Saving games and playing them back, as either player |
 | | [arena.md](src/harness/arena.md) | The match harness: one agent against another, in parallel, with confidence intervals |
+| | [planner_lab.md](src/harness/planner_lab.md) | Measuring the turn planner: wins found, and nodes with and without the closed set and f_bound |
 | `src/client` | [main.md](src/client/main.md) | The `pokebot` command: `play`, `watch`, `replay` |
 | `tools/import` | [main.md](tools/import/main.md) | The `pokebot-import` command |
 | | [tcgdex.md](tools/import/tcgdex.md) | TCGdex lookup, cache, retries |
