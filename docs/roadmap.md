@@ -1,7 +1,7 @@
 # Roadmap
 
 The milestone plan from the project proposal, with the current status of each.
-**Last reviewed:** 2026-11-18.
+**Last reviewed:** 2026-11-19.
 
 | # | Milestone | Status |
 |---|---|---|
@@ -11,7 +11,7 @@ The milestone plan from the project proposal, with the current status of each.
 | M3 | Effects system and every card in the four decks | ✅ Done |
 | M3b | Standard coverage: card-text translator and coverage report | ⬜ Not started |
 | M4 | Observation layer, command-line client, replays | ✅ Done |
-| M5 | Greedy agent, match harness, profiling | 🔄 In progress |
+| M5 | Greedy agent, match harness, profiling | ✅ Done |
 | M6 | Model 1: turn planner (or-tree and and-tree modes) | ⬜ Not started |
 | M7 | Determinization and flat Monte Carlo | ⬜ Not started |
 | M8 | Model 2: IS-MCTS | ⬜ Not started |
@@ -186,7 +186,7 @@ Known approximations, each documented where it lives:
 - **The client has had only light play-testing.** Its prompts and descriptions are tested with typed
   input, and a full game has been played by hand.
 
-## M5 — Greedy agent, match harness, profiling 🔄
+## M5 — Greedy agent, match harness, profiling ✅
 
 **Done when:** Greedy clearly beats Random over at least 1,000 seeded games per deck pairing in both
 seat orders, and the simulator's throughput is recorded.
@@ -207,11 +207,47 @@ planner (M6) needs the same states.
 | 5.3 | **The evaluation function** `e` (features φ1–φ8 as 10 features, hand-set weights), zero-sum and reading only what both players can see. See [evaluation](src/agents/evaluation.md) | ✅ |
 | 5.4 | **Greedy agent:** one action ahead, averaged over 3 worlds with the same luck for every action, and a fixed rule for setup; `--agent greedy` in `pokebot-sim` and `pokebot`. See [greedy agent](src/agents/greedy_agent.md) | ✅ |
 | 5.5 | **Match harness:** one agent against another on every deck pairing, each seed in both seats, on several threads with results that don't depend on how many; win rates with 95% Wilson intervals overall, by who went first and per pairing; replays kept; `pokebot-sim --agents A,B`. See [arena](src/harness/arena.md) | ✅ |
-| 5.6 | Sign-off: Greedy against Random on every deck pairing, and profiling. *First full run (16,000 games): Greedy 77.7% (95% CI 77.1% to 78.4%), but only 39.3% to 51.2% with ns-zoroark against three of the decks: it draws its deck away (Trade with an empty deck) and scores effects half-way through. So 5.6 is done in steps, each measured:* | 🔄 |
+| 5.6 | Sign-off: Greedy against Random on every deck pairing, and profiling. *First full run (16,000 games): Greedy 77.7% (95% CI 77.1% to 78.4%), but only 39.3% to 51.2% with ns-zoroark against three of the decks: it draws its deck away (Trade with an empty deck) and scores effects half-way through. So 5.6 is done in steps, each measured:* | ✅ |
 | 5.6a | How A won and lost (Prize cards, no Pokémon left, deck-out), so a loss by A's own deck-out shows. *Baseline: Greedy lost 3,566 games, 3,457 (97%) by its own deck running out; of its 12,434 wins, 7,223 were Random decking out and 4,206 by Prize cards* | ✅ |
 | 5.6b | Rebalance deck against hand in e: the deck counts up to 30 cards, the hand only up to 7. See [evaluation](src/agents/evaluation.md#features). *Greedy 82.5% (95% CI 81.9% to 83.1%), up from 77.7%; losses by its own deck-out 2,667, down from 3,457; 13 of 16 pairings better, but ns-zoroark against basic-box, dragapult and mega-greninja still 50.4%, 52.6% and 46.2%: starting Trade is scored before its discard and draw happen* | ✅ |
-| 5.6c | Greedy finishes its own choices inside an effect before scoring. See [greedy agent](src/agents/greedy_agent.md#how-it-chooses) | 🔄 |
-| 5.6d | Sign-off: the full run, speed recorded, M5 done | ⬜ |
+| 5.6c | Greedy finishes its own choices inside an effect before scoring. See [greedy agent](src/agents/greedy_agent.md#how-it-chooses). *Greedy 91.3% (95% CI 90.8% to 91.7%); losses by its own deck-out 1,321, down from 2,667; the ns-zoroark rows 79.8%, 86.8% and 76.8%; about 3.3 times slower* | ✅ |
+| 5.6d | Sign-off: the full run with invariant checks, Random against Random as a fairness check, Greedy against biased, speed recorded; same-agent matches labelled A and B | ✅ |
+
+**Sign-off run (2026-11-19):** `pokebot-sim --agents greedy,random --games 1000` on all 16 deck
+pairings (16,000 games, every seed once with Greedy in each seat), with the invariant checker after
+every action: **no problems found**, and exactly the same results as without the checks.
+
+| Measure | Result |
+|---|---|
+| Greedy's score against Random | **91.3%** (95% CI 90.8% to 91.7%): 14,605 won, 1,395 lost, 0 drawn |
+| By who went first | Greedy first 91.1% (90.6% to 91.6%), Random first 91.9% (91.0% to 92.7%) |
+| Every deck pairing | 76.8% to 99.9%; the lowest lower end is 74.1% (ns-zoroark against mega-greninja) |
+| How Greedy won | Random's deck ran out 8,201, Prize cards 5,154, no Pokémon left 1,250 |
+| How Greedy lost | Its own deck ran out 1,321, Prize cards 60, no Pokémon left 14 |
+| Greedy against biased random | 75.8% (75.2% to 76.5%); every pairing's lower end above 56% |
+| Random against Random (fairness check) | 49.6% (48.8% to 50.3%); mirror pairings 48.5% to 51.4% |
+| Speed, Greedy against Random | about 856 games/s on 16 threads, 92 on one |
+| Speed, engine (`--agent biased`, as at M4) | about 2,880 games/s: the observation's new fields cost nothing measurable |
+
+How each change in 5.6 moved Greedy, on the same 16,000 seeded games against Random:
+
+| Greedy | Score (95% CI) | Lost by own deck-out | Lowest pairing | Games/s (16 threads) |
+|---|---|---|---|---|
+| As built in 5.4 | 77.7% (77.1% to 78.4%) | 3,457 | 39.3% | about 2,890 |
+| 5.6b: deck counted up to 30, hand up to 7 | 82.5% (81.9% to 83.1%) | 2,667 | 46.2% | about 2,810 |
+| 5.6c: follow-up choices played out | 91.3% (90.8% to 91.7%) | 1,321 | 76.8% | about 856 |
+
+Known limits, each documented where it lives:
+- **Greedy sees one action ahead.** It misses a win two actions away: in a saved game it switched
+  in the N's Zoroark ex with no Energy, when switching in the one with Energy and attacking would
+  have taken its last 2 Prize cards. Finding such lines is the turn planner's job (M6).
+- **It still decks itself out sometimes** (1,321 of its 1,395 losses to Random): e values each
+  card in the deck the same, however many turns the game has left.
+- **The opponent's unseen cards are a placeholder** in Greedy's worlds until M7 deals them from a
+  guessed decklist.
+- **Greedy is slow** for what it does (about 9 ms a game on one thread), which matters once M7
+  uses it for playouts: profiling it is a good first task there.
+- **The weights θ are set by hand,** two of them adjusted in 5.6b after measuring; M10 learns them.
 
 ## M5 onward
 

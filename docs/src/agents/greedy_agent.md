@@ -59,6 +59,26 @@ before attaching the Energy that would have made the attack a Knock Out, or swit
 that can't attack when the other could win the game. It ends its turn as soon as nothing it can do
 scores higher. That's what the turn planner (M6) is for.
 
+## Results
+
+The Milestone 5 sign-off (2026-11-19), with the [match harness](../harness/arena.md): 1,000 games
+on each of the 16 deck pairings, every seed played once with Greedy in each seat.
+
+| Against | Greedy's score (95% CI) | Lowest pairing (95% CI) | How Greedy lost |
+|---|---|---|---|
+| Random | **91.3%** (90.8% to 91.7%) | ns-zoroark against mega-greninja, 76.8% (74.1% to 79.3%) | 1,321 by its own deck-out, 60 by Prize cards, 14 by no Pokémon left |
+| Biased random | **75.8%** (75.2% to 76.5%) | ns-zoroark against basic-box, 59.7% (56.6% to 62.7%) | 2,231 by Prize cards, 1,535 by its own deck-out, 102 by no Pokémon left |
+
+How each change in step 5.6 moved it, on the same 16,000 games against Random:
+
+| Greedy | Score (95% CI) | Lost by own deck-out | ns-zoroark's worst pairing |
+|---|---|---|---|
+| As first built (step 5.4) | 77.7% (77.1% to 78.4%) | 3,457 | 39.3% |
+| Deck counted up to 30, hand up to 7 (5.6b) | 82.5% (81.9% to 83.1%) | 2,667 | 46.2% |
+| Follow-up choices played out (5.6c) | 91.3% (90.8% to 91.7%) | 1,321 | 76.8% |
+
+It's about 92 games/s against Random on one thread, 856 on 16 (see the [sim](../../tools/sim/main.md)).
+
 ## Where it's used
 
 `pokebot-sim --agent greedy` ([sim](../../tools/sim/main.md)) and `pokebot play|watch --agent greedy`

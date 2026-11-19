@@ -51,8 +51,23 @@ It prints the speed, A's score (wins, plus half the draws, per game) with its 95
 interval, the same split by who went first and by deck pairing, how the games ended, and how A won
 and lost: by Prize cards, by the loser having no Pokémon left, or by the loser's deck running out
 (a loss by deck-out is A's own deck running out). Results
-don't depend on `--threads`. Replays saved with `--save-replays` are named
+don't depend on `--threads`. With the same agent on both sides (`--agents random,random`) they're
+labelled `random-A` and `random-B`. Replays saved with `--save-replays` are named
 `NNNNN-seed-S-<player 0's agent>-<deck>-vs-<player 1's agent>-<deck>.json`; print one with `--replay`.
+
+**Match speed** (Milestone 5 sign-off, release build, `--agents A,B --games 1000 --no-check`, 16,000
+games; the reference machine has 16 hardware threads):
+
+| Match | 16 threads | 1 thread (`--threads 1`, `--games 100`) |
+|---|---|---|
+| `random,random` | about 21,700 games/s, 4.5 million actions/s | |
+| `greedy,random` after step 5.6b (Greedy scores each action as it stands) | about 2,810 games/s | |
+| `greedy,random` at sign-off (Greedy also plays out its follow-up choices) | about 856 games/s; 840 with invariant checks | about 92 games/s |
+| `greedy,biased` at sign-off | about 892 games/s | |
+
+Greedy builds 3 worlds per decision and tries every action in each, so it costs about 9 ms per game
+on one thread against Random. Playing out follow-up choices (step 5.6c) made it about 3.3 times
+slower.
 
 ## Stress test output
 
@@ -91,6 +106,7 @@ back with `--replay` to see every action up to the one that broke it.
 | Step 4.3 (each agent is shown an observation, built at every decision) | about 2,860 games/s, 0.4 million actions/s | |
 | Step 4.4 (every action recorded for replays) | about 2,860 games/s: no measurable cost | |
 | Milestone 4 sign-off | about 2,860 games/s, 0.4 million actions/s | about 1,420 games/s; about 1,090 with `--check-replays` and no invariant checks |
+| Milestone 5 sign-off (`Observation` carries the engine's stack) | about 2,880 games/s, 0.4 million actions/s: no measurable cost | |
 
 Games are longer now (about 145 actions each, up from about 100), so compare actions/s between
 versions. The release preset uses link-time optimization; without it the

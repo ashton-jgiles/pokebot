@@ -225,11 +225,13 @@ namespace {
         for (std::size_t i = 0; i < files.size(); ++i) {
             arena_decks.push_back(ArenaDeck{files[i].filename().string(), decks[i]});
         }
-        const auto contestant = [](const std::string& name) {
-            return Contestant{name, [name](std::uint64_t seed) { return make_agent(name, seed); }};
+        // The same agent on both sides is labelled with its side, such as random-A and random-B.
+        const bool same = options.agents[0] == options.agents[1];
+        const auto contestant = [&](const std::string& name, const char* side) {
+            return Contestant{same ? name + "-" + side : name, [name](std::uint64_t seed) { return make_agent(name, seed); }};
         };
-        const Contestant a = contestant(options.agents[0]);
-        const Contestant b = contestant(options.agents[1]);
+        const Contestant a = contestant(options.agents[0], "A");
+        const Contestant b = contestant(options.agents[1], "B");
         ArenaOptions arena;
         arena.games = static_cast<int>(options.games);
         arena.seed = options.seed;

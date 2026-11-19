@@ -58,6 +58,10 @@ and 1, where Greedy against Random sits:
 
 `score_interval(tally)` is that interval for A's score, with draws counting half a win.
 
+**A fairness check:** with Random on both sides, 16,000 games give A 49.6% (95% CI 48.8% to 50.3%),
+and every mirror pairing is within 48.5% to 51.4%. The seat swap leaves no side an advantage the
+interval can see.
+
 ## When a game fails
 
 If an invariant breaks (with `check_invariants`), the arena stops the other threads and throws
