@@ -30,31 +30,46 @@ namespace pokebot {
                 ++result.false_wins;
             }
 
-            OrTreeOptions closed;
-            closed.budget = options.limit;
-            const OrTreeResult full = or_tree_search(game, player, Goal{GoalKind::Win, 1}, closed);
-            OrTreeOptions open = closed;
-            open.closed_set = false;
-            const OrTreeResult unpruned = or_tree_search(game, player, Goal{GoalKind::Win, 1}, open);
-
-            AndTreeResult and_runs[4];
-            bool all_finished = !full.out_of_budget && !unpruned.out_of_budget;
-            for (int i = 0; i < 4; ++i) {
+            const auto and_run = [&](int i) {
                 AndTreeOptions and_options;
                 and_options.budget = options.limit;
                 and_options.closed_set = i < 2;
                 and_options.bound = i % 2 == 0;
-                PlanScorer scorer(player, seed);
-                and_runs[i] = and_tree_search(game, player, scorer, and_options);
-                all_finished = all_finished && !and_runs[i].out_of_budget;
-            }
-            if (!all_finished) {
+                PlanScorer scorer(player, seed, options.samples);
+                return and_tree_search(game, player, scorer, and_options);
+            };
+
+            OrTreeOptions closed;
+            closed.budget = options.limit;
+            const OrTreeResult full = or_tree_search(game, player, Goal{GoalKind::Win, 1}, closed);
+            if (full.out_of_budget) {
                 return;
+            }
+            AndTreeResult and_runs[4];
+            and_runs[0] = and_run(0);
+            if (and_runs[0].out_of_budget) {
+                return;
+            }
+            OrTreeOptions open = closed;
+            open.closed_set = false;
+            const OrTreeResult unpruned = or_tree_search(game, player, Goal{GoalKind::Win, 1}, open);
+            if (unpruned.out_of_budget) {
+                return;
+            }
+            for (int i = 1; i < 4; ++i) {
+                and_runs[i] = and_run(i);
+                if (and_runs[i].out_of_budget) {
+                    return;
+                }
             }
 
             ++result.finished;
             if (full.found) {
                 ++result.wins;
+                result.win_nodes += full.expanded;
+                if (full.expanded > result.win_nodes_max) {
+                    result.win_nodes_max = full.expanded;
+                }
                 if (quick.found) {
                     ++result.wins_found;
                 }
@@ -96,6 +111,9 @@ namespace pokebot {
             };
             play_game(table, seed, first, second, match);
             ++result.games;
+            if (options.on_progress) {
+                options.on_progress(result.games, options.games);
+            }
         }
         result.seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
         return result;

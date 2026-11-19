@@ -259,6 +259,14 @@ namespace {
         lab.seed = options.seed;
         lab.every = options.every;
         lab.or_budget = options.planner.or_budget;
+        lab.samples = options.planner.samples;
+        const auto started = std::chrono::steady_clock::now();
+        lab.on_progress = [started](long long done, long long total) {
+            const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+            const double left = seconds * static_cast<double>(total - done) / static_cast<double>(done);
+            std::cerr << "  " << done << " of " << total << " games, " << std::fixed << std::setprecision(0) << seconds << " s, about "
+                      << left << " s left\n";
+        };
         const PlannerLabResult r = run_planner_lab(db, arena_decks, lab);
 
         const auto per = [&](long long total) {
@@ -269,6 +277,10 @@ namespace {
                   << " positions, " << r.finished << " searched to the end (" << lab.limit << " nodes at most)\n";
         std::cout << "Win this turn (or-tree): " << r.wins << " positions have one; the planner's " << lab.or_budget << "-node search found "
                   << r.wins_found << " (" << percent(r.wins_found, r.wins) << "%); " << r.false_wins << " false wins\n";
+        if (r.wins > 0) {
+            std::cout << "  nodes to reach a win: " << static_cast<double>(r.win_nodes) / static_cast<double>(r.wins) << " on average, "
+                      << r.win_nodes_max << " at most\n";
+        }
         std::cout << "  nodes per position: " << per(r.or_closed) << " with the closed set, " << per(r.or_open) << " without\n";
         std::cout << "Best plan (and-tree), nodes per position:\n";
         std::cout << "  closed set and f_bound  " << std::setw(10) << per(r.and_both) << "  (" << per(r.pruned) << " children pruned)\n";

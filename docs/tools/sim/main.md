@@ -37,7 +37,7 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 | `--planner-samples M` | 1 | The [planner](../../src/agents/planner_agent.md)'s sampled worlds for a plan that ends in chance or hidden cards |
 | `--planner-or-budget N` | 200 | The planner's node budget for its win search (the or-tree) |
 | `--planner-and-budget N` | 300 | The planner's node budget for its best-plan search (the and-tree) |
-| `--planner-lab N` | | Play `N` Greedy-against-Greedy games and measure the planner's searches at one in every `K` main-phase decisions ([planner lab](../../src/harness/planner_lab.md)). Uses `--seed` and `--planner-or-budget` |
+| `--planner-lab N` | | Play `N` Greedy-against-Greedy games and measure the planner's searches at one in every `K` main-phase decisions ([planner lab](../../src/harness/planner_lab.md)). Uses `--seed`, `--planner-samples` and `--planner-or-budget`, and prints its progress after each game to stderr |
 | `--every K` | 5 | With `--planner-lab`: which main-phase decisions to measure |
 
 **Pairings:** decks are sorted by file name. Game `i` plays deck `i mod n` against deck

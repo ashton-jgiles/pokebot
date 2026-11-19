@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 #include "cards/db/card_db.hpp"
@@ -13,7 +14,9 @@ namespace pokebot {
         std::uint64_t seed = 1;
         int every = 5;
         int or_budget = 200;
-        int limit = 20000;
+        int limit = 5000;
+        int samples = 1;
+        std::function<void(long long, long long)> on_progress;
     };
 
     struct PlannerLabResult {
@@ -23,6 +26,8 @@ namespace pokebot {
         long long wins = 0;
         long long wins_found = 0;
         long long false_wins = 0;
+        long long win_nodes = 0;
+        long long win_nodes_max = 0;
         long long or_closed = 0;
         long long or_open = 0;
         long long and_both = 0;

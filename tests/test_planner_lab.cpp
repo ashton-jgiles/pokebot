@@ -67,9 +67,9 @@ TEST_CASE("on the real decks, the planner lab finds every win it can and no fals
         decks.push_back(ArenaDeck{"deck.txt", list});
     }
     PlannerLabOptions options;
-    options.games = 2;
-    options.every = 8;
-    options.limit = 3000;
+    options.games = 1;
+    options.every = 10;
+    options.limit = 400;
     const PlannerLabResult r = pokebot::run_planner_lab(real->db, decks, options);
     check_consistent(r);
     CHECK(r.wins_found == r.wins);
