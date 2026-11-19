@@ -11,7 +11,7 @@ Observation observe(const GameState& game, int viewer);
 ```
 
 It's built from what [knowledge](../knowledge/knowledge.md) says the viewer knows. Like `GameState`,
-it's a plain value (trivially copyable, about 3.4 KB) with `==`.
+it's a plain value (trivially copyable, about 3.8 KB) with `==`.
 
 ## What's in it
 
@@ -20,8 +20,10 @@ it's a plain value (trivially copyable, about 3.4 KB) with `==`.
 | `viewer` | Whose view this is. `me()` and `opponent()` pick out the two `PlayerView`s |
 | `turn`, `current_player`, `first_player`, `phase`, `flags`, `history`, `lasting`, `result` | Copied from the game: all public |
 | `decision` | What's being decided and by whom (not meaningful once the game is over) |
+| `pending` | Every decision waiting, `decision` last: such as both players' new Active after a double Knock Out |
 | `choice_owner` | Whose Pokémon the actions' slots mean, from [`choice_owner`](../engine.md): the opponent's for Boss's Orders |
-| `effect` | The attack, Trainer or Ability resolving, if any (`effect.card` is `kNoCard` if none) |
+| `effects` | The effects resolving, innermost last, as the engine's `EffectRun`s: where each is up to and what it has chosen. A card in `chosen` whose place the viewer doesn't know is `kNoCard`, such as a card the opponent is taking in a search they don't reveal |
+| `effect()` | The attack, Trainer or Ability resolving, if any (`effect().card` is `kNoCard` if none) |
 | `players` | Each side of the table, as below |
 | `deck_or_prizes` | The viewer's own cards whose place they don't know, **sorted**: their deck and Prize cards as one list |
 | `opponent_seen` | Every opponent card the viewer has seen this game, wherever it is now, sorted |
@@ -48,6 +50,10 @@ Each `PlayerView` has:
   deck can't be read off the card table.
 - **`opponent_seen` is what deck guessing will use** (M7): a Dreepy seen once still says Dragapult,
   even after it's shuffled back into the deck.
+- **The engine's stack is in it** (`pending` and `effects`), so a game state consistent with an observation
+  can be built from it (for the greedy agent and search, M5 on), even partway through an effect. Everything in them is public
+  except the cards an effect has chosen, which are hidden as above. The rest of an `EffectRun` (its
+  damage so far, coins flipped, Pokémon targeted, how many cards it moved) is seen at the table.
 - **Two games that differ only in cards the viewer can't see give equal observations.** That's the
   test that proves nothing leaks.
 
@@ -66,9 +72,10 @@ the opponent's hand as a count and the cards known in it.
 - a revealed card in the opponent's view of the hand;
 - cards put on the bottom of the deck shown where they are;
 - face-down setup Pokémon;
+- the decision stack, and an effect's chosen cards shown to the player searching but hidden from the opponent;
 - games that differ only in hidden cards look the same, and a change the viewer can see does show;
 - random games on the sample cards and on the real decks, checking after every action that every
-  card an observation names is one whose place the viewer knows, with its definition. The real-deck
+  card an observation names (including an effect's chosen cards) is one whose place the viewer knows, with its definition. The real-deck
   games also swap hidden cards every 20 actions and check the viewer sees no difference;
 - `describe(observation)`;
 - [`play_game`](../../harness/match.md) showing each agent its own player's view, and on the real

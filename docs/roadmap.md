@@ -11,7 +11,7 @@ The milestone plan from the project proposal, with the current status of each.
 | M3 | Effects system and every card in the four decks | ✅ Done |
 | M3b | Standard coverage: card-text translator and coverage report | ⬜ Not started |
 | M4 | Observation layer, command-line client, replays | ✅ Done |
-| M5 | Greedy agent, match harness, profiling | ⬜ Not started |
+| M5 | Greedy agent, match harness, profiling | 🔄 In progress |
 | M6 | Model 1: turn planner (or-tree and and-tree modes) | ⬜ Not started |
 | M7 | Determinization and flat Monte Carlo | ⬜ Not started |
 | M8 | Model 2: IS-MCTS | ⬜ Not started |
@@ -185,6 +185,28 @@ Known approximations, each documented where it lives:
   play back; it then stops with the action that failed rather than showing a different game.
 - **The client has had only light play-testing.** Its prompts and descriptions are tested with typed
   input, and a full game has been played by hand.
+
+## M5 — Greedy agent, match harness, profiling 🔄
+
+**Done when:** Greedy clearly beats Random over at least 1,000 seeded games per deck pairing in both
+seat orders, and the simulator's throughput is recorded.
+
+**How Greedy judges actions (decided 2026-11-18):** agents get only an `Observation`, so Greedy builds
+a game state consistent with it, tries each action there and scores the result with the evaluation
+function `e`. Its own deck and Prize cards are dealt from `deck_or_prizes` (their contents are known
+exactly); the opponent's unseen cards are an inert placeholder until M7 deals them from a guessed
+decklist. Actions that use no chance and reveal nothing come out the same whatever the hidden cards
+are; the rest are averaged over a few sampled states. `e` is computed from an observation, so it
+can't use hidden cards either. The turn planner (M6) needs the same states.
+
+| Step | Builds | Status |
+|---|---|---|
+| 5.1 | **The engine's stack in `Observation`:** every pending decision, and the effects resolving with their chosen cards hidden from a viewer who can't place them. See [observation](src/engine/observation/observation.md) | 🔄 |
+| 5.2 | **Consistent states:** a `GameState` built from an observation, which observes back to the same observation | ⬜ |
+| 5.3 | **The evaluation function** `e` (features φ1–φ8, hand-set weights) computed from an observation | ⬜ |
+| 5.4 | **Greedy agent:** one action ahead, averaged over a few sampled states | ⬜ |
+| 5.5 | **Match harness:** seeded games in parallel, seats swapped, win rates with 95% confidence intervals per deck pairing, replays kept | ⬜ |
+| 5.6 | Sign-off: Greedy against Random on every deck pairing, and profiling | ⬜ |
 
 ## M5 onward
 

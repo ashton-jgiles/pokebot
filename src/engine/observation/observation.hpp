@@ -53,8 +53,9 @@ namespace pokebot {
         GameHistory history;
         FixedVector<LastingEffect, 8> lasting;
         Decision decision;
+        FixedVector<Decision, 8> pending;
         std::uint8_t choice_owner = 0;
-        ProgramRef effect;
+        FixedVector<EffectRun, 4> effects;
         GameResult result = GameResult::Ongoing;
         std::array<PlayerView, kPlayers> players;
         FixedVector<CardIndex, kDeckSize> deck_or_prizes;
@@ -62,6 +63,7 @@ namespace pokebot {
         std::array<const CardDef*, kMaxCards> defs{};
 
         const CardDef* def(CardIndex card) const { return defs[card]; }
+        ProgramRef effect() const { return effects.empty() ? ProgramRef{} : effects.back().program; }
         const PlayerView& player(int p) const { return players[static_cast<std::size_t>(p)]; }
         const PlayerView& me() const { return player(viewer); }
         const PlayerView& opponent() const { return player(opponent_of(viewer)); }
