@@ -3,6 +3,7 @@
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
+#include <nlohmann/json.hpp>
 
 #include "agents/greedy_agent.hpp"
 #include "agents/random_agent.hpp"
@@ -117,6 +118,55 @@ TEST_CASE("greedy attaches Energy rather than ending the turn", "[greedy]") {
         }
     }
     CHECK(attach > end);
+}
+
+TEST_CASE("greedy scores an Ability by what it does, not by the choice it leads to", "[greedy]") {
+    // Trader's Trade: discard a card from your hand, then draw 2. With an empty deck it only loses a card.
+    CardDB db = sample_db();
+    CardDef trader = test::basic_pokemon("TST-7", "Trader", 100);
+    pokebot::Ability trade;
+    trade.name = "Trade";
+    trade.text = "test ability";
+    trade.effects = nlohmann::json::parse(R"([{"op": "discard_from_hand"}, {"op": "draw", "count": 2}])");
+    trader.abilities.push_back(trade);
+    db.add(trader);
+    const pokebot::Decklist deck = test::deck({{4, 1}, {4, 3}, {4, 4}, {4, 5}, {4, 7}, {40, 2}});
+    const CardTable table(db, deck, deck);
+    GameState game = pokebot::new_game(table, 2);
+    test::play_setup(game);
+    test::end_turns(game, 3);
+    const int me = game.current_player;
+    test::clear_bench(game, me);
+    test::set_active(game, me, "TST-7");
+    auto& mine = game.player(me);
+    while (mine.hand.size() > 4) { // a small hand, so every card in it counts
+        mine.discard.push_back(mine.hand.back());
+        mine.hand.erase_at(mine.hand.size() - 1);
+    }
+    for (const auto card : mine.deck) {
+        mine.discard.push_back(card);
+    }
+    mine.deck.clear();
+    auto& theirs = game.player(pokebot::opponent_of(me));
+    while (theirs.hand.size() < 10) { // a full hand, so their draw after you end the turn changes nothing
+        theirs.hand.push_back(theirs.deck.back());
+        theirs.deck.erase_at(theirs.deck.size() - 1);
+    }
+    pokebot::detail::note_visible(game);
+
+    const pokebot::Observation view = observe(game, me);
+    const auto actions = pokebot::legal_actions(game);
+    GreedyAgent agent(5);
+    const auto scores = agent.scores(view, actions);
+    bool found = false;
+    for (std::size_t i = 0; i < actions.size(); ++i) {
+        if (is(actions[i], ActionKind::UseAbility)) {
+            found = true;
+            CHECK(scores[i] < pokebot::evaluate(game, me) - 0.01); // the discard counts, though it's chosen after
+        }
+    }
+    REQUIRE(found);
+    CHECK_FALSE(is(agent.choose(view, actions), ActionKind::UseAbility));
 }
 
 TEST_CASE("during setup greedy goes first and puts down its Basics with the most HP", "[greedy]") {

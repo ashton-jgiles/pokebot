@@ -11,16 +11,16 @@
 namespace pokebot {
 
     class GreedyAgent final : public Agent {
-        public:
-            explicit GreedyAgent(std::uint64_t seed, int worlds = 3, const Weights& weights = default_weights());
-            std::string name() const override { return "greedy"; }
-            Action choose(const Observation& observation, const std::vector<Action>& actions) override;
-            std::vector<double> scores(const Observation& observation, const std::vector<Action>& actions);
+    public:
+        explicit GreedyAgent(std::uint64_t seed, int worlds = 3, const Weights& weights = default_weights());
+        std::string name() const override { return "greedy"; }
+        Action choose(const Observation& observation, const std::vector<Action>& actions) override;
+        std::vector<double> scores(const Observation& observation, const std::vector<Action>& actions); // each action's average e, after its follow-up choices
 
-        private:
-            Rng rng_;
-            int worlds_;
-            Weights weights_;
+    private:
+        Rng rng_;
+        int worlds_;
+        Weights weights_;
     };
-    
+
 } // namespace pokebot
