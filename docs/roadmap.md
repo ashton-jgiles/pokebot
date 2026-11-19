@@ -136,7 +136,7 @@ cover most of them. **Done when:** a target share of Standard (to be set once M3
 effects and passes generated tests, and the rest is listed by what it needs. Can run alongside M4–M5,
 since the search work only needs our four decks.
 
-## M4 — Observation layer, client, replays 🟨 (in progress)
+## M4 — Observation layer, client, replays ✅
 
 **Done when:** agents only see what their player could see at the table (tests prove two games that
 differ only in hidden cards look identical), 10,000 simulated games round-trip through replays
@@ -154,7 +154,24 @@ the Blaziken ex version. M4 makes sure the list can't leak and records what each
 | 4.3 | **Agents see observations:** `Agent::choose(const Observation&, actions)`, with no `GameState` or `CardTable`; `ask` builds the deciding player's view; every action offered names only cards that player knows (a deck search now shows its owner the whole deck). See [agent](src/agents/agent.md) | ✅ |
 | 4.4 | **Replays:** decks, seed and actions as JSON, replayed exactly; viewed as either player or with everything shown; `--save-replay`, and a saved replay whenever an invariant breaks. See [replay](src/harness/replay.md) | ✅ |
 | 4.5 | **Command-line client:** `pokebot play` (you against an agent, seeing only your view), `watch` and `replay`; `HumanAgent`; actions described from an observation; the opponent's Pokémon named as theirs. See [client](src/client/main.md) | ✅ |
-| 4.6 | Sign-off: 100,000 games with checks, 10,000 games through replays (`pokebot-sim --check-replays`), and the known approximations listed | 🟨 |
+| 4.6 | Sign-off: 100,000 games with checks, 10,000 games through replays (`pokebot-sim --check-replays`), and the known approximations listed. *Done: no problems in either run, 263 tests pass* | ✅ |
+
+**Sign-off run (2026-11-18):** `pokebot-sim --games 100000 --agent biased --seed 1` on all four decks,
+with the invariant checker after every action (about 15 million actions): **no problems found, every
+game finished.** Then `--games 10000 --check-replays`: **every game was saved, loaded and played back
+to exactly the same final state.** 263 tests pass, and a full game against an agent was played by hand
+with `pokebot play`.
+
+| Measure | Result |
+|---|---|
+| How games ended (biased random agents) | Prize cards 31.1%, no Pokémon left 18.2%, deck-out 50.7%, draws 41 (0.04%) |
+| Speed, release build, no checks | about 2,860 games/s, 0.4 million actions/s (151.7 actions a game) |
+| Speed, release build, checking every action | about 1,420 games/s |
+| Speed, release build, checking every replay | about 1,090 games/s |
+| Player who went first won | 50.9% of decided games |
+
+The games end the same way as at the M3 sign-off: hiding cards from the agents changes nothing for
+random agents, as it shouldn't. The cost is speed, from building an observation at every decision.
 
 Known approximations, each documented where it lives:
 - **A revealed card is named only once it's revealed.** When the opponent picks cards in a search that

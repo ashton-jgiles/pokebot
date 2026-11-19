@@ -67,6 +67,7 @@ back with `--replay` to see every action up to the one that broke it.
 | Step 4.1 (each player's knowledge recorded after every action) | about 4,630 games/s, 0.7 million actions/s | |
 | Step 4.3 (each agent is shown an observation, built at every decision) | about 2,860 games/s, 0.4 million actions/s | |
 | Step 4.4 (every action recorded for replays) | about 2,860 games/s: no measurable cost | |
+| Milestone 4 sign-off | about 2,860 games/s, 0.4 million actions/s | about 1,420 games/s; about 1,090 with `--check-replays` and no invariant checks |
 
 Games are longer now (about 145 actions each, up from about 100), so compare actions/s between
 versions. The release preset uses link-time optimization; without it the
