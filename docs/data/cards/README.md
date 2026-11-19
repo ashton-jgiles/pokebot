@@ -200,6 +200,11 @@ An Item or Supporter has a top-level `effects` list, and optionally `requires`: 
 }
 ```
 
+A search whose text says "reveal" sets `"reveal": true`, so the opponent sees what was found; the
+coverage test fails for any that doesn't. So far: Ultra Ball, Poké Pad (ASC and POR), Dawn, Hilda,
+Cyrano, Secret Box, Crispin, Meowth ex's Last-Ditch Catch, Frogadier's Summoning Jutsu and Purrloin's
+Invite Evil.
+
 Trainers with effects so far: Switch, Boss's Orders, Ultra Ball, Night Stretcher, Energy
 Retrieval, Poké Pad (ASC and POR), Cyrano, Lillie's Determination, Judge, Unfair Stamp, Hilda, Dawn,
 Secret Box, Buddy-Buddy Poffin, Lana's Aid, Special Red Card, Ciphermaniac's Codebreaking and

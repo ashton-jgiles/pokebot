@@ -18,12 +18,13 @@ data/decks/*.txt ──► decklist parser ──► TcgdexClient ──► conv
                           deck validator ──► CardTable ──► new_game / legal_actions / apply
                           (src/cards)        (src/engine)              │
                                                                        ▼
-                                             Agent::choose ◄──── play_game ──► pokebot-sim
-                                             (src/agents)        (src/harness)  (tools/sim)
+                       Agent::choose ◄── observe ◄──── play_game ──► replays, pokebot-sim, pokebot
+                       (src/agents)    (src/engine)    (src/harness)  (src/harness, tools/sim, src/client)
 ```
 
-Only `tools/import` talks to TCGdex. The engine only uses `CardDB` and `CardDef`, and agents only
-see the engine through `legal_actions` and `apply`.
+Only `tools/import` talks to TCGdex. The engine only uses `CardDB` and `CardDef`. Agents never see
+the game state: each decision they get an `Observation` of what their player could see, and the
+legal actions.
 
 ## Index
 
@@ -50,13 +51,17 @@ see the engine through `legal_actions` and `apply`.
 | | [events.md](src/engine/events/events.md) | Moments cards react to, the event hook |
 | | [interpreter.md](src/engine/effects/interpreter.md) | Running effects and their choices |
 | | [custom.md](src/engine/effects/custom.md) | One-of-a-kind cards (Rare Candy, Transformation Tome) and the Bench limit |
+| | [knowledge.md](src/engine/knowledge/knowledge.md) | What each player knows: seen cards, revealed cards, shuffled card numbers |
+| | [observation.md](src/engine/observation/observation.md) | `Observation`: the game as one player sees it |
 | | [invariants.md](src/engine/invariants/invariants.md) | Consistency checker |
-| | [describe.md](src/engine/describe/describe.md) | States and actions as text |
+| | [describe.md](src/engine/describe/describe.md) | States, observations and actions as text |
 | | [fixed_vector.md](src/engine/shared/fixed_vector.md), [rng.md](src/engine/shared/rng.md) | Fixed-capacity list, seeded RNG |
 | `src/agents` | [agent.md](src/agents/agent.md) | The `Agent` interface |
 | | [random_agent.md](src/agents/random_agent.md) | Random and biased random agents |
+| | [human_agent.md](src/agents/human_agent.md) | A person typing their choices |
 | `src/harness` | [match.md](src/harness/match.md) | `play_game`, how games end |
-| `src/client` | [main.md](src/client/main.md) | Command-line client (placeholder) |
+| | [replay.md](src/harness/replay.md) | Saving games and playing them back, as either player |
+| `src/client` | [main.md](src/client/main.md) | The `pokebot` command: `play`, `watch`, `replay` |
 | `tools/import` | [main.md](tools/import/main.md) | The `pokebot-import` command |
 | | [tcgdex.md](tools/import/tcgdex.md) | TCGdex lookup, cache, retries |
 | | [convert.md](tools/import/convert.md) | TCGdex → our card format |

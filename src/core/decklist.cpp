@@ -114,6 +114,10 @@ namespace pokebot {
         return deck;
     }
 
+    std::string to_line(const DeckEntry& entry) {
+        return std::to_string(entry.count) + ' ' + entry.name + ' ' + entry.set_code + ' ' + std::to_string(entry.number);
+    }
+
     Decklist load_decklist(const std::filesystem::path& path) {
         std::ifstream in(path, std::ios::binary);
         if (!in) {

@@ -10,7 +10,7 @@ The milestone plan from the project proposal, with the current status of each.
 | M2 | Basic engine | ✅ Done |
 | M3 | Effects system and every card in the four decks | ✅ Done |
 | M3b | Standard coverage: card-text translator and coverage report | ⬜ Not started |
-| M4 | Observation layer, command-line client, replays | ⬜ Not started |
+| M4 | Observation layer, command-line client, replays | 🟨 In progress |
 | M5 | Greedy agent, match harness, profiling | ⬜ Not started |
 | M6 | Model 1: turn planner (or-tree and and-tree modes) | ⬜ Not started |
 | M7 | Determinization and flat Monte Carlo | ⬜ Not started |
@@ -136,10 +136,66 @@ cover most of them. **Done when:** a target share of Standard (to be set once M3
 effects and passes generated tests, and the rest is listed by what it needs. Can run alongside M4–M5,
 since the search work only needs our four decks.
 
-## M4 onward
+## M4 — Observation layer, client, replays ✅
 
-The full definitions of M4–M11 (what each builds and its "done when" test) are in the project
-proposal. The table at the top lists them in order.
+**Done when:** agents only see what their player could see at the table (tests prove two games that
+differ only in hidden cards look identical), 10,000 simulated games round-trip through replays
+exactly, and a full game against the random agent can be played in the terminal.
+
+**Opponent decks (decided 2026-11-18):** agents never get the opponent's decklist. They see the cards
+the opponent has shown and, from M7, guess the list from a library of known archetype lists, the
+way a player recognises Dragapult from a Dreepy and then wonders whether it's the Crushing Hammer or
+the Blaziken ex version. M4 makes sure the list can't leak and records what each player has seen.
+
+| Step | Builds | Status |
+|---|---|---|
+| 4.1 | **Who knows what:** each player's `located` and `seen` cards, revealed searches (`"reveal": true`), looking at the top of the deck, mulligans showing the hand, face-down setup, shuffles forgetting, and card numbers shuffled per game. See [knowledge](src/engine/knowledge/knowledge.md) | ✅ |
+| 4.2 | **`Observation`:** what one player can see, with card definitions only for cards they've seen; their own deck and Prize cards as one unordered list; the opponent's seen cards; `describe(observation)`; identical observations for games that differ only in hidden cards. See [observation](src/engine/observation/observation.md) | ✅ |
+| 4.3 | **Agents see observations:** `Agent::choose(const Observation&, actions)`, with no `GameState` or `CardTable`; `ask` builds the deciding player's view; every action offered names only cards that player knows (a deck search now shows its owner the whole deck). See [agent](src/agents/agent.md) | ✅ |
+| 4.4 | **Replays:** decks, seed and actions as JSON, replayed exactly; viewed as either player or with everything shown; `--save-replay`, and a saved replay whenever an invariant breaks. See [replay](src/harness/replay.md) | ✅ |
+| 4.5 | **Command-line client:** `pokebot play` (you against an agent, seeing only your view), `watch` and `replay`; `HumanAgent`; actions described from an observation; the opponent's Pokémon named as theirs. See [client](src/client/main.md) | ✅ |
+| 4.6 | Sign-off: 100,000 games with checks, 10,000 games through replays (`pokebot-sim --check-replays`), and the known approximations listed. *Done: no problems in either run, 263 tests pass* | ✅ |
+
+**Sign-off run (2026-11-18):** `pokebot-sim --games 100000 --agent biased --seed 1` on all four decks,
+with the invariant checker after every action (about 15 million actions): **no problems found, every
+game finished.** Then `--games 10000 --check-replays`: **every game was saved, loaded and played back
+to exactly the same final state.** 263 tests pass, and a full game against an agent was played by hand
+with `pokebot play`.
+
+| Measure | Result |
+|---|---|
+| How games ended (biased random agents) | Prize cards 31.1%, no Pokémon left 18.2%, deck-out 50.7%, draws 41 (0.04%) |
+| Speed, release build, no checks | about 2,860 games/s, 0.4 million actions/s (151.7 actions a game) |
+| Speed, release build, checking every action | about 1,420 games/s |
+| Speed, release build, checking every replay | about 1,090 games/s |
+| Player who went first won | 50.9% of decided games |
+
+The games end the same way as at the M3 sign-off: hiding cards from the agents changes nothing for
+random agents, as it shouldn't. The cost is speed, from building an observation at every decision.
+
+Known approximations, each documented where it lives:
+- **A revealed card is named only once it's revealed.** When the opponent picks cards in a search that
+  reveals them (Cyrano), the picks show as "an unseen card" until the search ends and the cards are
+  shown. The opponent's hand then names them, so nothing is hidden that should be shown for long.
+- **Building an observation costs about as much as an action** (about 1.2 µs), and recording who knows
+  what after every action is a sweep of the visible cards. With the random agents the simulator runs at
+  about 2,860 games/s, down from 5,480 at the end of M3. Search agents will spend far longer per
+  decision, so this was left as it is; recording cards as they move would be faster.
+- **Replays depend on the card data and the engine.** A replay made before either changes may no longer
+  play back; it then stops with the action that failed rather than showing a different game.
+- **The client has had only light play-testing.** Its prompts and descriptions are tested with typed
+  input, and a full game has been played by hand.
+
+## M5 onward
+
+The full definitions of M5–M11 (what each builds and its "done when" test) are in the project
+proposal. The table at the top lists them in order. Two changes since:
+
+- **M7 starts with an opponent deck model:** a library of archetype lists (`data/archetypes/`), a
+  belief over them updated from the cards seen (Bayes' rule, with a small chance for cards no list
+  explains), and dealing the opponent's unseen cards from a list drawn from that belief. Lists can
+  only use cards the engine has effects for, so M3b widens what they can hold.
+- **M11's opponent inference** becomes the learned, stronger version of that model.
 
 ## Known gaps and notes
 

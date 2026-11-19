@@ -1,1 +1,1 @@
-{"effects": [{"op": "search_deck", "count": 1, "filter": {"kind": "pokemon", "stage": "evolution"}, "shuffle": false}, {"op": "search_deck", "count": 1, "filter": {"kind": "energy"}}]}
+{"effects": [{"op": "search_deck", "reveal": true, "count": 1, "filter": {"kind": "pokemon", "stage": "evolution"}, "shuffle": false}, {"op": "search_deck", "reveal": true, "count": 1, "filter": {"kind": "energy"}}]}

@@ -25,6 +25,7 @@ for.
 | No Pokémon has damage ≥ its HP (it should have been Knocked Out), except while an effect is still running | `… has 990 damage on 60 HP and should have been Knocked Out` |
 | No Bench is bigger than `rules::bench_size`, unless that player is choosing what to discard | `player 0's Bench has 6 Pokemon, more than 5, and no discard is pending` |
 | A game in progress has a decision pending, for player 0 or 1 | `the game isn't over but no decision is pending` |
+| Nobody knows which card a Prize card is ([knowledge](../knowledge/knowledge.md)) | `player 1 knows which card player 0's Prize card 12 is` |
 | A finished game has no pending decisions or effects | `the game is over but a decision or effect is still pending` |
 | An effect's decision has an effect running | `an effect's decision is pending but no effect is running` |
 | A card being played has an effect running | `… card is still being played but no effect is running` |

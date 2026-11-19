@@ -22,11 +22,11 @@ namespace pokebot {
 
     } // namespace
 
-    Action RandomAgent::choose(const GameState& /*game*/, const std::vector<Action>& actions) {
+    Action RandomAgent::choose(const Observation& /*observation*/, const std::vector<Action>& actions) {
         return actions[rng_.below(static_cast<std::uint32_t>(actions.size()))];
     }
 
-    Action BiasedRandomAgent::choose(const GameState& /*game*/, const std::vector<Action>& actions) {
+    Action BiasedRandomAgent::choose(const Observation& /*observation*/, const std::vector<Action>& actions) {
         std::uint32_t total = 0;
         for (const Action& action : actions) {
             total += weight(action);

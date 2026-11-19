@@ -3,6 +3,7 @@
 #include <array>
 #include <string>
 
+#include "engine/knowledge/knowledge.hpp"
 #include "engine/rules/rules.hpp"
 
 namespace pokebot {
@@ -103,6 +104,13 @@ namespace pokebot {
                 note_zone(player.deck, p, who + "deck");
                 note_zone(player.hand, p, who + "hand");
                 note_zone(player.prizes, p, who + "Prize cards");
+                for (const CardIndex card : player.prizes) { // Prize cards are face down: nobody knows which they are
+                    for (int viewer = 0; viewer < kPlayers; ++viewer) {
+                        if (card < kMaxCards && knows_where(game_, viewer, card)) {
+                            fail("player " + std::to_string(viewer) + " knows which card " + who + "Prize card " + std::to_string(card) + " is");
+                        }
+                    }
+                }
                 note_zone(player.discard, p, who + "discard pile");
                 note_zone(player.lost_zone, p, who + "Lost Zone");
                 note_zone(player.resolving, p, who + "cards being played");

@@ -207,6 +207,7 @@ namespace pokebot {
         LastingSpec lasting;
         CustomEffect custom = CustomEffect::RareCandy;
         std::uint8_t jump = 0;
+        bool reveal = false; // MoveChosen: the opponent sees the cards ("reveal them")
     };
 
     using Program = std::vector<Step>;

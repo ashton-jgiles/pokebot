@@ -41,7 +41,12 @@ points to it.
 ```cpp
 CardTable(const CardDB& db, const Decklist& deck0, const Decklist& deck1);
 const CardDef& def(CardIndex card) const;
+CardTable shuffled(std::uint64_t seed) const;
 ```
+
+Cards are numbered in decklist order. `shuffled(seed)` returns a copy with each player's cards in a
+random order instead (player 0 keeps 0–59, player 1 60–119), so card numbers don't give a deck away.
+See [knowledge](../knowledge/knowledge.md#card-numbers).
 
 The constructor runs the [deck validator](../../cards/validator/deck_validator.md) on both decks and throws
 `std::invalid_argument`, listing every problem, if either is illegal, so a game can never start
@@ -142,6 +147,13 @@ happens once every pending decision is answered. See [`continue_game`](../action
 | `amount` | Extra number the decision needs: bonus cards allowed, Energy still to discard, Benched Pokémon still to discard |
 | `target` | A `Slot`, e.g. the Benched Pokémon a retreat will bring in, or for `ExtraAttack` the `id()` of the Pokémon allowed to attack again |
 
+## `Knowledge`
+
+Two [`CardSet`](#knowledge)s per player: `located` (where the card is) and `seen` (seen at some
+point this game). A `CardSet` is 120 bits in two `std::uint64_t`s, with `insert`, `erase` and
+`contains`; `std::bitset` isn't guaranteed trivially copyable. What goes in them is explained in
+[knowledge](../knowledge/knowledge.md).
+
 ## `GameResult`
 
 `Ongoing`, `Player0Wins`, `Player1Wins`, `Draw`. A draw is when both players win at once with the
@@ -161,6 +173,7 @@ same number of win conditions. The rulebook's tiebreaker game isn't modeled.
 | `pending` | Stack of up to 8 open decisions; `back()` is decided first |
 | `effects` | Stack of up to 4 running effects ([`EffectRun`](#effectrun)) |
 | `lasting` | Up to 8 [lasting effects](#lastingeffect) |
+| `knowledge` | What each player knows ([`Knowledge`](#knowledge)) |
 | `rng` | The game's random number generator |
 | `result` | `GameResult` |
 
@@ -168,7 +181,8 @@ Helpers: `player(p)`, `def(card)`, `decision()` (the top of `pending`), `is_over
 
 A `static_assert` requires `GameState` to be **trivially copyable**. Adding a `std::vector` or
 `std::string` to it stops the build, because copying the state is how search explores the game.
-A whole game is **2,624 bytes** (1,920 before the Bench grew to 8 for Area Zero Underdepths).
+A whole game is **2,688 bytes**: 1,920 at the start of Milestone 3, 2,624 once the Bench grew to 8
+for Area Zero Underdepths, and 64 more for `knowledge`.
 
 ## Tests
 

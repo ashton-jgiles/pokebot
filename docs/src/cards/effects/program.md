@@ -19,7 +19,7 @@ Each block is a JSON object with an `"op"`:
 | `discard_hand` | — | Discard your hand | `DiscardHand` |
 | `shuffle_deck` | — | Shuffle your deck | `ShuffleDeck` |
 | `shuffle_hand_into_deck` | `player` | Shuffle your hand into your deck | `ShuffleHandIntoDeck` |
-| `search_deck` | `count` (1), `filter`, `to` (`"hand"`), `shuffle` (`true`) | Search your deck for **up to** `count` matching cards, then shuffle (unless `"shuffle": false`, for a card that searches several times and shuffles once) | `ChooseCards`, `MoveChosen`, `ShuffleDeck` |
+| `search_deck` | `count` (1), `filter`, `to` (`"hand"`), `shuffle` (`true`), `reveal` (`false`) | Search your deck for **up to** `count` matching cards, then shuffle (unless `"shuffle": false`, for a card that searches several times and shuffles once). With `"reveal": true` ("reveal them") the opponent sees what was found | `ChooseCards`, `MoveChosen`, `ShuffleDeck` |
 | `discard_from_hand` | `count` (1), `filter` | Discard exactly `count` cards from your hand | `ChooseCards`, `MoveChosen` |
 | `from_discard` | `count` (1), `filter`, `to` (`"hand"`), `up_to` (`false`) | Take exactly `count` matching cards from your discard pile, or up to `count` with `"up_to": true` | `ChooseCards`, `MoveChosen` |
 | `attach_to` | `from` (`"discard"`), `targets` (1), `up_to_targets`, `on` (`"any"`), `target`, `count` (1), `up_to`, `filter` | Choose that many of your Pokémon (matching the `target` filter), then for **each** one choose `count` matching cards from `from` (`"discard"`, `"deck"` or `"hand"`) and attach them. From the deck, it shuffles afterwards (N's PP Up, Rosa's Encouragement, Glass Trumpet, Janine's Secret Art) | `ChooseTargets`, `EachTarget`, `ChooseCards`, `MoveChosen`, `NextTarget` |
@@ -36,7 +36,7 @@ Each block is a JSON object with an `"op"`:
 | `return_self_to_hand` | — | Put this Pokémon and everything attached to it into your hand (Tuck Tail). If it was Active, you choose a new one after the attack | `ReturnSelfToHand` |
 | `discard_target_energy` | `count` (1), `on`, `player` (`"opponent"`), `filter` | Choose 1 Pokémon that has Energy, then discard `count` of its Energy (Crushing Hammer) | `ChooseTargets`, `ChooseCards`, `MoveChosen` |
 | `use_attack` | `filter` | Choose an attack of one of your matching Benched Pokémon and use it as this attack (Night Joker). Copy attacks can't be copied. Attacks only | `ChooseAttack`, `UseChosenAttack` |
-| `search_to_top` | `count` (1), `filter` | Search your deck for up to `count` cards, shuffle, then put them on top; the last one chosen is the top card (Ciphermaniac's Codebreaking) | `ChooseCards`, `ShuffleDeck`, `MoveChosen` |
+| `search_to_top` | `count` (1), `filter`, `reveal` (`false`) | Search your deck for up to `count` cards, shuffle, then put them on top; the last one chosen is the top card (Ciphermaniac's Codebreaking) | `ChooseCards`, `ShuffleDeck`, `MoveChosen` |
 | `special_condition` | `condition`, `player` (`"opponent"`), `count` (1) | Give that player's Active Pokémon a [Special Condition](../../engine/actions/conditions.md): `"asleep"`, `"burned"`, `"confused"`, `"paralyzed"` or `"poisoned"`. **Defaults to the opponent**, since cards almost always say "your opponent's Active Pokémon is now …". `count` is the Poison damage counters per Checkup | `ApplySpecialCondition` |
 | `switch_self` | — | Switch this Pokémon with 1 of your Benched Pokémon | `ChooseBenched`, `SwitchWithChosen` |
 | `switch_active` | `player` (`"you"` or `"opponent"`), `filter` | Switch that player's Active with 1 of their Benched Pokémon that matches `filter`, chosen by you (Switch, Boss's Orders, Subjugating Chains) | `ChooseBenched`, `SwitchWithChosen` |
@@ -205,6 +205,7 @@ for as long as the card is in play:
 | `SwitchToActive` | — | As named |
 | `EachTarget` | `jump` | The start of a loop over the targets: when every target is done, carry on at `jump` |
 | `NextTarget` | `jump` | The end of the loop: the next target, back to `jump` |
+| `MoveChosen` with `reveal` | — | Also shows the moved cards to the opponent ([knowledge](../../engine/knowledge/knowledge.md)) |
 | `ChooseDestination` | — | The player chooses another of their Pokémon (not a target) |
 | `Custom` | `custom` | Hands over to a [one-of-a-kind card's C++](../../engine/effects/custom.md) |
 

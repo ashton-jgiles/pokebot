@@ -53,6 +53,8 @@ database (via `card_id(entry)`) for the real name.
 - `entries`: the card lines, in file order.
 - `total_cards()`: the sum of all `count` values.
 
+Both compare with `==`.
+
 ### `DecklistError`
 
 Derives from `std::runtime_error`. The message starts with `line N:`, and `line()` returns `N`.
@@ -63,6 +65,7 @@ Derives from `std::runtime_error`. The message starts with `line N:`, and `line(
 |---|---|
 | `Decklist parse_decklist(std::istream& in)` | Parses from any stream. Throws `DecklistError`. |
 | `Decklist load_decklist(const std::filesystem::path& path)` | Opens the file and parses it. Throws `std::runtime_error` if the file can't be opened, `DecklistError` if its contents are bad. |
+| `std::string to_line(const DeckEntry& entry)` | The entry as a decklist line, `4 Dreepy TWM 128`, which parses back to the same entry. [Replays](../harness/replay.md) store decks this way. |
 
 ## Errors detected
 

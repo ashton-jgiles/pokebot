@@ -1,7 +1,5 @@
 #include <cstdint>
-#include <filesystem>
 #include <map>
-#include <memory>
 #include <set>
 #include <string>
 #include <vector>
@@ -11,39 +9,21 @@
 #include "agents/random_agent.hpp"
 #include "cards/db/card_db.hpp"
 #include "engine/engine.hpp"
+#include "harness/match.hpp"
+#include "support/real_decks.hpp"
 
 using pokebot::Action;
 using pokebot::ActionKind;
-using pokebot::CardDB;
 using pokebot::CardDef;
 using pokebot::CardKind;
 using pokebot::CardTable;
 using pokebot::GameState;
+using test::load_real_decks;
 
 // Milestone 3's sign-off: every card in our decks has its effects written, and random games reach every
 // one of them. Mechanics no deck card uses (Burned, Paralyzed, extra attacks, ...) have test-only cards in
 // the other engine tests; docs/tests/README.md lists them.
 namespace {
-
-    struct RealDecks {
-        CardDB db;
-        std::vector<pokebot::Decklist> decks;
-    };
-
-    std::unique_ptr<RealDecks> load_real_decks() {
-        const std::filesystem::path root = POKEBOT_SOURCE_DIR;
-        if (!std::filesystem::exists(root / "data/cards/generated")) {
-            return nullptr;
-        }
-        auto real = std::make_unique<RealDecks>();
-        real->db = CardDB::load(root / "data/cards/generated", root / "data/cards/effects");
-        for (const auto& file : std::filesystem::directory_iterator(root / "data/decks")) {
-            if (file.path().extension() == ".txt") {
-                real->decks.push_back(pokebot::load_decklist(file.path()));
-            }
-        }
-        return real;
-    }
 
     std::string card_key(const CardDef& c) {
         return c.id + " " + c.name;
@@ -132,6 +112,40 @@ TEST_CASE("every card in our decks has its effects written", "[coverage]") {
     CHECK(list.empty());
 }
 
+TEST_CASE("every card whose text says \"reveal\" reveals what it finds", "[coverage]") {
+    const auto real = load_real_decks();
+    if (!real) {
+        SKIP("no generated card data; run pokebot-import first");
+    }
+    const auto says_reveal = [](const std::string& text) {
+        return text.find("reveal") != std::string::npos;
+    };
+    const auto reveals = [](const nlohmann::json& effects) {
+        return effects.dump().find("\"reveal\":true") != std::string::npos;
+    };
+    std::string list;
+    for (const auto& deck : real->decks) {
+        for (const auto& entry : deck.entries) {
+            const CardDef& c = real->db.at(pokebot::card_id(entry));
+            if (says_reveal(c.text) && !reveals(c.effects)) {
+                list += "\n  " + card_key(c);
+            }
+            for (const auto& a : c.attacks) {
+                if (says_reveal(a.text) && !reveals(a.effects)) {
+                    list += "\n  " + card_key(c) + ": attack " + a.name;
+                }
+            }
+            for (const auto& a : c.abilities) {
+                if (says_reveal(a.text) && !reveals(a.effects)) {
+                    list += "\n  " + card_key(c) + ": ability " + a.name;
+                }
+            }
+        }
+    }
+    INFO("missing \"reveal\": true:" << list);
+    CHECK(list.empty());
+}
+
 TEST_CASE("random games use every attack, Ability, Trainer and Special Energy in our decks", "[coverage]") {
     const auto real = load_real_decks();
     if (!real) {
@@ -151,7 +165,7 @@ TEST_CASE("random games use every attack, Ability, Trainer and Special Energy in
         pokebot::BiasedRandomAgent agent(i);
         for (int step = 0; step < 20000 && !game.is_over(); ++step) {
             const auto actions = pokebot::legal_actions(game);
-            const Action action = agent.choose(game, actions);
+            const Action action = pokebot::ask(agent, game, actions);
             record(game, action, used);
             pokebot::apply(game, action);
         }

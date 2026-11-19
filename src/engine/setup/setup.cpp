@@ -26,7 +26,7 @@ namespace pokebot {
                 p.deck.push_back(card);
             }
             p.hand.clear();
-            game.rng.shuffle(p.deck);
+            detail::shuffle_deck(game, player);
             detail::draw_cards(game, player, kOpeningHand);
         }
 
@@ -80,6 +80,14 @@ namespace pokebot {
             if (!redraw0 && !redraw1) {
                 break;
             }
+            // A player who mulligans shows their hand to the opponent first.
+            for (int p = 0; p < kPlayers; ++p) {
+                if (p == 0 ? redraw0 : redraw1) {
+                    for (const CardIndex card : game.player(p).hand) {
+                        detail::show(game, opponent_of(p), card);
+                    }
+                }
+            }
             if (redraw0) {
                 deal_opening_hand(game, 0);
                 ++game.player(0).mulligans;
@@ -105,6 +113,7 @@ namespace pokebot {
             game.pending.push_back(decision_for(DecisionKind::SetupActive, p));
         }
         game.pending.push_back(decision_for(DecisionKind::ChooseTurnOrder, coin_winner));
+        detail::note_visible(game);
         return game;
     }
 

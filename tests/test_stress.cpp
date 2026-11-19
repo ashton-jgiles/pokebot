@@ -1,7 +1,5 @@
 #include <array>
 #include <cstdint>
-#include <filesystem>
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -12,33 +10,14 @@
 #include "engine/describe/describe.hpp"
 #include "engine/engine.hpp"
 #include "harness/match.hpp"
+#include "support/real_decks.hpp"
 
-using pokebot::CardDB;
 using pokebot::CardTable;
 using pokebot::GameEnd;
+using test::load_real_decks;
+using test::RealDecks;
 
 namespace {
-
-    struct RealDecks {
-        CardDB db;
-        std::vector<pokebot::Decklist> decks;
-    };
-
-    // The project's real card data and decks, or nothing if pokebot-import hasn't been run.
-    std::unique_ptr<RealDecks> load_real_decks() {
-        const std::filesystem::path root = POKEBOT_SOURCE_DIR;
-        if (!std::filesystem::exists(root / "data/cards/generated")) {
-            return nullptr;
-        }
-        auto real = std::make_unique<RealDecks>();
-        real->db = CardDB::load(root / "data/cards/generated", root / "data/cards/effects");
-        for (const auto& file : std::filesystem::directory_iterator(root / "data/decks")) {
-            if (file.path().extension() == ".txt") {
-                real->decks.push_back(pokebot::load_decklist(file.path()));
-            }
-        }
-        return real;
-    }
 
     template <class AgentType>
     std::array<int, 5> play_many(const RealDecks& real, int games) {
@@ -111,7 +90,7 @@ TEST_CASE("every state and every legal action can be described", "[stress][descr
                 REQUIRE_FALSE(text.empty());
                 REQUIRE(text.find("unknown") == std::string::npos);
             }
-            pokebot::apply(game, agent.choose(game, actions));
+            pokebot::apply(game, pokebot::ask(agent, game, actions));
         }
         CHECK(pokebot::describe(game).find("game over") != std::string::npos);
     }
