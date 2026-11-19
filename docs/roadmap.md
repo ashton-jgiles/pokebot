@@ -1,7 +1,7 @@
 # Roadmap
 
 The milestone plan from the project proposal, with the current status of each.
-**Last reviewed:** 2026-11-16.
+**Last reviewed:** 2026-11-18.
 
 | # | Milestone | Status |
 |---|---|---|
@@ -10,7 +10,7 @@ The milestone plan from the project proposal, with the current status of each.
 | M2 | Basic engine | ✅ Done |
 | M3 | Effects system and every card in the four decks | ✅ Done |
 | M3b | Standard coverage: card-text translator and coverage report | ⬜ Not started |
-| M4 | Observation layer, command-line client, replays | 🟨 In progress |
+| M4 | Observation layer, command-line client, replays | ✅ Done |
 | M5 | Greedy agent, match harness, profiling | ⬜ Not started |
 | M6 | Model 1: turn planner (or-tree and and-tree modes) | ⬜ Not started |
 | M7 | Determinization and flat Monte Carlo | ⬜ Not started |
