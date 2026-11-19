@@ -69,6 +69,8 @@ namespace pokebot {
         std::vector<PairingResult> pairings;
 
         std::array<long long, 5> ends{};
+        std::array<long long, 5> a_wins_by{};   // A's wins by how the game ended: DeckOut means B's deck ran out
+        std::array<long long, 5> a_losses_by{}; // A's losses the same way: DeckOut means A's deck ran out
         long long games = 0;
         long long turns = 0;
         long long actions = 0;
@@ -78,9 +80,9 @@ namespace pokebot {
     };
 
     class ArenaError : public std::runtime_error {
-        public:
-            ArenaError(const std::string& message, Replay game) : std::runtime_error(message), replay(std::move(game)) {}
-            Replay replay;
+    public:
+        ArenaError(const std::string& message, Replay game) : std::runtime_error(message), replay(std::move(game)) {}
+        Replay replay;
     };
 
     ArenaResult run_arena(const CardDB& db, const std::vector<ArenaDeck>& decks, const Contestant& a, const Contestant& b, const ArenaOptions& options = {});

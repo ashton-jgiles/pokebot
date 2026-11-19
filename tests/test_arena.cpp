@@ -111,6 +111,17 @@ TEST_CASE("an arena plays every deck pairing, each seed with A in both seats, an
         ended += count;
     }
     CHECK(ended == result.games);
+    long long won = 0;
+    long long lost = 0;
+    for (std::size_t i = 0; i < result.ends.size(); ++i) {
+        won += result.a_wins_by[i];
+        lost += result.a_losses_by[i];
+    }
+    CHECK(won == result.overall.wins);
+    CHECK(lost == result.overall.losses);
+    const auto deck_out = static_cast<std::size_t>(pokebot::GameEnd::DeckOut);
+    CHECK(result.a_wins_by[deck_out] == result.overall.wins); // the sample Pokemon have no attacks, so every game is a deck-out
+    CHECK(result.a_losses_by[deck_out] == result.overall.losses);
 
     // Every game is kept: seeds come in pairs, with A as player 0 and then as player 1, each with its own deck.
     REQUIRE(result.replays.size() == 24);

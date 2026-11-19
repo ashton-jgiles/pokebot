@@ -66,7 +66,7 @@ namespace pokebot {
         const long long total = static_cast<long long>(n * n) * per_pairing;
 
         std::vector<CardTable> tables;
-        tables.reserve(2 * n *n);
+        tables.reserve(2 * n * n);
         for (std::size_t pairing = 0; pairing < n * n; ++pairing) {
             const Decklist& deck_a = decks[pairing / n].list;
             const Decklist& deck_b = decks[pairing % n].list;
@@ -159,7 +159,13 @@ namespace pokebot {
             result.pairings[slot.pairing].tally.add(record.result, slot.a_seat);
             result.overall.add(record.result, slot.a_seat);
             (record.first_player == slot.a_seat ? result.a_first : result.b_first).add(record.result, slot.a_seat);
-            ++result.ends[static_cast<std::size_t>(record.end)];
+            const auto end = static_cast<std::size_t>(record.end);
+            ++result.ends[end];
+            if (record.result == (slot.a_seat == 0 ? GameResult::Player0Wins : GameResult::Player1Wins)) {
+                ++result.a_wins_by[end];
+            } else if (record.result == (slot.a_seat == 0 ? GameResult::Player1Wins : GameResult::Player0Wins)) {
+                ++result.a_losses_by[end];
+            }
             ++result.games;
             result.turns += record.turns;
             result.actions += record.actions;
@@ -173,4 +179,4 @@ namespace pokebot {
         return result;
     }
 
-} // namespace pokbot
+} // namespace pokebot

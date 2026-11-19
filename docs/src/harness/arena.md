@@ -44,6 +44,7 @@ shared read-only; every game copies its own state.
 | `a_first`, `b_first` | The same, split by who went first |
 | `pairings` | One `Tally` for each (A's deck, B's deck), A's deck first |
 | `ends` | Games by how they ended ([`GameEnd`](match.md)) |
+| `a_wins_by`, `a_losses_by` | A's wins and losses by how the game ended. Prize cards and no Pokémon left are the winner's doing and deck-out the loser's, so a win by `DeckOut` means B's deck ran out and a loss by `DeckOut` means A's did |
 | `games`, `turns`, `actions`, `seconds`, `threads` | For speed |
 | `replays` | Every `replay_every`-th game as a [replay](replay.md), with the decks' and agents' names |
 
@@ -70,8 +71,8 @@ and is passed on as it was.
 
 - the Wilson interval for 50 of 100, 31 of 32, 0 of 10 and no games;
 - a tally counting results for A from either seat, with a draw as half;
-- every pairing played the same number of times and the totals adding up, with each seed played
-  with A in each seat and each side keeping its deck;
+- every pairing played the same number of times and the totals adding up (wins and losses by how
+  they ended too), with each seed played with A in each seat and each side keeping its deck;
 - kept games playing back to the same result;
 - the same results with 1 thread and with 4;
 - an agent's failure stopping the arena and passed on.

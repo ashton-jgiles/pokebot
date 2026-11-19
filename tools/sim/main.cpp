@@ -272,6 +272,15 @@ namespace {
             std::cout << "  " << std::setw(16) << std::left << to_string(static_cast<GameEnd>(end)) << std::right
                       << std::setw(8) << result.ends[end] << "  (" << percent(result.ends[end], result.games) << "%)\n";
         }
+        // Prize cards and no Pokemon left are the winner's doing, deck-out the loser's.
+        std::cout << "How " << a.name << " won and lost:\n";
+        std::cout << "  " << std::setw(16) << std::left << "" << std::right << std::setw(8) << "won" << std::setw(8) << "lost" << '\n';
+        for (const GameEnd end : {GameEnd::PrizeCards, GameEnd::NoPokemon, GameEnd::DeckOut}) {
+            const auto i = static_cast<std::size_t>(end);
+            std::cout << "  " << std::setw(16) << std::left << to_string(end) << std::right << std::setw(8) << result.a_wins_by[i]
+                      << std::setw(8) << result.a_losses_by[i] << '\n';
+        }
+        std::cout << "  (won by deck-out: " << b.name << "'s deck ran out; lost by deck-out: " << a.name << "'s did)\n";
         std::cout << (options.check ? "Invariants checked after every action: no problems found\n"
                                     : "Invariant checks were off (--no-check)\n");
         for (std::size_t i = 0; i < result.replays.size(); ++i) {
