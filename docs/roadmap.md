@@ -12,7 +12,7 @@ The milestone plan from the project proposal, with the current status of each.
 | M3b | Standard coverage: card-text translator and coverage report | ⬜ Not started |
 | M4 | Observation layer, command-line client, replays | ✅ Done |
 | M5 | Greedy agent, match harness, profiling | ✅ Done |
-| M6 | Model 1: turn planner (or-tree and and-tree modes) | ⬜ Not started |
+| M6 | Model 1: turn planner (or-tree and and-tree modes) | 🔄 In progress |
 | M7 | Determinization and flat Monte Carlo | ⬜ Not started |
 | M8 | Model 2: IS-MCTS | ⬜ Not started |
 | M9 | Model 3: endgame solver (expectiminimax) | ⬜ Not started |
@@ -248,6 +248,34 @@ Known limits, each documented where it lives:
 - **Greedy is slow** for what it does (about 9 ms a game on one thread), which matters once M7
   uses it for playouts: profiling it is a good first task there.
 - **The weights θ are set by hand,** two of them adjusted in 5.6b after measuring; M10 learns them.
+
+## M6 — Model 1: turn planner 🔄
+
+**Done when:** the or-tree mode finds the win in every position of a hand-built test suite, and the
+and-tree mode's Planner beats Greedy. The suite also reports the nodes expanded with and without the
+closed set, and with and without f_bound.
+
+The planner searches the certain part of the current turn: Det actions, ending in one Bnd action.
+The or-tree mode looks for the first plan that reaches a goal (a win, a Knock Out, k Prize cards); the
+and-tree mode finds the best plans by branch-and-bound. Until IS-MCTS (M8), the Planner plays the
+or-tree's winning plan if there is one, and the and-tree's best plan otherwise.
+
+**How actions are classed (decided 2026-11-19):** by applying the action once: Det if it uses no
+chance (the random number generator didn't move), reveals nothing (the player knows the place of no
+new card) and leaves the player in their main phase; Fin if only the last fails. A Prize card taken
+for a Knock Out doesn't count as revealing for Fin, and the engine now takes Prize cards from the end
+of the pile rather than at random, so a Knock Out needs no chance.
+
+| Step | Builds | Status |
+|---|---|---|
+| 6.1 | **Action classes** Det, Fin and the rest of Bnd, by applying the action once. See [action classes](src/agents/action_class.md) | 🔄 |
+| 6.2 | **State hash and closed set**, with equivalent orders of the same actions hashing the same | ⬜ |
+| 6.3 | **Plans and plan value:** δ*, e (or u) at the end, averaged over m sampled worlds when the last action is uncertain | ⬜ |
+| 6.4 | **Or-tree mode:** goals γ_win, γ_KO and γ_prize^k, best-first by h_KO, children ordered by action class, node budget B_or | ⬜ |
+| 6.5 | **And-tree mode:** branch-and-bound for the top-K plans, f_bound from a relaxed problem, node budget B_tp | ⬜ |
+| 6.6 | **Planner agent:** the or-tree's win, else the and-tree's best plan, planning again after each boundary | ⬜ |
+| 6.7 | **Test positions:** the win found in every one, and nodes expanded with and without the closed set and f_bound | ⬜ |
+| 6.8 | **Sign-off:** Planner against Greedy on every deck pairing, and speed | ⬜ |
 
 ## M5 onward
 

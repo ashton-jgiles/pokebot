@@ -73,7 +73,10 @@ Runs after every attack and after every Pokémon Checkup (rulebook p. 14):
    event is raised and counted in history first; then it and every attached card go to its owner's
    discard pile.
 2. The opponent takes `rules::prize_value` Prize cards: **1**, **2** for Pokémon ex, **3** for Mega Evolution Pokémon ex,
-   or as many as remain. Prize cards are face down, so which ones are taken is random.
+   or as many as remain, from the end of the pile. They're face down and were dealt from a shuffled
+   deck, so taking a particular one is the same as taking one at random. Until step 6.1 they were
+   picked at random, which made every Knock Out look like chance to the turn planner
+   ([action classes](../../agents/action_class.md)).
 3. **Check for a winner** (below). If the game is over, stop.
 4. Each player whose Active Spot is empty gets a `PromoteActive` decision: after a Knock Out, or after
    an effect like Tuck Tail took the Active out of play. The opponent of the current player chooses first.
