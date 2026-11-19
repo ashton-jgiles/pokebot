@@ -196,14 +196,15 @@ a game state consistent with it, tries each action there and scores the result w
 function `e`. Its own deck and Prize cards are dealt from `deck_or_prizes` (their contents are known
 exactly); the opponent's unseen cards are an inert placeholder until M7 deals them from a guessed
 decklist. Actions that use no chance and reveal nothing come out the same whatever the hidden cards
-are; the rest are averaged over a few sampled states. `e` is computed from an observation, so it
-can't use hidden cards either. The turn planner (M6) needs the same states.
+are; the rest are averaged over a few sampled states. `e` reads only what both players can see, so
+it can't use hidden cards either, and gives the same value in a world as in the real game. The turn
+planner (M6) needs the same states.
 
 | Step | Builds | Status |
 |---|---|---|
 | 5.1 | **The engine's stack in `Observation`:** every pending decision, and the effects resolving with their chosen cards hidden from a viewer who can't place them. See [observation](src/engine/observation/observation.md) | ✅ |
-| 5.2 | **Consistent states:** a [`World`](src/agents/world.md), a `GameState` built from an observation that observes back to the same observation, with the viewer's own hidden cards dealt from their known contents and the opponent's unseen cards a placeholder | 🔄 |
-| 5.3 | **The evaluation function** `e` (features φ1–φ8, hand-set weights) computed from an observation | ⬜ |
+| 5.2 | **Consistent states:** a [`World`](src/agents/world.md), a `GameState` built from an observation that observes back to the same observation, with the viewer's own hidden cards dealt from their known contents and the opponent's unseen cards a placeholder | ✅ |
+| 5.3 | **The evaluation function** `e` (features φ1–φ8 as 10 features, hand-set weights), zero-sum and reading only what both players can see. See [evaluation](src/agents/evaluation.md) | 🔄 |
 | 5.4 | **Greedy agent:** one action ahead, averaged over a few sampled states | ⬜ |
 | 5.5 | **Match harness:** seeded games in parallel, seats swapped, win rates with 95% confidence intervals per deck pairing, replays kept | ⬜ |
 | 5.6 | Sign-off: Greedy against Random on every deck pairing, and profiling | ⬜ |

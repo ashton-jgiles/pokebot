@@ -60,6 +60,7 @@ legal actions.
 | | [random_agent.md](src/agents/random_agent.md) | Random and biased random agents |
 | | [human_agent.md](src/agents/human_agent.md) | A person typing their choices |
 | | [world.md](src/agents/world.md) | `World`: a game state consistent with an observation, to try actions on |
+| | [evaluation.md](src/agents/evaluation.md) | The evaluation function e: features, weights, utility |
 | `src/harness` | [match.md](src/harness/match.md) | `play_game`, how games end |
 | | [replay.md](src/harness/replay.md) | Saving games and playing them back, as either player |
 | `src/client` | [main.md](src/client/main.md) | The `pokebot` command: `play`, `watch`, `replay` |

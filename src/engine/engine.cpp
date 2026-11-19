@@ -150,4 +150,8 @@ namespace pokebot {
         detail::note_visible(game);
     }
 
+    bool can_pay_attack(const GameState& game, const PokemonInPlay& pokemon, std::size_t attack) {
+        return detail::can_pay_cost(game, pokemon, rules::attack_cost(game, pokemon, attack));
+    }
+
 } // namespace pokebot

@@ -27,6 +27,7 @@ add_library(pokebot_lib
   agents/random_agent.cpp
   agents/human_agent.cpp
   agents/world.cpp
+  agents/evaluation.cpp
   harness/match.cpp
   harness/replay.cpp
 )
