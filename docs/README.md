@@ -63,6 +63,7 @@ legal actions.
 | | [evaluation.md](src/agents/evaluation.md) | The evaluation function e: features, weights, utility |
 | | [greedy_agent.md](src/agents/greedy_agent.md) | The greedy agent: one action ahead in a few worlds |
 | | [action_class.md](src/agents/action_class.md) | Det, Fin and the rest of Bnd: which actions the turn planner searches through |
+| | [state_hash.md](src/agents/state_hash.md) | State hashes and the turn planner's closed set |
 | `src/harness` | [match.md](src/harness/match.md) | `play_game`, how games end |
 | | [replay.md](src/harness/replay.md) | Saving games and playing them back, as either player |
 | | [arena.md](src/harness/arena.md) | The match harness: one agent against another, in parallel, with confidence intervals |

@@ -47,6 +47,7 @@ add_executable(pokebot_tests
   test_stress.cpp
   test_coverage.cpp
   test_action_class.cpp
+  test_state_hash.cpp
 )
 target_link_libraries(pokebot_tests PRIVATE
   pokebot_lib pokebot_import_lib pokebot_warnings Catch2::Catch2WithMain)
