@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "engine/actions/action.hpp"
@@ -19,6 +20,8 @@ namespace pokebot {
         // Picks one of `actions`, the legal choices for observation.decision, which is always this
         // agent's player's to make. `actions` is never empty.
         virtual Action choose(const Observation& observation, const std::vector<Action>& actions) = 0;
+
+        virtual std::vector<std::pair<std::string, double>> counters() const { return {}; }
     };
 
 } // namespace pokebot

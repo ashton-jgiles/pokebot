@@ -242,6 +242,13 @@ namespace {
         arena.threads = options.threads;
         arena.check_invariants = options.check;
         arena.replay_every = options.replay_every;
+        const auto started = std::chrono::steady_clock::now();
+        arena.on_progress = [started](long long done, long long total) {
+            const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+            const double left = seconds * static_cast<double>(total - done) / static_cast<double>(done);
+            std::cerr << "  " << done << " of " << total << " games, " << std::fixed << std::setprecision(0) << seconds << " s, about "
+                      << left << " s left\n";
+        };
 
         ArenaResult result;
         try {
@@ -287,6 +294,20 @@ namespace {
                       << std::setw(8) << result.a_losses_by[i] << '\n';
         }
         std::cout << "  (won by deck-out: " << b.name << "'s deck ran out; lost by deck-out: " << a.name << "'s did)\n";
+        const auto print_counters = [&](const std::string& name, const std::vector<std::pair<std::string, double>>& counters) {
+            if (counters.empty()) {
+                return;
+            }
+            std::cout << name << " per game:" << std::setprecision(2);
+            const char* separator = " ";
+            for (const auto& [label, total] : counters) {
+                std::cout << separator << label << ' ' << total / static_cast<double>(result.games);
+                separator = ", ";
+            }
+            std::cout << std::setprecision(1) << '\n';
+        };
+        print_counters(a.name, result.a_counters);
+        print_counters(b.name, result.b_counters);
         std::cout << (options.check ? "Invariants checked after every action: no problems found\n"
                                     : "Invariant checks were off (--no-check)\n");
         for (std::size_t i = 0; i < result.replays.size(); ++i) {

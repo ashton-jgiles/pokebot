@@ -1,5 +1,7 @@
 #include <cstddef>
 #include <cstdint>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
@@ -160,4 +162,21 @@ TEST_CASE("on the real decks, the planner plays whole games against random", "[p
         CHECK(record.end != pokebot::GameEnd::ActionLimit);
         CHECK(planner.stats().plans > 0);
     }
+}
+
+TEST_CASE("the planner counts its searches and the time they take", "[planner]") {
+    Fixture f;
+    f.give("TST-2");
+    f.give("TST-4");
+    PlannerAgent planner(1);
+    f.play_turn(planner);
+    const auto& stats = planner.stats();
+    CHECK(stats.or_nodes > 0);
+    CHECK(stats.and_nodes > 0);
+    CHECK(stats.scored > 0);
+    CHECK(stats.or_seconds >= 0.0);
+    CHECK(stats.scoring_seconds <= stats.and_seconds);
+    const auto counters = planner.counters();
+    REQUIRE(!counters.empty());
+    CHECK(counters.front() == std::pair<std::string, double>{"plans", 1.0});
 }

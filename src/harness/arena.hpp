@@ -34,6 +34,7 @@ namespace pokebot {
         int threads = 0;
         bool check_invariants = false;
         int replay_every = 0;
+        std::function<void(long long finished, long long total)> on_progress;
     };
 
     struct Tally {
@@ -77,6 +78,8 @@ namespace pokebot {
         int threads = 0;
         double seconds = 0.0;
         std::vector<Replay> replays;
+        std::vector<std::pair<std::string, double>> a_counters;
+        std::vector<std::pair<std::string, double>> b_counters;
     };
 
     class ArenaError : public std::runtime_error {

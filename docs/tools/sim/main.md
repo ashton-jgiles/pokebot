@@ -50,7 +50,10 @@ for the stress test. It can't be combined with `--print` or `--check-replays`.
 It prints the speed, A's score (wins, plus half the draws, per game) with its 95% confidence
 interval, the same split by who went first and by deck pairing, how the games ended, and how A won
 and lost: by Prize cards, by the loser having no Pokémon left, or by the loser's deck running out
-(a loss by deck-out is A's own deck running out). Results
+(a loss by deck-out is A's own deck running out). For an agent that measures itself (the
+[planner](../../src/agents/planner_agent.md)) it then prints its counters per game. While it plays, it
+prints a progress line about every 5% of the games to the error stream, with the time so far and an
+estimate of the time left. Results
 don't depend on `--threads`. With the same agent on both sides (`--agents random,random`) they're
 labelled `random-A` and `random-B`. Replays saved with `--save-replays` are named
 `NNNNN-seed-S-<player 0's agent>-<deck>-vs-<player 1's agent>-<deck>.json`; print one with `--replay`.

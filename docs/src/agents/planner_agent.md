@@ -35,6 +35,22 @@ This is the proposal's decision procedure with Model 2 (IS-MCTS, M8) not built y
    a search takes, which is also how the plan was scored.
 5. A single legal action is taken without searching.
 
+## What it measures
+
+`stats()`, and the same numbers by name from `counters()` for the [match harness](../harness/arena.md):
+
+| Counter | Counts |
+|---|---|
+| `plans` | Plans made |
+| `wins found` | Plans the or-tree found to win this turn |
+| `plan actions` | Actions played from a plan |
+| `greedy decisions` | Decisions left to Greedy |
+| `or-tree nodes`, `and-tree nodes` | Nodes the two searches expanded |
+| `plan endings scored`, `of them uncertain` | Plan-ending actions the and-tree scored, and how many of them in sampled worlds |
+| `or-tree s`, `and-tree s`, `of it scoring s`, `greedy s` | Seconds in each search, in scoring the and-tree's plan endings (part of the and-tree's time), and in Greedy's decisions |
+
+`pokebot-sim --agents planner,…` prints them per game.
+
 ## Options
 
 | Option | Default | Meaning |

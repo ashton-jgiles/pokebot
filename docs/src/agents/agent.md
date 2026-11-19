@@ -11,6 +11,7 @@ public:
     virtual ~Agent() = default;
     virtual std::string name() const = 0;
     virtual Action choose(const Observation& observation, const std::vector<Action>& actions) = 0;
+    virtual std::vector<std::pair<std::string, double>> counters() const { return {}; }
 };
 ```
 
@@ -18,6 +19,9 @@ public:
 - An agent is asked about **every** decision that belongs to its player, including setup, choosing a
   new Active, and which Energy to discard when retreating, not just the main phase.
 - `name()` is a short label for reports, such as `"random"`.
+- `counters()` gives totals for measuring the agent over its game, as named numbers: nodes searched,
+  seconds spent, and so on. Agents that don't measure anything return none. The
+  [match harness](../harness/arena.md) adds them up over every game each side plays.
 
 ## Agents see only their own view
 

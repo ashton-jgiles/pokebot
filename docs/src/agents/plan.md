@@ -40,6 +40,8 @@ otherwise; a finished game is scored with u_i instead of e_i ([evaluation](evalu
 - **The worlds for a state depend only on the scorer's seed and the state** (its
   [hash](state_hash.md)), not on what was scored before. So a plan has the same value however a search
   reaches it, and two searches (with f_bound on and off, say) can be compared plan for plan.
+- **It times itself:** `seconds()` is the time spent in `value`, and `uncertain()` the number of
+  uncertain plan endings scored, for the Planner's counters.
 - **Follow-up choices come first.** After the last action, the player's own choices that follow from
   it (the Pokémon Seek takes, the cards Ultra Ball discards) are made with `finish_choices`, as Greedy
   does, and only then is the state scored. Otherwise a search would be scored partway through.

@@ -1,6 +1,7 @@
 #include "agents/plan.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cstddef>
 #include <stdexcept>
 
@@ -55,11 +56,17 @@ namespace pokebot {
         : player_(player), samples_(std::max(samples, 1)), weights_(weights), seed_(seed) {}
 
     double PlanScorer::value(const GameState& game, const Action& action, const TriedAction& tried) {
+        const auto start = std::chrono::steady_clock::now();
+        const auto timed = [&](double value) {
+            seconds_ += std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+            return value;
+        };
         if (tried.kind != ActionClass::Uncertain) {
             GameState after = tried.after;
             finish_choices(after, player_, weights_);
-            return evaluate(after, player_, weights_);
+            return timed(evaluate(after, player_, weights_));
         }
+        ++uncertain_;
         const std::uint64_t key = hash_state(game);
         if (worlds_.empty() || key != worlds_for_) {
             worlds_.clear();
@@ -77,7 +84,7 @@ namespace pokebot {
             finish_choices(after, player_, weights_);
             total += evaluate(after, player_, weights_);
         }
-        return total / static_cast<double>(samples_);
+        return timed(total / static_cast<double>(samples_));
     }
 
     double PlanScorer::value(const GameState& game, const Plan& plan) {
