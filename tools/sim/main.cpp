@@ -35,10 +35,11 @@ namespace {
         std::string agent = "biased";
         std::uint64_t seed = 1;
         bool check = true;
-        bool print = false;      // narrate one game instead of running many
-        std::string save_replay; // with --print: where to save that game
-        std::string replay;      // print this saved game instead of playing
-        int as = kEveryone;      // whose view --print and --replay show
+        bool print = false;         // narrate one game instead of running many
+        std::string save_replay;    // with --print: where to save that game
+        std::string replay;         // print this saved game instead of playing
+        int as = kEveryone;         // whose view --print and --replay show
+        bool check_replays = false; // save, load and play back every game
     };
 
     void print_usage() {
@@ -52,6 +53,8 @@ namespace {
                      "  --save-replay FILE   with --print: also save that game as a replay\n"
                      "  --replay FILE        print a saved replay instead of playing\n"
                      "  --as 0|1|all         with --print or --replay: show what that player saw (default all)\n"
+                     "  --check-replays      save every game as a replay, load it and play it back, checking it\n"
+                     "                       ends in exactly the same state (slower)\n"
                      "If an invariant breaks, the game is saved to replays/invariant-seed-S.json.\n";
     }
 
@@ -69,6 +72,8 @@ namespace {
                 options.check = false;
             } else if (arg == "--print") {
                 options.print = true;
+            } else if (arg == "--check-replays") {
+                options.check_replays = true;
             } else if (arg == "--save-replay" && has_value) {
                 options.save_replay = argv[++i];
             } else if (arg == "--replay" && has_value) {
@@ -121,11 +126,13 @@ namespace {
     // Plays one game with play_game. If an invariant breaks, saves the game as a replay, made by
     // make_replay() only then, so the decks aren't copied for every game.
     template <class MakeReplay>
-    GameRecord play_saving_failures(const CardTable& table, std::uint64_t seed, const Options& options, MakeReplay make_replay) {
+    GameRecord play_saving_failures(const CardTable& table, std::uint64_t seed, const Options& options, MakeReplay make_replay,
+                                    GameState* end = nullptr) {
         const auto agent0 = make_agent(options.agent, seed * 2);
         const auto agent1 = make_agent(options.agent, seed * 2 + 1);
         MatchOptions match_options;
         match_options.check_invariants = options.check;
+        match_options.final_state = end;
         try {
             return play_game(table, seed, *agent0, *agent1, match_options);
         } catch (const InvariantError& e) {
@@ -137,6 +144,28 @@ namespace {
             std::cerr << "saved the game as a replay: " << path << '\n';
             throw;
         }
+    }
+
+    // Saves the game as replay text, loads it back and plays it, checking it ends in exactly `end`.
+    // A game that doesn't is saved to replays/mismatch-seed-S.json.
+    bool round_trips(const CardDB& db, Replay replay, const GameRecord& record, const GameState& end) {
+        replay.actions = record.moves;
+        replay.result = record.result;
+        bool same = false;
+        try {
+            const Replay loaded = replay_from_json(nlohmann::ordered_json::parse(to_json(replay).dump()));
+            GameState replayed = play_back(replay_table(db, loaded), loaded);
+            replayed.cards = nullptr;
+            same = loaded == replay && replayed == end;
+        } catch (const ReplayError&) {
+            same = false;
+        }
+        if (!same) {
+            const std::string path = "replays/mismatch-seed-" + std::to_string(replay.seed) + ".json";
+            save_replay(replay, path);
+            std::cerr << "game " << replay.seed << " didn't play back the same; saved it to " << path << '\n';
+        }
+        return same;
     }
 
     double percent(long long part, long long whole) {
@@ -196,6 +225,7 @@ int main(int argc, char** argv) {
         long long total_actions = 0;
         long long first_player_wins = 0;
         long long decided = 0;
+        long long replay_mismatches = 0;
 
         const auto start = std::chrono::steady_clock::now();
         for (long long i = 0; i < options.games; ++i) {
@@ -207,9 +237,14 @@ int main(int argc, char** argv) {
             const std::uint64_t seed = options.seed + static_cast<std::uint64_t>(i);
             const std::size_t a = pairing / n;
             const std::size_t b = pairing % n;
-            const GameRecord record = play_saving_failures(*tables[pairing], seed, options, [&] {
+            const auto replay_of = [&] {
                 return start_replay(seed, options.agent, files[a], decks[a], files[b], decks[b]);
-            });
+            };
+            GameState end;
+            const GameRecord record = play_saving_failures(*tables[pairing], seed, options, replay_of, options.check_replays ? &end : nullptr);
+            if (options.check_replays && !round_trips(db, replay_of(), record, end)) {
+                ++replay_mismatches;
+            }
 
             ++ends[static_cast<std::size_t>(record.end)];
             total_turns += record.turns;
@@ -239,7 +274,14 @@ int main(int argc, char** argv) {
         std::cout << "Player who went first won " << percent(first_player_wins, decided) << "% of decided games\n";
         std::cout << (options.check ? "Invariants checked after every action: no problems found\n"
                                     : "Invariant checks were off (--no-check)\n");
-        return ends[static_cast<std::size_t>(GameEnd::ActionLimit)] == 0 ? 0 : 1;
+        if (options.check_replays) {
+            if (replay_mismatches == 0) {
+                std::cout << "Replays: every game was saved, loaded and played back to exactly the same final state\n";
+            } else {
+                std::cout << "Replays: " << replay_mismatches << " of " << options.games << " games didn't play back the same\n";
+            }
+        }
+        return ends[static_cast<std::size_t>(GameEnd::ActionLimit)] == 0 && replay_mismatches == 0 ? 0 : 1;
     } catch (const std::exception& e) {
         std::cerr << "error: " << e.what() << '\n';
         return 1;

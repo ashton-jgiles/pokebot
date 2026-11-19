@@ -24,6 +24,7 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 | `--no-check` | | Skip the invariant check after every action (about 2.5× faster) |
 | `--print` | | Play **one** game with seed `S` and print every action |
 | `--save-replay FILE` | | With `--print`: also save that game as a replay |
+| `--check-replays` | | Save every game as replay text, load it and play it back, checking it ends in exactly the same state. A game that doesn't is saved to `replays/mismatch-seed-S.json`, and the run exits with 1 |
 | `--replay FILE` | | Print a saved replay instead of playing |
 | `--as 0\|1\|all` | `all` | With `--print` or `--replay`: show only what that player saw |
 
@@ -135,6 +136,8 @@ Turn 0, player 0's turn - waiting on player 0: choose who goes first
 
 A replay that no longer plays back, because the cards or the engine changed, stops with the action
 that failed.
+
+`--check-replays` tests the whole round trip at scale: the Milestone 4 sign-off runs 10,000 games with it.
 
 It ends with the final board and how the game ended. Narration includes hidden cards: it's a
 debugging view, not a player's view.

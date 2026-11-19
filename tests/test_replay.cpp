@@ -133,6 +133,28 @@ TEST_CASE("a game from play_game replays to the same ending", "[replay]") {
     }
 }
 
+TEST_CASE("a replay plays back to exactly play_game's final state", "[replay]") {
+    const CardDB db = sample_db();
+    for (std::uint64_t seed = 0; seed < 20; ++seed) {
+        INFO("seed " << seed);
+        Replay replay = sample_replay(seed);
+        pokebot::BiasedRandomAgent first(seed * 2);
+        pokebot::RandomAgent second(seed * 2 + 1);
+        GameState end;
+        pokebot::MatchOptions options;
+        options.final_state = &end;
+        const pokebot::GameRecord record = pokebot::play_game(CardTable(db, kDeck, kDeck), seed, first, second, options);
+        CHECK(end.cards == nullptr);
+        CHECK(end.result == record.result);
+        replay.actions = record.moves;
+        replay.result = record.result;
+
+        GameState replayed = pokebot::play_back(pokebot::replay_table(db, replay), replay);
+        replayed.cards = nullptr;
+        CHECK(replayed == end);
+    }
+}
+
 TEST_CASE("real-deck games replay to the same ending after saving", "[replay]") {
     const auto real = test::load_real_decks();
     if (!real) {

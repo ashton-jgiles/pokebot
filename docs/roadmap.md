@@ -154,7 +154,20 @@ the Blaziken ex version. M4 makes sure the list can't leak and records what each
 | 4.3 | **Agents see observations:** `Agent::choose(const Observation&, actions)`, with no `GameState` or `CardTable`; `ask` builds the deciding player's view; every action offered names only cards that player knows (a deck search now shows its owner the whole deck). See [agent](src/agents/agent.md) | ✅ |
 | 4.4 | **Replays:** decks, seed and actions as JSON, replayed exactly; viewed as either player or with everything shown; `--save-replay`, and a saved replay whenever an invariant breaks. See [replay](src/harness/replay.md) | ✅ |
 | 4.5 | **Command-line client:** `pokebot play` (you against an agent, seeing only your view), `watch` and `replay`; `HumanAgent`; actions described from an observation; the opponent's Pokémon named as theirs. See [client](src/client/main.md) | ✅ |
-| 4.6 | Sign-off | ⬜ |
+| 4.6 | Sign-off: 100,000 games with checks, 10,000 games through replays (`pokebot-sim --check-replays`), and the known approximations listed | 🟨 |
+
+Known approximations, each documented where it lives:
+- **A revealed card is named only once it's revealed.** When the opponent picks cards in a search that
+  reveals them (Cyrano), the picks show as "an unseen card" until the search ends and the cards are
+  shown. The opponent's hand then names them, so nothing is hidden that should be shown for long.
+- **Building an observation costs about as much as an action** (about 1.2 µs), and recording who knows
+  what after every action is a sweep of the visible cards. With the random agents the simulator runs at
+  about 2,860 games/s, down from 5,480 at the end of M3. Search agents will spend far longer per
+  decision, so this was left as it is; recording cards as they move would be faster.
+- **Replays depend on the card data and the engine.** A replay made before either changes may no longer
+  play back; it then stops with the action that failed rather than showing a different game.
+- **The client has had only light play-testing.** Its prompts and descriptions are tested with typed
+  input, and a full game has been played by hand.
 
 ## M5 onward
 

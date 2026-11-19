@@ -98,6 +98,10 @@ namespace pokebot {
                 require_invariants(game, seed, record.moves);
             }
         }
+        if (options.final_state != nullptr) {
+            *options.final_state = game;
+            options.final_state->cards = nullptr;
+        }
         record.result = game.result;
         record.end = how_game_ended(game);
         record.first_player = game.first_player;

@@ -18,12 +18,13 @@ data/decks/*.txt ──► decklist parser ──► TcgdexClient ──► conv
                           deck validator ──► CardTable ──► new_game / legal_actions / apply
                           (src/cards)        (src/engine)              │
                                                                        ▼
-                                             Agent::choose ◄──── play_game ──► pokebot-sim
-                                             (src/agents)        (src/harness)  (tools/sim)
+                       Agent::choose ◄── observe ◄──── play_game ──► replays, pokebot-sim, pokebot
+                       (src/agents)    (src/engine)    (src/harness)  (src/harness, tools/sim, src/client)
 ```
 
-Only `tools/import` talks to TCGdex. The engine only uses `CardDB` and `CardDef`, and agents only
-see the engine through `legal_actions` and `apply`.
+Only `tools/import` talks to TCGdex. The engine only uses `CardDB` and `CardDef`. Agents never see
+the game state: each decision they get an `Observation` of what their player could see, and the
+legal actions.
 
 ## Index
 

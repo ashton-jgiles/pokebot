@@ -33,6 +33,8 @@ namespace pokebot {
         bool check_invariants = true;
         // Called after every action with the state before and after it, such as to show the game as it's played.
         std::function<void(const GameState& before, const Action& action, const GameState& after)> on_action;
+        // If set, receives the state the game ended in, with `cards` cleared: the numbered table play_game made is gone.
+        GameState* final_state = nullptr;
     };
 
     struct GameRecord {

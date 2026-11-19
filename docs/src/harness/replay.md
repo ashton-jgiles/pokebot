@@ -92,7 +92,8 @@ a card the viewer didn't know the place of before or after the action is "an uns
 - a replay survives saving and loading, as JSON and as a file;
 - playing back reaches exactly the same `GameState` (30 games), and games from `play_game` replay to
   the same ending (30 more);
-- 50 real-deck games survive saving and replay to the same ending and turn;
+- 50 real-deck games survive saving and replay to the same ending and turn, and 20 sample games
+  replay to exactly the final `GameState` that `play_game` hands back;
 - a replay with an illegal action says which action, and a wrong result or extra action is caught;
 - files that aren't replays, from another version, or with bad actions, cards or players are rejected;
 - the opponent doesn't see what a search that doesn't reveal found, but does when it reveals;

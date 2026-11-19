@@ -12,9 +12,9 @@ Information-Set MCTS for looking several turns ahead, and an expectiminimax solv
 | `src/core` | Decklist parser |
 | `src/cards` | Card definitions, card database, deck validator |
 | `src/engine` | Rules engine: game state, legal actions, applying actions |
-| `src/agents` | AI agents (random so far; planner, MCTS… later) |
-| `src/harness` | Playing games between agents |
-| `src/client` | Command-line client (placeholder) |
+| `src/agents` | AI agents (random so far; planner, MCTS… later) and the human player |
+| `src/harness` | Playing games between agents, replays |
+| `src/client` | `pokebot`: play against an agent, watch two agents, play back a replay |
 | `tools/import` | `pokebot-import`: downloads and converts card data |
 | `tools/sim` | `pokebot-sim`: plays many games, or narrates one |
 | `data/cards` | Card definitions (JSON) |
@@ -49,3 +49,15 @@ Play 1,000 games between random agents and report how they went, or narrate one 
 ./build/debug/tools/sim/pokebot-sim.exe --games 1000
 ./build/debug/tools/sim/pokebot-sim.exe --print --seed 3
 ```
+
+Play against the biased agent, seeing only what your player can see, then watch the game again from
+either side:
+
+```bash
+./build/debug/src/pokebot.exe play --deck dragapult --against basic-box --save-replay replays/mine.json
+./build/debug/src/pokebot.exe replay replays/mine.json --as 1
+./build/debug/src/pokebot.exe watch --seed 7 --step
+```
+
+Agents never see the game itself, only an observation of what their player could see at the table;
+see [observation](docs/src/engine/observation/observation.md).
