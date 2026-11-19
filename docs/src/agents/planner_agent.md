@@ -7,7 +7,7 @@ The third rung of the agent ladder (M6): Random → Greedy → **Planner** → f
 plays Model 1: it plans the certain part of its turn and plays the plan.
 
 ```cpp
-PlannerAgent planner(seed);          // budgets 200 (or-tree) and 300 (and-tree), 3 samples
+PlannerAgent planner(seed);          // budgets 200 (or-tree) and 300 (and-tree), 1 sample
 PlannerAgent quick(seed, options);   // other budgets, samples or weights
 planner.stats();                     // plans made, wins found, actions followed, greedy decisions
 ```
@@ -57,10 +57,17 @@ This is the proposal's decision procedure with Model 2 (IS-MCTS, M8) not built y
 |---|---|---|
 | `or_budget` | 200 | B_or: nodes for the or-tree's win search |
 | `and_budget` | 300 | B_tp: nodes for the and-tree |
-| `samples` | 3 | m: sampled worlds for a plan that ends in chance or hidden cards |
+| `samples` | 1 | m: sampled worlds for a plan that ends in chance or hidden cards |
 | `weights` | `default_weights()` | θ for e, used by the planner and the greedy fallback |
 
 The budgets are a starting point; step 6.8 measures the Planner's strength and speed against them.
+
+**One sampled world (decided 2026-11-19).** Against Greedy, 100 games per pairing: with 3 worlds
+the Planner scored 73.2% (95% CI 71.0% to 75.3%) at 10.2 games/s on 16 threads; with 1, 73.8% (71.6%
+to 75.9%) at 38.0 games/s, scoring plan endings in 0.27 s a game instead of 1.30 s. e counts how many
+cards each player holds and has left, not which, so a draw or a search scores the same in every
+world; only coin flips differ, and they're a small share of the endings scored. `samples` (and
+`--planner-samples`) can still raise it.
 
 ## Where it's used
 

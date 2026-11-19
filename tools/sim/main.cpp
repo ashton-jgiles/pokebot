@@ -47,12 +47,14 @@ namespace {
         std::vector<std::string> agents; // --agents A,B: A against B on every pairing
         int threads = 0;                 // with --agents: games at once; 0 = one per hardware thread
         int replay_every = 0;            // with --agents: save every Nth game
+        PlannerOptions planner;
     };
 
     void print_usage() {
         std::cerr << "usage: pokebot-sim [--games N] [--agent random|biased|greedy|planner] [--seed S] [--no-check]\n"
                      "                   [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]\n"
                      "                   [--agents A,B [--threads N] [--save-replays K]]\n"
+                     "                   [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]\n"
                      "  --games N            games to play (default 1000)\n"
                      "  --agent A            random, biased, greedy or planner (default biased)\n"
                      "  --seed S             first game's seed; game i uses S + i (default 1)\n"
@@ -67,6 +69,9 @@ namespace {
                      "                       A in each seat; --games is then the number of games per pairing\n"
                      "  --threads N          with --agents: games played at once (default: one per hardware thread)\n"
                      "  --save-replays K     with --agents: save every Kth game to replays/arena/\n"
+                     "  --planner-samples M      the planner's sampled worlds for a plan that ends in chance (default 1)\n"
+                     "  --planner-or-budget N    the planner's nodes for its win search (default 200)\n"
+                     "  --planner-and-budget N   the planner's nodes for its best-plan search (default 300)\n"
                      "If an invariant breaks, the game is saved to replays/invariant-seed-S.json.\n";
     }
 
@@ -87,6 +92,12 @@ namespace {
                 options.threads = std::stoi(argv[++i]);
             } else if (arg == "--save-replays" && has_value) {
                 options.replay_every = std::stoi(argv[++i]);
+            } else if (arg == "--planner-samples" && has_value) {
+                options.planner.samples = std::stoi(argv[++i]);
+            } else if (arg == "--planner-or-budget" && has_value) {
+                options.planner.or_budget = std::stoi(argv[++i]);
+            } else if (arg == "--planner-and-budget" && has_value) {
+                options.planner.and_budget = std::stoi(argv[++i]);
             } else if (arg == "--seed" && has_value) {
                 options.seed = std::stoull(argv[++i]);
             } else if (arg == "--no-check") {
@@ -115,6 +126,9 @@ namespace {
         const auto known = [](const std::string& name) {
             return name == "random" || name == "biased" || name == "greedy" || name == "planner";
         };
+        if (options.planner.samples < 1 || options.planner.or_budget < 1 || options.planner.and_budget < 1) {
+            return false;
+        }
         if (options.agents.empty()) {
             if (options.threads != 0 || options.replay_every != 0) {
                 return false;
@@ -126,7 +140,7 @@ namespace {
         return options.games > 0 && known(options.agent);
     }
 
-    std::unique_ptr<Agent> make_agent(const std::string& name, std::uint64_t seed) {
+    std::unique_ptr<Agent> make_agent(const std::string& name, std::uint64_t seed, const PlannerOptions& planner) {
         if (name == "random") {
             return std::make_unique<RandomAgent>(seed);
         }
@@ -134,7 +148,7 @@ namespace {
             return std::make_unique<GreedyAgent>(seed);
         }
         if (name == "planner") {
-            return std::make_unique<PlannerAgent>(seed);
+            return std::make_unique<PlannerAgent>(seed, planner);
         }
         return std::make_unique<BiasedRandomAgent>(seed);
     }
@@ -166,8 +180,8 @@ namespace {
     template <class MakeReplay>
     GameRecord play_saving_failures(const CardTable& table, std::uint64_t seed, const Options& options, MakeReplay make_replay,
                                     GameState* end = nullptr) {
-        const auto agent0 = make_agent(options.agent, seed * 2);
-        const auto agent1 = make_agent(options.agent, seed * 2 + 1);
+        const auto agent0 = make_agent(options.agent, seed * 2, options.planner);
+        const auto agent1 = make_agent(options.agent, seed * 2 + 1, options.planner);
         MatchOptions match_options;
         match_options.check_invariants = options.check;
         match_options.final_state = end;
@@ -232,7 +246,7 @@ namespace {
         // The same agent on both sides is labelled with its side, such as random-A and random-B.
         const bool same = options.agents[0] == options.agents[1];
         const auto contestant = [&](const std::string& name, const char* side) {
-            return Contestant{same ? name + "-" + side : name, [name](std::uint64_t seed) { return make_agent(name, seed); }};
+            return Contestant{same ? name + "-" + side : name, [name, planner = options.planner](std::uint64_t seed) { return make_agent(name, seed, planner); }};
         };
         const Contestant a = contestant(options.agents[0], "A");
         const Contestant b = contestant(options.agents[1], "B");
@@ -265,6 +279,10 @@ namespace {
         std::cout << std::fixed << std::setprecision(1);
         std::cout << a.name << " vs " << b.name << ": " << n << " decks, " << n * n << " pairings, " << per_pairing
                   << " games each (every seed once with " << a.name << " in each seat), " << result.threads << " threads\n";
+        if (options.agents[0] == "planner" || options.agents[1] == "planner") {
+            std::cout << "  planner: " << options.planner.samples << " sampled worlds, or-tree budget " << options.planner.or_budget
+                      << ", and-tree budget " << options.planner.and_budget << '\n';
+        }
         std::cout << "Played " << result.games << " games in " << result.seconds << " s: "
                   << static_cast<double>(result.games) / result.seconds << " games/s, "
                   << static_cast<double>(result.actions) / result.seconds / 1e6 << " million actions/s, "

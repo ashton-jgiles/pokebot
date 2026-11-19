@@ -16,7 +16,7 @@ namespace pokebot {
     struct PlannerOptions {
         int or_budget = 200;
         int and_budget = 300;
-        int samples = 3;
+        int samples = 1;
         Weights weights = default_weights();
     };
 

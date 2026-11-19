@@ -16,6 +16,7 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 ./build/debug/tools/sim/pokebot-sim.exe [--games N] [--agent random|biased|greedy|planner] [--seed S] [--no-check]
                                         [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]
                                         [--agents A,B [--threads N] [--save-replays K]]
+                                        [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]
 ```
 
 | Option | Default | Meaning |
@@ -32,6 +33,9 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 | `--agents A,B` | | Play agent `A` against agent `B` instead (see [below](#one-agent-against-another)). `--games` is then the number of games **per deck pairing** |
 | `--threads N` | one per hardware thread | With `--agents`: games played at once |
 | `--save-replays K` | | With `--agents`: save every `K`th game to `replays/arena/` |
+| `--planner-samples M` | 1 | The [planner](../../src/agents/planner_agent.md)'s sampled worlds for a plan that ends in chance or hidden cards |
+| `--planner-or-budget N` | 200 | The planner's node budget for its win search (the or-tree) |
+| `--planner-and-budget N` | 300 | The planner's node budget for its best-plan search (the and-tree) |
 
 **Pairings:** decks are sorted by file name. Game `i` plays deck `i mod n` against deck
 `(i / n) mod n`, so every pairing, including mirrors, comes up equally often.
@@ -50,7 +54,8 @@ for the stress test. It can't be combined with `--print` or `--check-replays`.
 It prints the speed, A's score (wins, plus half the draws, per game) with its 95% confidence
 interval, the same split by who went first and by deck pairing, how the games ended, and how A won
 and lost: by Prize cards, by the loser having no Pokémon left, or by the loser's deck running out
-(a loss by deck-out is A's own deck running out). For an agent that measures itself (the
+(a loss by deck-out is A's own deck running out). With a planner on either side, the header also gives
+its settings. For an agent that measures itself (the
 [planner](../../src/agents/planner_agent.md)) it then prints its counters per game. While it plays, it
 prints a progress line about every 5% of the games to the error stream, with the time so far and an
 estimate of the time left. Results
