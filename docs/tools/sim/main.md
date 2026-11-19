@@ -75,6 +75,7 @@ games; the reference machine has 16 hardware threads):
 | `greedy,random` after step 5.6b (Greedy scores each action as it stands) | about 2,810 games/s | |
 | `greedy,random` at sign-off (Greedy also plays out its follow-up choices) | about 856 games/s; 840 with invariant checks | about 92 games/s |
 | `greedy,biased` at sign-off | about 892 games/s | |
+| `planner,greedy` at the Milestone 6 sign-off (1 sampled world, budgets 200 and 300) | about 33.9 games/s; 32.5 with invariant checks | about 3.5 games/s (`--games 10`) |
 
 Greedy builds 3 worlds per decision and tries every action in each, so it costs about 9 ms per game
 on one thread against Random. Playing out follow-up choices (step 5.6c) made it about 3.3 times

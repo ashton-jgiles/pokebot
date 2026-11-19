@@ -60,7 +60,13 @@ This is the proposal's decision procedure with Model 2 (IS-MCTS, M8) not built y
 | `samples` | 1 | m: sampled worlds for a plan that ends in chance or hidden cards |
 | `weights` | `default_weights()` | θ for e, used by the planner and the greedy fallback |
 
-The budgets are a starting point; step 6.8 measures the Planner's strength and speed against them.
+**At the Milestone 6 sign-off** (16,000 games against Greedy, every deck pairing), the Planner
+scored 73.8% (95% CI 73.1% to 74.4%) at about 33.9 games/s on 16 threads and 3.5 on one. Each game it
+makes about 22 plans and plays 57 actions from them, and hands 10 decisions to Greedy. Of its time,
+about two thirds goes on scoring plan endings, and the or-tree takes less than a tenth. A 2,000-node
+or-tree found more wins in the [planner lab](../harness/planner_lab.md) but scored no better (74.2%)
+and was 40% slower, so `or_budget` stays 200. See the [roadmap](../../roadmap.md) for the full
+results.
 
 **One sampled world (decided 2026-11-19).** Against Greedy, 100 games per pairing: with 3 worlds
 the Planner scored 73.2% (95% CI 71.0% to 75.3%) at 10.2 games/s on 16 threads; with 1, 73.8% (71.6%
