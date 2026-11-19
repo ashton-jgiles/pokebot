@@ -49,6 +49,32 @@ The searches run on the real game state. That's fine for measuring: a plan's Det
 same whatever the hidden cards are, and uncertain plan endings are scored in sampled worlds dealt from
 what the player sees.
 
+## Results
+
+Release build, `pokebot-sim --planner-lab N --every 5`, seed 1, limit 5,000:
+
+| Games | Positions | Finished | Wins | Found at 200 / 500 / 1,000 nodes | Nodes to a win (average, most) | False wins |
+|---:|---:|---:|---:|---|---|---:|
+| 16 | 334 | 254 | 8 | 5 / 6 / 7 | | 0 |
+| 64 | 1,234 | 928 | 12 | 9 at 200 | 214.5, 1,420 | 0 |
+
+Nodes per finished position, 64 games:
+
+| Search | Closed set and f_bound | Closed set only | f_bound only | Neither |
+|---|---:|---:|---:|---:|
+| Or-tree (win) | | 165.1 | | 386.0 |
+| And-tree (best plan) | 163.4 (0.3 children pruned) | 168.9 | 381.0 | 396.4 |
+
+- **The or-tree's wins are real:** there were no false wins. But the Planner's 200-node budget misses
+  a quarter of them. Positions with a win this turn are bigger than most, and the deepest win took
+  1,420 nodes.
+- **The closed set is the big saving:** it cuts both searches by about 2.3 times.
+- **f_bound is safe but saves little:** it changed the best value in none of 928 positions, but it cuts
+  the and-tree by only 3%. Its bound is 1 whenever a Knock Out could win, and otherwise loose, so it
+  rarely falls below the best plan found so far.
+- **A quarter of the positions are big:** 306 of 1,234 didn't finish within 5,000 nodes. In a real
+  game, those are the turns where the Planner uses its whole budget. The lab took 113 s for 64 games.
+
 ## Tests
 
 [`tests/test_planner_lab.cpp`](../../../tests/test_planner_lab.cpp), tag `[planner]`:
