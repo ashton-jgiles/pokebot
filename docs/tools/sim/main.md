@@ -12,14 +12,14 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 `data/decks/*.txt`, so run `pokebot-import` first.
 
 ```bash
-./build/debug/tools/sim/pokebot-sim.exe [--games N] [--agent random|biased] [--seed S] [--no-check]
+./build/debug/tools/sim/pokebot-sim.exe [--games N] [--agent random|biased|greedy] [--seed S] [--no-check]
                                         [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]
 ```
 
 | Option | Default | Meaning |
 |---|---|---|
 | `--games N` | 1000 | Games to play |
-| `--agent A` | `biased` | `random` or `biased` (see [random agents](../../src/agents/random_agent.md)) |
+| `--agent A` | `biased` | `random`, `biased` (see [random agents](../../src/agents/random_agent.md)) or `greedy` ([greedy agent](../../src/agents/greedy_agent.md)); both players get the same kind |
 | `--seed S` | 1 | Game `i` uses seed `S + i`; agents are seeded from it too |
 | `--no-check` | | Skip the invariant check after every action (about 2.5× faster) |
 | `--print` | | Play **one** game with seed `S` and print every action |

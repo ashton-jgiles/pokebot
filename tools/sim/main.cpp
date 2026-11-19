@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "agents/random_agent.hpp"
+#include "agents/greedy_agent.hpp"
 #include "cards/db/card_db.hpp"
 #include "core/decklist.hpp"
 #include "harness/match.hpp"
@@ -43,10 +44,10 @@ namespace {
     };
 
     void print_usage() {
-        std::cerr << "usage: pokebot-sim [--games N] [--agent random|biased] [--seed S] [--no-check]\n"
+        std::cerr << "usage: pokebot-sim [--games N] [--agent random|biased|greedy] [--seed S] [--no-check]\n"
                      "                   [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]\n"
                      "  --games N            games to play (default 1000)\n"
-                     "  --agent A            random or biased (default biased)\n"
+                     "  --agent A            random, biased or greedy (default biased)\n"
                      "  --seed S             first game's seed; game i uses S + i (default 1)\n"
                      "  --no-check           skip the invariant check after every action (faster)\n"
                      "  --print              play one game with seed S and print every action\n"
@@ -91,12 +92,15 @@ namespace {
         if (!options.save_replay.empty() && !options.print) {
             return false;
         }
-        return options.games > 0 && (options.agent == "random" || options.agent == "biased");
+        return options.games > 0 && (options.agent == "random" || options.agent == "biased" || options.agent == "greedy");
     }
 
     std::unique_ptr<Agent> make_agent(const std::string& name, std::uint64_t seed) {
         if (name == "random") {
             return std::make_unique<RandomAgent>(seed);
+        }
+        if (name == "greedy") {
+            return std::make_unique<GreedyAgent>(seed);
         }
         return std::make_unique<BiasedRandomAgent>(seed);
     }
