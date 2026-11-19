@@ -158,6 +158,51 @@ TEST_CASE("a player choosing a new Active is scored by their Benched Pokemon wit
     CHECK(at(features(game, f.me), Feature::ActiveHp) == Approx(1.0 - 4.0 / 6.0));
 }
 
+TEST_CASE("cards in hand count up to 7 and cards in the deck up to 30", "[evaluation]") {
+    Fixture f;
+    GameState game = f.game;
+    auto& mine = game.player(f.me);
+    auto& theirs = game.player(f.them);
+    const auto hand_of = [](pokebot::PlayerState& p, std::size_t size) { // moves cards between hand and deck
+        while (p.hand.size() > size) {
+            p.deck.push_back(p.hand.back());
+            p.hand.erase_at(p.hand.size() - 1);
+        }
+        while (p.hand.size() < size) {
+            p.hand.push_back(p.deck.back());
+            p.deck.erase_at(p.deck.size() - 1);
+        }
+    };
+    const auto deck_of = [](pokebot::PlayerState& p, std::size_t size) { // discards from the deck
+        while (p.deck.size() > size) {
+            p.discard.push_back(p.deck.back());
+            p.deck.erase_at(p.deck.size() - 1);
+        }
+    };
+    const auto hand = [&] {
+        return at(features(game, f.me), Feature::Hand);
+    };
+    const auto deck = [&] {
+        return at(features(game, f.me), Feature::Deck);
+    };
+
+    hand_of(mine, 7);
+    hand_of(theirs, 7);
+    CHECK(hand() == 0.0);
+    hand_of(mine, 10);
+    CHECK(hand() == 0.0); // the 3 extra cards are worth nothing
+    hand_of(mine, 5);
+    CHECK(hand() == Approx(-2.0 / 7.0));
+
+    REQUIRE(mine.deck.size() >= 35);
+    REQUIRE(theirs.deck.size() >= 30);
+    deck_of(mine, 35);
+    deck_of(theirs, 30);
+    CHECK(deck() == 0.0); // past 30, more cards don't count
+    deck_of(mine, 20);
+    CHECK(deck() == Approx(-10.0 / 30.0));
+}
+
 TEST_CASE("in random games the two players' features are opposites and stay in [-1, 1]", "[evaluation]") {
     const CardDB db = sample_db();
     const CardTable table(db, kDeck, kDeck);

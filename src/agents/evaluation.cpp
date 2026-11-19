@@ -12,6 +12,8 @@ namespace pokebot {
     namespace {
 
         constexpr int kMaxTurns = 5;
+        constexpr std::size_t kHandCounted = 7;
+        constexpr std::size_t kDeckCounted = 30;
 
         constexpr std::size_t slot(Feature feature) {
             return static_cast<std::size_t>(feature);
@@ -160,8 +162,14 @@ namespace pokebot {
         const auto turns = [&](const PlayerState& attacker, const PokemonInPlay* defender) {
             return static_cast<std::size_t>(turns_to_knockout(game, attacker, defender));
         };
-        const auto capped = [](std::size_t size) {
-            return std::min<std::size_t>(size, 10);
+        const auto counted = [](std::size_t size, std::size_t most) {
+            return std::min(size, most);
+        };
+        const auto hand = [&](const PlayerState& p) {
+            return counted(p.hand.size(), kHandCounted);
+        };
+        const auto deck = [&](const PlayerState& p) {
+            return counted(p.deck.size(), kDeckCounted);
         };
 
         Features phi{};
@@ -171,8 +179,8 @@ namespace pokebot {
         phi[slot(Feature::ReadyAttackers)] = scaled(minus(ready_attackers(game, mine), ready_attackers(game, theirs)), 3.0);
         phi[slot(Feature::Energy)] = scaled(minus(energy_in_play(game, mine), energy_in_play(game, theirs)), 10.0);
         phi[slot(Feature::Bench)] = scaled(minus(mine.bench.size(), theirs.bench.size()), static_cast<double>(kBenchSize));
-        phi[slot(Feature::Hand)] = scaled(minus(mine.hand.size(), theirs.hand.size()), 10.0);
-        phi[slot(Feature::Deck)] = scaled(minus(capped(mine.deck.size()), capped(theirs.deck.size())), 10.0);
+        phi[slot(Feature::Hand)] = scaled(minus(hand(mine), hand(theirs)), static_cast<double>(kHandCounted));
+        phi[slot(Feature::Deck)] = scaled(minus(deck(mine), deck(theirs)), static_cast<double>(kDeckCounted));
         phi[slot(Feature::Conditions)] = scaled(minus(conditions(their_front), conditions(my_front)), 3.0);
         phi[slot(Feature::PrizesAtRisk)] = scaled(minus(prize_value(game, their_front), prize_value(game, my_front)), 3.0);
         return phi;
