@@ -319,6 +319,28 @@ proposal. The table at the top lists them in order. Two changes since:
   only use cards the engine has effects for, so M3b widens what they can hold.
 - **M11's opponent inference** becomes the learned, stronger version of that model.
 
+## Long-term goals (back burner)
+
+Not scheduled yet; recorded 2026-11-19 so the milestones above keep them possible.
+
+- **Many more decks and variants.** A much larger pool of decks, and variants of each, for the
+  models to train and be tested on (M10's learned evaluation especially), so they get stronger in
+  general rather than tuned to four lists. It also gives the archetype library (M7) more to tell
+  apart. It depends on M3b: lists can only use cards the engine has effects for.
+- **A client to play our agents in real time:** a desktop app or a TypeScript web interface, likely
+  one web UI talking to the C++ engine through a JSON protocol of observations, actions and
+  analysis, wrapped as a desktop app if wanted. It showcases every model on the agent ladder.
+- **Agents fast enough for live play.** The best agents should take their turns in a few seconds.
+  The arena keeps iteration budgets so results repeat; live play adds time budgets, which suit the
+  anytime searches (IS-MCTS, the endgame solver's iterative deepening). M8 should profile IS-MCTS's
+  expansions first: an and-tree search per new node (about 23 ms mid-game at M7) is its likely limit.
+- **An analysis mode, like a chess engine's:** while you play, or while watching two agents, an agent
+  shows its best plans for the player to move, with their values and how sure it is (playout or
+  visit counts, a range). It works from that player's observation only, as every agent does, so it
+  gives advice a player could really use. Its values become win chances once M10 trains the
+  evaluation on game results. Agents therefore report their ranked candidates, not just one choice,
+  from Flat MC (M7) on.
+
 ## Known gaps and notes
 
 - **TCGdex has no rule-box data.** Tera can't be detected automatically. Each non-Mega Pokémon ex
