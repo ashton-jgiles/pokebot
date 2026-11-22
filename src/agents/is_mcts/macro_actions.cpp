@@ -1,5 +1,6 @@
 #include "agents/is_mcts/macro_actions.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <utility>
 
@@ -14,6 +15,24 @@ namespace pokebot {
 
         double seconds_since(std::chrono::steady_clock::time_point start) {
             return std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+        }
+
+        bool names_other_cards(const Plan& plan, int player) {
+            return std::any_of(plan.actions.begin(), plan.actions.end(), [&](const Action& action) {
+                return action.card != kNoCard && static_cast<int>(action.card / kDeckSize) != player;
+            });
+        }
+
+        bool legal(const GameState& world, const Plan& plan) {
+            GameState walk = world;
+            for (const Action& action : plan.actions) {
+                const std::vector<Action> actions = legal_actions(walk);
+                if (std::find(actions.begin(), actions.end(), action) == actions.end()) {
+                    return false;
+                }
+                apply_legal(walk, action);
+            }
+            return true;
         }
 
     } // namespace
@@ -41,17 +60,35 @@ namespace pokebot {
         const int actor = decision.player;
         const bool planning = world.turn > 0 && (decision.kind == DecisionKind::MainPhase || decision.kind == DecisionKind::ExtraAttack);
         if (planning && actor == searcher_) {
-            const std::uint64_t key = hash_observation(observe(world, searcher_));
+            const std::uint64_t key = hash_observation(observe(world, searcher_), searcher_);
             const auto it = cache_.find(key);
             if (it != cache_.end()) {
                 ++stats_.cache_hits;
-                return it->second;
+                const std::vector<Plan>& cached = it->second;
+                const auto other = [&](const Plan& plan) {
+                    return names_other_cards(plan, searcher_);
+                };
+                if (std::none_of(cached.begin(), cached.end(), other)) {
+                    return cached;
+                }
+                for (const Plan& plan : cached) {
+                    if (!other(plan) || legal(world, plan)) {
+                        scratch_.push_back(plan);
+                    }
+                }
+                if (!scratch_.empty()) {
+                    return scratch_;
+                }
             }
             const auto start = std::chrono::steady_clock::now();
             std::vector<Plan> found = plans(world, actor, options_.searcher_budget, options_.searcher_plans);
             ++stats_.searcher_searches;
             stats_.searcher_seconds += seconds_since(start);
             if (!found.empty()) {
+                if (it != cache_.end()) {
+                    scratch_ = std::move(found);
+                    return scratch_;
+                }
                 return cache_.emplace(key, std::move(found)).first->second;
             }
         } else if (planning) {

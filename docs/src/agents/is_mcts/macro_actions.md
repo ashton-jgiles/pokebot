@@ -25,9 +25,18 @@ If an and-tree finds no plan, the node falls back to single actions, so a node i
 moves while the game goes on.
 
 **Why the searcher's plans are cached.** The searcher sees the same thing in every world, so a node's
-plans are the same in all of them; they're worked out on the first visit and reused after, keyed by
-the information-set key of the searcher's observation. At about 23 ms an and-tree search, this is
-what makes IS-MCTS affordable.
+plans are the same in all of them; they're worked out on the first visit and reused after. At about
+15 ms an and-tree search, this is what makes IS-MCTS affordable.
+
+**What the cache is keyed by.** Plans name cards by number, so the key is the
+[information-set key](info_set.md#numbering-one-players-cards) with the searcher's own cards also
+hashed by number: a plan is reused only where every card of the searcher's is where it was. (Keyed by
+card identity alone, a plan found where the searcher had drawn card 12 was reused in a world where it
+had drawn card 15, another copy, and moved a card that wasn't there: the first IS-MCTS arena run
+stopped on it in step 8.5.) The opponent's cards are numbered differently in every world, so a cached
+plan that names one of them (rare: a choice among the opponent's cards) is checked for legality in
+the current world before it's offered, and if no cached plan is legal there, the node is searched
+again.
 
 **Why the opponent's aren't.** The opponent's options depend on its hand in ŵ, which changes from
 world to world, so a cache would rarely hit. Its search is kept cheap instead: the budget lab found

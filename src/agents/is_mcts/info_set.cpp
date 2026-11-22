@@ -23,7 +23,7 @@ namespace pokebot {
 
         class Hasher {
         public:
-            explicit Hasher(const Observation& observation) : observation_(observation) {}
+            Hasher(const Observation& observation, int numbered) : observation_(observation), numbered_(numbered) {}
 
             std::uint64_t value() const { return hash_; }
             void add(std::uint64_t v) { hash_ = mix(hash_ ^ (v + 0x9E3779B97F4A7C15ULL)); }
@@ -132,6 +132,9 @@ namespace pokebot {
                 if (keys_[c] == 0) {
                     const CardDef* def = observation_.def(c);
                     keys_[c] = def == nullptr ? kUnseenKey : id_key(def->id);
+                    if (static_cast<int>(c / kDeckSize) == numbered_) {
+                        keys_[c] = mix(keys_[c] ^ (static_cast<std::uint64_t>(c) + 1));
+                    }
                 }
                 return keys_[c];
             }
@@ -143,14 +146,15 @@ namespace pokebot {
             }
 
             const Observation& observation_;
+            int numbered_;
             std::array<std::uint64_t, kMaxCards> keys_{};
             std::uint64_t hash_ = 0;
         };
 
     } // namespace
 
-    std::uint64_t hash_observation(const Observation& o) {
-        Hasher h(o);
+    std::uint64_t hash_observation(const Observation& o, int numbered) {
+        Hasher h(o, numbered);
         h.add(o.viewer);
         h.add(o.current_player);
         h.add(o.first_player);

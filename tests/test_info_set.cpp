@@ -186,3 +186,36 @@ TEST_CASE("the hash tells different cards apart, and an unseen card from a seen 
         }
     }
 }
+
+TEST_CASE("numbering a player's cards tells apart copies of a card the plain key treats alike", "[is_mcts]") {
+    const auto real = test::load_real_decks();
+    if (!real) {
+        SKIP("no generated card data; run pokebot-import first");
+    }
+    const CardTable table = CardTable(real->db, real->decks[0], real->decks[1]).shuffled(11);
+    int checked = 0;
+    for (std::uint64_t seed = 0; seed < 20 && checked < 3; ++seed) {
+        const GameState game = ongoing(table, seed, 30);
+        const Observation view = observe(game, 0);
+        bool done = false;
+        for (std::size_t h = 0; h < view.players[0].hand.size() && !done; ++h) {
+            for (std::size_t d = 0; d < view.deck_or_prizes.size() && !done; ++d) {
+                const pokebot::CardIndex in_hand = view.players[0].hand[h];
+                const pokebot::CardIndex in_deck = view.deck_or_prizes[d];
+                if (view.def(in_hand)->id != view.def(in_deck)->id) {
+                    continue;
+                }
+                Observation renumbered = view;
+                renumbered.players[0].hand[h] = in_deck;
+                renumbered.deck_or_prizes[d] = in_hand;
+                INFO("seed " << seed);
+                CHECK(hash_observation(renumbered) == hash_observation(view));
+                CHECK(hash_observation(renumbered, 0) != hash_observation(view, 0));
+                CHECK(hash_observation(renumbered, 1) == hash_observation(view, 1));
+                done = true;
+                ++checked;
+            }
+        }
+    }
+    CHECK(checked > 0);
+}

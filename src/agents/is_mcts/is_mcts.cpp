@@ -68,12 +68,19 @@ namespace pokebot {
                 const std::vector<Plan>& moves = macros.moves(state);
                 steps.clear();
                 for (std::size_t m = 0; m < moves.size(); ++m) {
-                    GameState after = apply_plan(state, moves[m]);
+                    GameState after = state;
+                    if (!apply_plan_checked(after, moves[m])) {
+                        ++stats_.unplayable;
+                        continue;
+                    }
                     const std::uint64_t key = hash_observation(observe(after, me));
                     const bool seen = std::any_of(steps.begin(), steps.end(), [&](const Successor& s) { return s.key == key; });
                     if (!seen) {
                         steps.push_back(Successor{key, m, after});
                     }
+                }
+                if (steps.empty()) {
+                    break;
                 }
                 std::vector<std::size_t> existing;
                 const Successor* untried = nullptr;

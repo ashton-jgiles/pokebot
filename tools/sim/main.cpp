@@ -16,6 +16,7 @@
 #include "agents/flat_mc/flat_mc_agent.hpp"
 #include "agents/flat_mc/playout.hpp"
 #include "agents/greedy/greedy_agent.hpp"
+#include "agents/is_mcts/is_mcts_agent.hpp"
 #include "agents/planner/planner_agent.hpp"
 #include "agents/random/random_agent.hpp"
 #include "cards/db/card_db.hpp"
@@ -55,6 +56,7 @@ namespace {
         int replay_every = 0;            // with --agents: save every Nth game
         PlannerOptions planner;
         FlatMcOptions flat_mc;
+        IsMctsAgentOptions is_mcts;
         const DeckModel* model = nullptr;
         int lab_games = 0;
         int budget_lab_games = 0;
@@ -67,9 +69,11 @@ namespace {
                      "                   [--agents A,B [--threads N] [--save-replays K]]\n"
                      "                   [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]\n"
                      "                   [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W] [--mc-greedy-choices]\n"
+                     "                   [--mcts-iterations N] [--mcts-c C] [--mcts-depth R] [--mcts-plans K]\n"
+                     "                   [--mcts-opponent-budget B] [--mcts-opponent-plans K]\n"
                      "                   [--planner-lab N [--every K]] [--budget-lab N [--every K]]\n"
                      "  --games N            games to play (default 1000)\n"
-                     "  --agent A            random, biased, greedy, planner or flatmc (default biased)\n"
+                     "  --agent A            random, biased, greedy, planner, flatmc or ismcts (default biased)\n"
                      "  --seed S             first game's seed; game i uses S + i (default 1)\n"
                      "  --no-check           skip the invariant check after every action (faster)\n"
                      "  --print              play one game with seed S and print every action\n"
@@ -92,11 +96,18 @@ namespace {
                      "  --mc-policy P            greedy or biased: who plays the playouts (default greedy)\n"
                      "  --mc-greedy-worlds W     worlds for a greedy playout's decisions (default 1)\n"
                      "  --mc-greedy-choices      flat MC leaves its decisions outside the main phase to Greedy (default: plays them out)\n"
+                     "  --mcts-iterations N      IS-MCTS's iterations each decision (default 64)\n"
+                     "  --mcts-c C               IS-MCTS's exploration constant (default 0.7)\n"
+                     "  --mcts-depth R           turns of the searching player an IS-MCTS playout runs to (default 1)\n"
+                     "  --mcts-plans K           IS-MCTS's plans at the searcher's nodes (default 16)\n"
+                     "  --mcts-opponent-budget B nodes for the opponent's and-tree at an IS-MCTS node (default 25)\n"
+                     "  --mcts-opponent-plans K  plans at the opponent's IS-MCTS nodes (default 4)\n"
                      "  --planner-lab N          play N greedy games and measure the planner's searches at every Kth\n"
                      "                           main-phase decision (--every K, default 5)\n"
                      "  --budget-lab N           play N greedy games and time the and-tree at cheap budgets against\n"
                      "                           --planner-and-budget, at every Kth main-phase decision\n"
-                     "If an invariant breaks, the game is saved to replays/invariant-seed-S.json.\n";
+                     "If an invariant breaks, the game is saved to replays/invariant-seed-S.json; with --agents, a game\n"
+                     "that fails for any reason (a broken invariant or an agent's error) is saved to replays/failed-seed-S.json.\n";
     }
 
     bool parse(int argc, char** argv, Options& options) {
@@ -138,6 +149,18 @@ namespace {
                 options.flat_mc.playout.greedy_worlds = std::stoi(argv[++i]);
             } else if (arg == "--mc-greedy-choices") {
                 options.flat_mc.search_choices = false;
+            } else if (arg == "--mcts-iterations" && has_value) {
+                options.is_mcts.search.iterations = std::stoi(argv[++i]);
+            } else if (arg == "--mcts-c" && has_value) {
+                options.is_mcts.search.exploration = std::stod(argv[++i]);
+            } else if (arg == "--mcts-depth" && has_value) {
+                options.is_mcts.search.playout.depth = std::stoi(argv[++i]);
+            } else if (arg == "--mcts-plans" && has_value) {
+                options.is_mcts.search.macros.searcher_plans = std::stoi(argv[++i]);
+            } else if (arg == "--mcts-opponent-budget" && has_value) {
+                options.is_mcts.search.macros.opponent_budget = std::stoi(argv[++i]);
+            } else if (arg == "--mcts-opponent-plans" && has_value) {
+                options.is_mcts.search.macros.opponent_plans = std::stoi(argv[++i]);
             } else if (arg == "--budget-lab" && has_value) {
                 options.budget_lab_games = std::stoi(argv[++i]);
             } else if (arg == "--planner-lab" && has_value) {
@@ -170,7 +193,7 @@ namespace {
             return false;
         }
         const auto known = [](const std::string& name) {
-            return name == "random" || name == "biased" || name == "greedy" || name == "planner" || name == "flatmc";
+            return name == "random" || name == "biased" || name == "greedy" || name == "planner" || name == "flatmc" || name == "ismcts";
         };
         if (options.planner.samples < 1 || options.planner.or_budget < 1 || options.planner.and_budget < 1 || options.every < 1) {
             return false;
@@ -181,6 +204,14 @@ namespace {
         options.flat_mc.or_budget = options.planner.or_budget;
         options.flat_mc.and_budget = options.planner.and_budget;
         options.flat_mc.samples = options.planner.samples;
+        const IsMctsOptions& mcts = options.is_mcts.search;
+        if (mcts.iterations < 1 || mcts.exploration < 0.0 || mcts.playout.depth < 0 || mcts.macros.searcher_plans < 1 || mcts.macros.opponent_budget < 1 ||
+            mcts.macros.opponent_plans < 1) {
+            return false;
+        }
+        options.is_mcts.or_budget = options.planner.or_budget;
+        options.is_mcts.search.macros.searcher_budget = options.planner.and_budget;
+        options.is_mcts.search.macros.samples = options.planner.samples;
         if (options.lab_games < 0 || (options.lab_games > 0 && (!options.agents.empty() || options.print || options.check_replays))) {
             return false;
         }
@@ -211,6 +242,9 @@ namespace {
         }
         if (name == "flatmc") {
             return std::make_unique<FlatMcAgent>(seed, *options.model, options.flat_mc);
+        }
+        if (name == "ismcts") {
+            return std::make_unique<IsMctsAgent>(seed, *options.model, options.is_mcts);
         }
         return std::make_unique<BiasedRandomAgent>(seed);
     }
@@ -409,9 +443,11 @@ namespace {
         try {
             result = run_arena(db, arena_decks, a, b, arena);
         } catch (const ArenaError& e) {
-            const std::string path = "replays/invariant-seed-" + std::to_string(e.replay.seed) + ".json";
+            const std::string path = "replays/failed-seed-" + std::to_string(e.replay.seed) + ".json";
             save_replay(e.replay, path);
-            std::cerr << "saved the game as a replay: " << path << '\n';
+            std::cerr << "game with seed " << e.replay.seed << " (" << e.replay.players[0].agent << " with " << e.replay.players[0].deck_name << " against "
+                      << e.replay.players[1].agent << " with " << e.replay.players[1].deck_name << ") failed after " << e.replay.actions.size()
+                      << " actions; saved it as a replay: " << path << '\n';
             throw;
         }
 
@@ -420,6 +456,11 @@ namespace {
         std::cout << std::fixed << std::setprecision(1);
         std::cout << a.name << " vs " << b.name << ": " << n << " decks, " << n * n << " pairings, " << per_pairing
                   << " games each (every seed once with " << a.name << " in each seat), " << result.threads << " threads\n";
+        if (options.agents[0] == "ismcts" || options.agents[1] == "ismcts") {
+            const IsMctsOptions& m = options.is_mcts.search;
+            std::cout << "  ismcts: " << m.iterations << " iterations, C " << m.exploration << ", depth " << m.playout.depth << ", " << m.macros.searcher_plans
+                      << " plans, opponent and-tree " << m.macros.opponent_budget << " nodes keeping " << m.macros.opponent_plans << '\n';
+        }
         if (options.agents[0] == "flatmc" || options.agents[1] == "flatmc") {
             std::cout << "  flatmc: " << options.flat_mc.plans << " plans, " << options.flat_mc.playouts << " playouts, depth "
                       << options.flat_mc.playout.depth << ", " << to_string(options.flat_mc.playout.policy) << " playouts with "
@@ -519,8 +560,10 @@ int main(int argc, char** argv) {
         }
         std::unique_ptr<ArchetypeLibrary> library;
         std::unique_ptr<DeckModel> model;
-        const bool flat_mc = options.agent == "flatmc" || std::find(options.agents.begin(), options.agents.end(), "flatmc") != options.agents.end();
-        if (flat_mc) {
+        const auto playing = [&](const char* name) {
+            return options.agent == name || std::find(options.agents.begin(), options.agents.end(), name) != options.agents.end();
+        };
+        if (playing("flatmc") || playing("ismcts")) {
             library = std::make_unique<ArchetypeLibrary>(ArchetypeLibrary::load("data/archetypes", db));
             model = std::make_unique<DeckModel>(*library);
             options.model = model.get();

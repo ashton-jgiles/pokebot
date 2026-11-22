@@ -170,6 +170,7 @@ TEST_CASE("every IS-MCTS iteration passes through one root move, and the same se
     CHECK(search.stats().iterations == 60);
     CHECK(search.stats().nodes <= 61);
     CHECK(search.stats().macros.cache_hits > 0);
+    CHECK(search.stats().macros.opponent_searches > 0);
 
     IsMcts again(model, 7, small(60));
     same_search(choices, again.search(pokebot::observe(f.game, f.me)));

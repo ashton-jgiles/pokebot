@@ -17,7 +17,7 @@ namespace pokebot {
         double exploration = 0.7;
         int max_depth = 32;
         PlayoutOptions playout{.depth = 1};
-        MacroOptions macros;
+        MacroOptions macros{};
     };
 
     struct IsMctsStats {
@@ -25,6 +25,7 @@ namespace pokebot {
         long long iterations = 0;
         long long nodes = 0;
         long long playout_actions = 0;
+        long long unplayable = 0;
         double seconds = 0.0;
         double playout_seconds = 0.0;
         MacroStats macros;

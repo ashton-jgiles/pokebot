@@ -26,6 +26,20 @@ namespace pokebot {
         return after;
     }
 
+    bool apply_plan_checked(GameState& game, const Plan& plan) {
+        for (const Action& action : plan.actions) {
+            if (game.is_over()) {
+                return true;
+            }
+            const std::vector<Action> actions = legal_actions(game);
+            if (std::find(actions.begin(), actions.end(), action) == actions.end()) {
+                return false;
+            }
+            apply_legal(game, action);
+        }
+        return true;
+    }
+
     bool follows_up(const GameState& game, int player) {
         if (game.is_over()) {
             return false;

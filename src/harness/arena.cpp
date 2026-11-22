@@ -114,6 +114,10 @@ namespace pokebot {
             Agent& player1 = slot.a_seat == 0 ? *agent_b : *agent_a;
             MatchOptions match;
             match.check_invariants = options.check_invariants;
+            std::vector<Action> moves;
+            match.on_action = [&moves](const GameState&, const Action& action, const GameState&) {
+                moves.push_back(action);
+            };
             try {
                 GameRecord record = play_game(tables[2 * slot.pairing + static_cast<std::size_t>(slot.a_seat)], slot.seed, player0, player1, match);
                 if (options.replay_every <= 0 || game % options.replay_every != 0) {
@@ -123,6 +127,11 @@ namespace pokebot {
             } catch (const InvariantError& e) {
                 Replay replay = replay_of(slot);
                 replay.actions = e.moves;
+                replay.note = e.what();
+                throw ArenaError(e.what(), std::move(replay));
+            } catch (const std::exception& e) {
+                Replay replay = replay_of(slot);
+                replay.actions = moves;
                 replay.note = e.what();
                 throw ArenaError(e.what(), std::move(replay));
             }

@@ -74,6 +74,7 @@ legal actions.
 | | [info_set.md](src/agents/is_mcts/info_set.md) | IS-MCTS's information-set key: an observation hashed with cards by what they are |
 | | [tree.md](src/agents/is_mcts/tree.md) | The IS-MCTS tree: nodes, UCB1 with availability counts, backpropagation |
 | | [is_mcts.md](src/agents/is_mcts/is_mcts.md) | The IS-MCTS search: determinize, select or expand, play out, back up |
+| | [is_mcts_agent.md](src/agents/is_mcts/is_mcts_agent.md) | The IS-MCTS agent: Model 2 playing a game |
 | | [macro_actions.md](src/agents/is_mcts/macro_actions.md) | The moves at an IS-MCTS node: and-tree plans, cached for the searcher, or single actions |
 | `src/harness` | [match.md](src/harness/match.md) | `play_game`, how games end |
 | | [replay.md](src/harness/replay.md) | Saving games and playing them back, as either player |

@@ -27,6 +27,16 @@ appears: the zones, each Pokémon's stack, Energy and Tool, and the Pokémon ids
 card at the bottom of the stack) that effects, lasting effects, Abilities used and the history point
 at. Each card's key is worked out once per call.
 
+### Numbering one player's cards
+
+`hash_observation(observation, numbered)` with `numbered` a player also hashes that player's cards by
+their number. The [macro-actions](macro_actions.md) cache keys the searcher's plans this way: a plan
+names cards by number ("attach card 12"), and inside the tree two worlds can reach the same
+information set with the searcher holding different copies of a card (it drew card 12 in one, card 15
+in the other). The plain key treats them alike, which is right for the tree's nodes, but a plan
+cached in one world would then name a card the other doesn't have where the plan expects it. With the
+searcher's cards numbered, plans are reused only where every card of theirs is where they say.
+
 ## What's hashed
 
 Everything an `Observation` holds: the turn, phase, flags, history, lasting effects, the decision
@@ -56,4 +66,6 @@ resolving cards and the Stadium), `deck_or_prizes` and `opponent_seen`.
 - two worlds dealt from the same observation, where the opponent attaches differently numbered copies
   of the same Energy: different observations, the same key;
 - a change the viewer can see (damage, the opponent's hand size, the viewer, the turn) changing it;
-- a different card in the hand, or a card the viewer hasn't seen, changing it.
+- a different card in the hand, or a card the viewer hasn't seen, changing it;
+- a hand card swapped with another copy of it from the deck: the plain key the same, the key that
+  numbers that player's cards different, and the one numbering the other player's the same.

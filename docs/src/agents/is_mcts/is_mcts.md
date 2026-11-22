@@ -18,9 +18,12 @@ choices.front().plan;         // the most visited move; every RootChoice has its
 1. **Determinize.** Deal a world ŵ from the observation with the [deck model](../flat_mc/deck_model.md),
    from a fresh seed.
 2. **Select or expand, down the tree.** At each node, [`MacroActions`](macro_actions.md) gives the
-   actor's moves in ŵ. Each is applied to a copy, and the result is keyed by the
+   actor's moves in ŵ. Each is applied to a copy with
+   [`apply_plan_checked`](../planner/plan.md), and the result is keyed by the
    [information-set key](info_set.md) of the **searcher's** observation; moves with the same key count
-   once. The [tree](tree.md) marks the existing children legal in ŵ available. If a legal move has no
+   once. A move that can't be played in ŵ (a cached plan whose "deterministic" action asks for a
+   choice in this world) is left out, as not available here, and counted; a node with no playable
+   move is evaluated where it stands. The [tree](tree.md) marks the existing children legal in ŵ available. If a legal move has no
    child yet, the first such (in the and-tree's order, best first) is added and the descent stops:
    expansion. Otherwise UCB1 picks among the legal children and the descent goes on from that child's
    state in ŵ.
@@ -59,8 +62,10 @@ choosing hidden cards, leads to one node: single-observer IS-MCTS.
 
 ## Counters
 
-`stats()`: searches, iterations, tree nodes, playout actions, seconds in all and in playouts, and the
-macro-action counters added up over the searches.
+`stats()`: searches, iterations, tree nodes, playout actions, moves unplayable in a world, seconds in
+all and in playouts, and the macro-action counters added up over the searches. In the game that
+first showed the problem (seed 18, basic-box against dragapult), 42 moves in 2,496 iterations were
+unplayable in the world they were tried in.
 
 ## Tests
 

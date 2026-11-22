@@ -13,11 +13,22 @@ struct Plan {
 };
 
 GameState apply_plan(const GameState& game, const Plan& plan); // δ*(w, τ)
+bool apply_plan_checked(GameState& game, const Plan& plan);    // the same, only while each action is legal
 
 PlanScorer scorer(player, seed, 3); // m = 3 samples
 scorer.value(game, plan);           // val(w, τ)
 scorer.value(game, action, tried);  // the same for a plan ending with `action` at `game`
 ```
+
+`apply_plan` trusts the plan: it's for a plan applied in the state it was found in. A plan found in
+one world and applied in another goes through `apply_plan_checked`, which stops and returns false at
+the first action that isn't legal there (and true if the game ends part-way). A plan's Det actions
+are classed by applying them once, in the world the plan was found in, and a few depend on how the
+player's own hidden cards are split between the deck and the Prize cards, which the player can't
+see: a trigger that searches the deck does nothing where every copy of the card is a Prize card, and
+asks for a choice where one is in the deck. Two worlds with the same observation can then disagree
+on whether the plan's next action is still a main-phase action. Flat MC and IS-MCTS use the checked
+version (found in step 8.5, when IS-MCTS's first arena run applied such a plan).
 
 ## Plan value
 
@@ -58,6 +69,8 @@ step 5.6c and moved here so the planner uses the same rule.
 [`tests/test_plan.cpp`](../../../../tests/test_plan.cpp), tag `[planner]`:
 
 - `apply_plan` plays a plan's actions in order;
+- `apply_plan_checked` plays the same plan, refuses one with an action that isn't legal when it comes,
+  and leaves the state as it was when the first action already isn't;
 - a final plan's value is e after it, with one sample or eight;
 - a plan ending in a draw is worth e after the draw, since every sampled world agrees on what e can
   see; a deck search is scored after taking a Pokémon, not partway through;
