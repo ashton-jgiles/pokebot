@@ -69,6 +69,7 @@ legal actions.
 | | [and_tree.md](src/agents/planner/and_tree.md) | The turn planner's and-tree mode: the best plans this turn, by branch-and-bound |
 | | [planner_agent.md](src/agents/planner/planner_agent.md) | The Planner agent: Model 1 playing a game |
 | | [deck_model.md](src/agents/flat_mc/deck_model.md) | The archetype library: the decklists agents know, to guess the opponent's from |
+| | [playout.md](src/agents/flat_mc/playout.md) | Playouts: playing a determinization on for r turns and scoring it |
 | `src/harness` | [match.md](src/harness/match.md) | `play_game`, how games end |
 | | [replay.md](src/harness/replay.md) | Saving games and playing them back, as either player |
 | | [arena.md](src/harness/arena.md) | The match harness: one agent against another, in parallel, with confidence intervals |
