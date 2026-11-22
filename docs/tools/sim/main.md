@@ -18,7 +18,7 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
                                         [--agents A,B [--threads N] [--save-replays K]]
                                         [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]
                                         [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W] [--mc-greedy-choices]
-                                        [--planner-lab N [--every K]]
+                                        [--planner-lab N [--every K]] [--budget-lab N [--every K]]
 ```
 
 | Option | Default | Meaning |
@@ -50,7 +50,8 @@ With `flatmc`, the [archetype library](../../data/archetypes/README.md) is loade
 `data/archetypes/`, and a match prints a line with flat MC's settings. Its counters include
 `playouts`, `playout actions` and `playout s`, so a run shows what a playout costs.
 | `--planner-lab N` | | Play `N` Greedy-against-Greedy games and measure the planner's searches at one in every `K` main-phase decisions ([planner lab](../../src/harness/planner_lab.md)). Uses `--seed`, `--planner-samples` and `--planner-or-budget`, and prints its progress after each game to stderr |
-| `--every K` | 5 | With `--planner-lab`: which main-phase decisions to measure |
+| `--budget-lab N` | | Play `N` Greedy-against-Greedy games and, at one in every `K` main-phase decisions, time the and-tree at budgets 25, 50, 100 and 150 against `--planner-and-budget` and report what each gives up ([budget lab](../../src/harness/budget_lab.md)). Uses `--seed` and `--planner-samples` |
+| `--every K` | 5 | With `--planner-lab` or `--budget-lab`: which main-phase decisions to measure |
 
 **Pairings:** decks are sorted by file name. Game `i` plays deck `i mod n` against deck
 `(i / n) mod n`, so every pairing, including mirrors, comes up equally often.

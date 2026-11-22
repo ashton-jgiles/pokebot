@@ -40,10 +40,12 @@ add_library(pokebot_lib
   agents/flat_mc/flat_mc_agent.cpp
   agents/is_mcts/info_set.cpp
   agents/is_mcts/tree.cpp
+  agents/is_mcts/macro_actions.cpp
   harness/match.cpp
   harness/replay.cpp
   harness/arena.cpp
   harness/planner_lab.cpp
+  harness/budget_lab.cpp
 )
 target_include_directories(pokebot_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 # card.hpp includes nlohmann/json, so anything using pokebot_lib needs it too.

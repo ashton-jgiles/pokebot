@@ -21,6 +21,7 @@
 #include "cards/db/card_db.hpp"
 #include "core/decklist.hpp"
 #include "harness/arena.hpp"
+#include "harness/budget_lab.hpp"
 #include "harness/match.hpp"
 #include "harness/planner_lab.hpp"
 #include "harness/replay.hpp"
@@ -56,6 +57,7 @@ namespace {
         FlatMcOptions flat_mc;
         const DeckModel* model = nullptr;
         int lab_games = 0;
+        int budget_lab_games = 0;
         int every = 5;
     };
 
@@ -65,7 +67,7 @@ namespace {
                      "                   [--agents A,B [--threads N] [--save-replays K]]\n"
                      "                   [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]\n"
                      "                   [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W] [--mc-greedy-choices]\n"
-                     "                   [--planner-lab N [--every K]]\n"
+                     "                   [--planner-lab N [--every K]] [--budget-lab N [--every K]]\n"
                      "  --games N            games to play (default 1000)\n"
                      "  --agent A            random, biased, greedy, planner or flatmc (default biased)\n"
                      "  --seed S             first game's seed; game i uses S + i (default 1)\n"
@@ -92,6 +94,8 @@ namespace {
                      "  --mc-greedy-choices      flat MC leaves its decisions outside the main phase to Greedy (default: plays them out)\n"
                      "  --planner-lab N          play N greedy games and measure the planner's searches at every Kth\n"
                      "                           main-phase decision (--every K, default 5)\n"
+                     "  --budget-lab N           play N greedy games and time the and-tree at cheap budgets against\n"
+                     "                           --planner-and-budget, at every Kth main-phase decision\n"
                      "If an invariant breaks, the game is saved to replays/invariant-seed-S.json.\n";
     }
 
@@ -134,6 +138,8 @@ namespace {
                 options.flat_mc.playout.greedy_worlds = std::stoi(argv[++i]);
             } else if (arg == "--mc-greedy-choices") {
                 options.flat_mc.search_choices = false;
+            } else if (arg == "--budget-lab" && has_value) {
+                options.budget_lab_games = std::stoi(argv[++i]);
             } else if (arg == "--planner-lab" && has_value) {
                 options.lab_games = std::stoi(argv[++i]);
             } else if (arg == "--every" && has_value) {
@@ -176,6 +182,10 @@ namespace {
         options.flat_mc.and_budget = options.planner.and_budget;
         options.flat_mc.samples = options.planner.samples;
         if (options.lab_games < 0 || (options.lab_games > 0 && (!options.agents.empty() || options.print || options.check_replays))) {
+            return false;
+        }
+        if (options.budget_lab_games < 0 ||
+            (options.budget_lab_games > 0 && (!options.agents.empty() || options.print || options.check_replays || options.lab_games > 0))) {
             return false;
         }
         if (options.agents.empty()) {
@@ -331,6 +341,42 @@ namespace {
         return r.false_wins == 0 ? 0 : 1;
     }
 
+    int run_budget_lab_command(const CardDB& db, const std::vector<std::filesystem::path>& files, const std::vector<Decklist>& decks, const Options& options) {
+        std::vector<ArenaDeck> arena_decks;
+        for (std::size_t i = 0; i < files.size(); ++i) {
+            arena_decks.push_back(ArenaDeck{files[i].filename().string(), decks[i]});
+        }
+        BudgetLabOptions lab;
+        lab.games = options.budget_lab_games;
+        lab.seed = options.seed;
+        lab.every = options.every;
+        lab.reference = options.planner.and_budget;
+        lab.samples = options.planner.samples;
+        const auto started = std::chrono::steady_clock::now();
+        lab.on_progress = [started](long long done, long long total) {
+            const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+            std::cerr << "  " << done << " of " << total << " games, " << std::fixed << std::setprecision(0) << seconds << " s\n";
+        };
+        const BudgetLabResult r = run_budget_lab(db, arena_decks, lab);
+        const auto line = [&](const BudgetRow& row) {
+            const double searches = static_cast<double>(std::max(row.searches, 1LL));
+            const double compared = static_cast<double>(std::max(r.reference.same_best, 1LL));
+            std::cout << "  " << std::setw(6) << row.budget << std::setw(10) << std::setprecision(2) << 1000.0 * row.seconds / searches << " ms"
+                      << std::setw(9) << std::setprecision(1) << 100.0 * static_cast<double>(row.same_best) / compared << "%" << std::setw(12)
+                      << std::setprecision(3) << row.gap / compared << std::setw(9) << std::setprecision(2) << static_cast<double>(row.plans) / searches
+                      << '\n';
+        };
+        std::cout << std::fixed << "Budget lab: " << r.games << " greedy games, one in every " << lab.every << " main-phase decisions: " << r.positions
+                  << " positions, top " << lab.plans << " plans each\n";
+        std::cout << "  budget  time/search  same best  value lost    plans\n";
+        line(r.reference);
+        for (const BudgetRow& row : r.rows) {
+            line(row);
+        }
+        std::cout << std::setprecision(1) << "Took " << r.seconds << " s\n";
+        return 0;
+    }
+
     // --agents A,B: A against B on every deck pairing, with win rates and their confidence intervals.
     int run_match(const CardDB& db, const std::vector<std::filesystem::path>& files, const std::vector<Decklist>& decks,
                   const Options& options) {
@@ -484,6 +530,9 @@ int main(int argc, char** argv) {
         }
         if (options.lab_games > 0) {
             return run_lab(db, files, decks, options);
+        }
+        if (options.budget_lab_games > 0) {
+            return run_budget_lab_command(db, files, decks, options);
         }
 
         if (options.print) {
