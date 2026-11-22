@@ -11,7 +11,7 @@ happens next: the opponent's reply, played out in worlds dealt from the [deck mo
 ```cpp
 const ArchetypeLibrary library = ArchetypeLibrary::load("data/archetypes", db);
 const DeckModel model(library);
-FlatMcAgent agent(seed, model);   // defaults: K = 16 plans, N = 64 playouts, r = 2, Greedy with 1 world
+FlatMcAgent agent(seed, model);   // defaults: K = 16 plans, N = 64 playouts, r = 2, Greedy with 1 world, choices played out
 agent.analysis();                 // the last decision's plans, best first, with their means
 ```
 
@@ -34,13 +34,15 @@ In its main phase (or when offered an extra attack), after setup:
 5. **Following:** the plan is followed while the observation is the one it expected, and planned
    again when not, as in the Planner.
 
-Every other decision (setup, a new Active, choices inside the opponent's effects) goes to
-[Greedy](../greedy/greedy_agent.md) with 3 worlds, as in the Planner, unless `search_choices` is on
-(`--mc-choices`). Then every decision after setup that flat MC isn't following a plan through is
-scored like the plans: each action as a one-action plan, played out in the same m = N / (number of
-actions) worlds with the same seeds, the best mean taken. Setup still goes to Greedy's setup rule,
-since a `World` can't be built before both players have set up. It's off by default until step 7.6
-has measured it: it adds about 64 playouts to each of about 11 decisions a game.
+**Every other decision after setup** (a new Active, what a search takes, what to discard) is scored
+like the plans when `search_choices` is on, as it is by default: each action as a one-action plan,
+played out in the same m = N / (number of actions) worlds with the same seeds, the best mean taken.
+Setup goes to [Greedy](../greedy/greedy_agent.md)'s setup rule, since a `World` can't be built
+before both players have set up. With `search_choices` off (`--mc-greedy-choices`), these decisions
+go to Greedy with 3 worlds, as in the Planner.
+
+Step 7.6 measured it: playing out these choices took Flat MC from 67.9% to 73.8% against the Planner,
+for 8.7 choices a game and about 1 s more per game.
 
 **The same worlds for every plan.** All K plans are played out in the same m worlds with the same
 playout seeds (common random numbers), so the difference between two plans' means comes from the
@@ -67,13 +69,14 @@ One playout is comparable to one IS-MCTS iteration (M8).
 | `playouts` | 64 | N: playouts each decision, split evenly over the plans |
 | `playout` | depth 2, Greedy with 1 world | The [playout options](playout.md#where-it-stops): r, the policy, its worlds |
 | `weights` | `default_weights()` | θ for e |
-| `search_choices` | off | Play out the decisions outside the main phase too, instead of asking Greedy |
+| `search_choices` | on | Play out the decisions outside the main phase too, instead of asking Greedy |
 
 The defaults are step 7.6's choice: of the settings measured against the Planner, r = 2 with N = 64
-and K = 16 scored best for its cost, 67.9% (95% CI 65.6% to 70.2%) at 6.6 games/s on 16 threads
-(see the [roadmap](../../../roadmap.md)). Seeing the opponent's reply mattered most (r = 1 against
-0), then more plans (K = 8 against 4); deeper than r = 2, more playouts and better playout play all
-paid less for their time.
+and K = 16 scored best for its cost, 67.9% (95% CI 65.6% to 70.2%) at 6.6 games/s on 16 threads, and
+73.8% (71.5% to 75.8%) at 4.7 games/s with its choices played out (see the
+[roadmap](../../../roadmap.md)). Seeing the opponent's reply mattered most (r = 1 against 0), then
+playing out the choices, then more plans (K = 8 against 4); deeper than r = 2, more playouts and
+better playout play all paid less for their time.
 
 The `DeckModel` (and its library and `CardDB`) must outlive the agent. It's only read, so one model
 can serve every agent in an arena at once.

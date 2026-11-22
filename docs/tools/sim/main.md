@@ -17,7 +17,7 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
                                         [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]
                                         [--agents A,B [--threads N] [--save-replays K]]
                                         [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]
-                                        [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W] [--mc-choices]
+                                        [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W] [--mc-greedy-choices]
                                         [--planner-lab N [--every K]]
 ```
 
@@ -44,7 +44,7 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 | `--mc-depth R` | 2 | How far a [playout](../../src/agents/flat_mc/playout.md) runs: to the start of the searching player's R-th next turn (0 scores right after the plan) |
 | `--mc-policy P` | `greedy` | Who plays the playouts: `greedy` or `biased` |
 | `--mc-greedy-worlds W` | 1 | Worlds for each decision of a Greedy playout |
-| `--mc-choices` | off | Flat MC also plays out its decisions outside the main phase, instead of asking Greedy |
+| `--mc-greedy-choices` | | Flat MC leaves its decisions outside the main phase to Greedy, as the Planner does. By default it plays them out like its plans |
 
 With `flatmc`, the [archetype library](../../data/archetypes/README.md) is loaded from
 `data/archetypes/`, and a match prints a line with flat MC's settings. Its counters include

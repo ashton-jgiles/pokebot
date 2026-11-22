@@ -25,7 +25,7 @@ namespace pokebot {
         int playouts = 64;
         PlayoutOptions playout{.depth = 2};
         Weights weights = default_weights();
-        bool search_choices = false;
+        bool search_choices = true;
     };
 
     struct FlatMcStats {

@@ -291,7 +291,7 @@ TEST_CASE("flat MC's defaults are the ones tuned in step 7.6", "[flat_mc]") {
     CHECK(o.playout.depth == 2);
     CHECK(o.playout.policy == pokebot::PlayoutPolicy::Greedy);
     CHECK(o.playout.greedy_worlds == 1);
-    CHECK_FALSE(o.search_choices);
+    CHECK(o.search_choices);
 }
 
 TEST_CASE("on the real decks, with search_choices flat MC plays out its decisions outside the main phase", "[flat_mc]") {
@@ -316,7 +316,9 @@ TEST_CASE("on the real decks, with search_choices flat MC plays out its decision
         INFO("seed " << seed);
         FlatMcAgent agent(seed, model, options);
         FlatMcAgent again(seed, model, options);
-        FlatMcAgent plain(seed, model, quick());
+        FlatMcOptions without = quick();
+        without.search_choices = false;
+        FlatMcAgent plain(seed, model, without);
         const auto record = play(seed, agent);
         CHECK(record.end != pokebot::GameEnd::ActionLimit);
         CHECK(play(seed, again).moves == record.moves);

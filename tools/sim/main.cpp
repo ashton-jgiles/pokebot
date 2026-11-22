@@ -64,7 +64,7 @@ namespace {
                      "                   [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]\n"
                      "                   [--agents A,B [--threads N] [--save-replays K]]\n"
                      "                   [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]\n"
-                     "                   [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W] [--mc-choices]\n"
+                     "                   [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W] [--mc-greedy-choices]\n"
                      "                   [--planner-lab N [--every K]]\n"
                      "  --games N            games to play (default 1000)\n"
                      "  --agent A            random, biased, greedy, planner or flatmc (default biased)\n"
@@ -89,7 +89,7 @@ namespace {
                      "  --mc-depth R             turns of the searching player a playout runs to (default 2)\n"
                      "  --mc-policy P            greedy or biased: who plays the playouts (default greedy)\n"
                      "  --mc-greedy-worlds W     worlds for a greedy playout's decisions (default 1)\n"
-                     "  --mc-choices             flat MC also plays out its decisions outside the main phase\n"
+                     "  --mc-greedy-choices      flat MC leaves its decisions outside the main phase to Greedy (default: plays them out)\n"
                      "  --planner-lab N          play N greedy games and measure the planner's searches at every Kth\n"
                      "                           main-phase decision (--every K, default 5)\n"
                      "If an invariant breaks, the game is saved to replays/invariant-seed-S.json.\n";
@@ -132,8 +132,8 @@ namespace {
                 }
             } else if (arg == "--mc-greedy-worlds" && has_value) {
                 options.flat_mc.playout.greedy_worlds = std::stoi(argv[++i]);
-            } else if (arg == "--mc-choices") {
-                options.flat_mc.search_choices = true;
+            } else if (arg == "--mc-greedy-choices") {
+                options.flat_mc.search_choices = false;
             } else if (arg == "--planner-lab" && has_value) {
                 options.lab_games = std::stoi(argv[++i]);
             } else if (arg == "--every" && has_value) {
