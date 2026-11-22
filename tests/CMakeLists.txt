@@ -55,6 +55,7 @@ add_executable(pokebot_tests
   test_planner_lab.cpp
   test_deck_model.cpp
   test_playout.cpp
+  test_flat_mc.cpp
 )
 target_link_libraries(pokebot_tests PRIVATE
   pokebot_lib pokebot_import_lib pokebot_warnings Catch2::Catch2WithMain)

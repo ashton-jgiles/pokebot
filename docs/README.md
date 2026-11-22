@@ -70,6 +70,7 @@ legal actions.
 | | [planner_agent.md](src/agents/planner/planner_agent.md) | The Planner agent: Model 1 playing a game |
 | | [deck_model.md](src/agents/flat_mc/deck_model.md) | The archetype library: the decklists agents know, to guess the opponent's from |
 | | [playout.md](src/agents/flat_mc/playout.md) | Playouts: playing a determinization on for r turns and scoring it |
+| | [flat_mc_agent.md](src/agents/flat_mc/flat_mc_agent.md) | The flat MC agent: the turn planner's best plans, each played out in determinized worlds |
 | `src/harness` | [match.md](src/harness/match.md) | `play_game`, how games end |
 | | [replay.md](src/harness/replay.md) | Saving games and playing them back, as either player |
 | | [arena.md](src/harness/arena.md) | The match harness: one agent against another, in parallel, with confidence intervals |

@@ -8,9 +8,13 @@
 #include <iostream>
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
+#include "agents/flat_mc/deck_model.hpp"
+#include "agents/flat_mc/flat_mc_agent.hpp"
+#include "agents/flat_mc/playout.hpp"
 #include "agents/greedy/greedy_agent.hpp"
 #include "agents/planner/planner_agent.hpp"
 #include "agents/random/random_agent.hpp"
@@ -49,18 +53,21 @@ namespace {
         int threads = 0;                 // with --agents: games at once; 0 = one per hardware thread
         int replay_every = 0;            // with --agents: save every Nth game
         PlannerOptions planner;
+        FlatMcOptions flat_mc;
+        const DeckModel* model = nullptr;
         int lab_games = 0;
         int every = 5;
     };
 
     void print_usage() {
-        std::cerr << "usage: pokebot-sim [--games N] [--agent random|biased|greedy|planner] [--seed S] [--no-check]\n"
+        std::cerr << "usage: pokebot-sim [--games N] [--agent random|biased|greedy|planner|flatmc] [--seed S] [--no-check]\n"
                      "                   [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]\n"
                      "                   [--agents A,B [--threads N] [--save-replays K]]\n"
                      "                   [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]\n"
+                     "                   [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W]\n"
                      "                   [--planner-lab N [--every K]]\n"
                      "  --games N            games to play (default 1000)\n"
-                     "  --agent A            random, biased, greedy or planner (default biased)\n"
+                     "  --agent A            random, biased, greedy, planner or flatmc (default biased)\n"
                      "  --seed S             first game's seed; game i uses S + i (default 1)\n"
                      "  --no-check           skip the invariant check after every action (faster)\n"
                      "  --print              play one game with seed S and print every action\n"
@@ -76,6 +83,12 @@ namespace {
                      "  --planner-samples M      the planner's sampled worlds for a plan that ends in chance (default 1)\n"
                      "  --planner-or-budget N    the planner's nodes for its win search (default 200)\n"
                      "  --planner-and-budget N   the planner's nodes for its best-plan search (default 300)\n"
+                     "                           (the three --planner settings apply to flatmc's searches too)\n"
+                     "  --mc-plans K             flat MC's plans played out each decision (default 4)\n"
+                     "  --mc-playouts N          flat MC's playouts each decision, split over its plans (default 32)\n"
+                     "  --mc-depth R             turns of the searching player a playout runs to (default 1)\n"
+                     "  --mc-policy P            greedy or biased: who plays the playouts (default greedy)\n"
+                     "  --mc-greedy-worlds W     worlds for a greedy playout's decisions (default 1)\n"
                      "  --planner-lab N          play N greedy games and measure the planner's searches at every Kth\n"
                      "                           main-phase decision (--every K, default 5)\n"
                      "If an invariant breaks, the game is saved to replays/invariant-seed-S.json.\n";
@@ -104,6 +117,20 @@ namespace {
                 options.planner.or_budget = std::stoi(argv[++i]);
             } else if (arg == "--planner-and-budget" && has_value) {
                 options.planner.and_budget = std::stoi(argv[++i]);
+            } else if (arg == "--mc-plans" && has_value) {
+                options.flat_mc.plans = std::stoi(argv[++i]);
+            } else if (arg == "--mc-playouts" && has_value) {
+                options.flat_mc.playouts = std::stoi(argv[++i]);
+            } else if (arg == "--mc-depth" && has_value) {
+                options.flat_mc.playout.depth = std::stoi(argv[++i]);
+            } else if (arg == "--mc-policy" && has_value) {
+                try {
+                    options.flat_mc.playout.policy = playout_policy(argv[++i]);
+                } catch (const std::invalid_argument&) {
+                    return false;
+                }
+            } else if (arg == "--mc-greedy-worlds" && has_value) {
+                options.flat_mc.playout.greedy_worlds = std::stoi(argv[++i]);
             } else if (arg == "--planner-lab" && has_value) {
                 options.lab_games = std::stoi(argv[++i]);
             } else if (arg == "--every" && has_value) {
@@ -134,11 +161,17 @@ namespace {
             return false;
         }
         const auto known = [](const std::string& name) {
-            return name == "random" || name == "biased" || name == "greedy" || name == "planner";
+            return name == "random" || name == "biased" || name == "greedy" || name == "planner" || name == "flatmc";
         };
         if (options.planner.samples < 1 || options.planner.or_budget < 1 || options.planner.and_budget < 1 || options.every < 1) {
             return false;
         }
+        if (options.flat_mc.plans < 1 || options.flat_mc.playouts < 1 || options.flat_mc.playout.depth < 0 || options.flat_mc.playout.greedy_worlds < 1) {
+            return false;
+        }
+        options.flat_mc.or_budget = options.planner.or_budget;
+        options.flat_mc.and_budget = options.planner.and_budget;
+        options.flat_mc.samples = options.planner.samples;
         if (options.lab_games < 0 || (options.lab_games > 0 && (!options.agents.empty() || options.print || options.check_replays))) {
             return false;
         }
@@ -153,7 +186,7 @@ namespace {
         return options.games > 0 && known(options.agent);
     }
 
-    std::unique_ptr<Agent> make_agent(const std::string& name, std::uint64_t seed, const PlannerOptions& planner) {
+    std::unique_ptr<Agent> make_agent(const std::string& name, std::uint64_t seed, const Options& options) {
         if (name == "random") {
             return std::make_unique<RandomAgent>(seed);
         }
@@ -161,7 +194,10 @@ namespace {
             return std::make_unique<GreedyAgent>(seed);
         }
         if (name == "planner") {
-            return std::make_unique<PlannerAgent>(seed, planner);
+            return std::make_unique<PlannerAgent>(seed, options.planner);
+        }
+        if (name == "flatmc") {
+            return std::make_unique<FlatMcAgent>(seed, *options.model, options.flat_mc);
         }
         return std::make_unique<BiasedRandomAgent>(seed);
     }
@@ -193,8 +229,8 @@ namespace {
     template <class MakeReplay>
     GameRecord play_saving_failures(const CardTable& table, std::uint64_t seed, const Options& options, MakeReplay make_replay,
                                     GameState* end = nullptr) {
-        const auto agent0 = make_agent(options.agent, seed * 2, options.planner);
-        const auto agent1 = make_agent(options.agent, seed * 2 + 1, options.planner);
+        const auto agent0 = make_agent(options.agent, seed * 2, options);
+        const auto agent1 = make_agent(options.agent, seed * 2 + 1, options);
         MatchOptions match_options;
         match_options.check_invariants = options.check;
         match_options.final_state = end;
@@ -302,7 +338,7 @@ namespace {
         // The same agent on both sides is labelled with its side, such as random-A and random-B.
         const bool same = options.agents[0] == options.agents[1];
         const auto contestant = [&](const std::string& name, const char* side) {
-            return Contestant{same ? name + "-" + side : name, [name, planner = options.planner](std::uint64_t seed) { return make_agent(name, seed, planner); }};
+            return Contestant{same ? name + "-" + side : name, [name, &options](std::uint64_t seed) { return make_agent(name, seed, options); }};
         };
         const Contestant a = contestant(options.agents[0], "A");
         const Contestant b = contestant(options.agents[1], "B");
@@ -335,6 +371,11 @@ namespace {
         std::cout << std::fixed << std::setprecision(1);
         std::cout << a.name << " vs " << b.name << ": " << n << " decks, " << n * n << " pairings, " << per_pairing
                   << " games each (every seed once with " << a.name << " in each seat), " << result.threads << " threads\n";
+        if (options.agents[0] == "flatmc" || options.agents[1] == "flatmc") {
+            std::cout << "  flatmc: " << options.flat_mc.plans << " plans, " << options.flat_mc.playouts << " playouts, depth "
+                      << options.flat_mc.playout.depth << ", " << to_string(options.flat_mc.playout.policy) << " playouts with "
+                      << options.flat_mc.playout.greedy_worlds << " world(s)\n";
+        }
         if (options.agents[0] == "planner" || options.agents[1] == "planner") {
             std::cout << "  planner: " << options.planner.samples << " sampled worlds, or-tree budget " << options.planner.or_budget
                       << ", and-tree budget " << options.planner.and_budget << '\n';
@@ -426,6 +467,14 @@ int main(int argc, char** argv) {
         std::vector<Decklist> decks;
         for (const auto& file : files) {
             decks.push_back(load_decklist(file));
+        }
+        std::unique_ptr<ArchetypeLibrary> library;
+        std::unique_ptr<DeckModel> model;
+        const bool flat_mc = options.agent == "flatmc" || std::find(options.agents.begin(), options.agents.end(), "flatmc") != options.agents.end();
+        if (flat_mc) {
+            library = std::make_unique<ArchetypeLibrary>(ArchetypeLibrary::load("data/archetypes", db));
+            model = std::make_unique<DeckModel>(*library);
+            options.model = model.get();
         }
         if (!options.agents.empty()) {
             return run_match(db, files, decks, options);
