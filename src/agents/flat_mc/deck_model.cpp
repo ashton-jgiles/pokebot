@@ -1,8 +1,10 @@
 #include "agents/flat_mc/deck_model.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <exception>
 #include <map>
+#include <stdexcept>
 #include <tuple>
 #include <utility>
 
@@ -11,6 +13,10 @@
 namespace pokebot {
 
     namespace {
+
+        double log_choose(int n, int k) {
+            return std::lgamma(n + 1.0) - std::lgamma(k + 1.0) - std::lgamma(n - k + 1.0);
+        }
 
         std::string label(const std::string& archetype, const std::string& variant) {
             return archetype + "/" + variant;
@@ -128,6 +134,74 @@ namespace pokebot {
             }
         }
         return nullptr;
+    }
+
+    SeenCards opponent_cards_seen(const Observation& observation) {
+        SeenCards seen;
+        for (const CardIndex card : observation.opponent_seen) {
+            const CardDef* def = observation.def(card);
+            if (def != nullptr) {
+                ++seen[def->id];
+            }
+        }
+        return seen;
+    }
+
+    DeckModel::DeckModel(const ArchetypeLibrary& library, double unexplained) : library_(library) {
+        if (library.empty()) {
+            throw std::invalid_argument("DeckModel: the library has no lists");
+        }
+        if (!(unexplained > 0.0 && unexplained <= 1.0)) {
+            throw std::invalid_argument("DeckModel: the chance of a card no list explains must be in (0, 1]");
+        }
+        log_unexplained_ = std::log(unexplained);
+        std::map<std::string, int, std::less<>> variants;
+        for (const ArchetypeList& list : library.lists()) {
+            ++variants[list.archetype];
+        }
+        const double archetypes = static_cast<double>(variants.size());
+        for (const ArchetypeList& list : library.lists()) {
+            prior_.push_back(1.0 / (archetypes * static_cast<double>(variants[list.archetype])));
+        }
+    }
+
+    std::vector<double> DeckModel::belief(const SeenCards& seen) const {
+        const std::vector<ArchetypeList>& lists = library_.lists();
+        std::vector<double> weight(lists.size());
+        for (std::size_t i = 0; i < lists.size(); ++i) {
+            double log_weight = std::log(prior_[i]);
+            for (const auto& [id, k] : seen) {
+                const int n = lists[i].count(id);
+                log_weight += k <= n ? log_choose(n, k) : (k - n) * log_unexplained_;
+            }
+            weight[i] = log_weight;
+        }
+        const double top = *std::max_element(weight.begin(), weight.end());
+        double total = 0.0;
+        for (double& w : weight) {
+            w = std::exp(w - top);
+            total += w;
+        }
+        for (double& w : weight) {
+            w /= total;
+        }
+        return weight;
+    }
+
+    std::vector<double> DeckModel::belief(const Observation& observation) const {
+        return belief(opponent_cards_seen(observation));
+    }
+
+    std::vector<std::pair<std::string, double>> DeckModel::by_archetype(const std::vector<double>& belief) const {
+        std::vector<std::pair<std::string, double>> sums;
+        const std::vector<ArchetypeList>& lists = library_.lists();
+        for (std::size_t i = 0; i < lists.size() && i < belief.size(); ++i) {
+            if (sums.empty() || sums.back().first != lists[i].archetype) {
+                sums.emplace_back(lists[i].archetype, 0.0);
+            }
+            sums.back().second += belief[i];
+        }
+        return sums;
     }
 
 } // namespace pokebot

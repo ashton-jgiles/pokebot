@@ -2,13 +2,17 @@
 
 #include <cstddef>
 #include <filesystem>
+#include <functional>
+#include <map>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "cards/db/card_db.hpp"
 #include "core/decklist.hpp"
+#include "engine/observation/observation.hpp"
 
 namespace pokebot {
 
@@ -44,6 +48,26 @@ namespace pokebot {
 
     private:
         std::vector<ArchetypeList> lists_;
+    };
+
+    using SeenCards = std::map<std::string, int, std::less<>>;
+
+    SeenCards opponent_cards_seen(const Observation& observation);
+
+    class DeckModel {
+    public:
+        explicit DeckModel(const ArchetypeLibrary& library, double unexplained = 0.01);
+
+        const ArchetypeLibrary& library() const { return library_; }
+        double prior(std::size_t list) const { return prior_[list]; }
+        std::vector<double> belief(const SeenCards& seen) const;
+        std::vector<double> belief(const Observation& observation) const;
+        std::vector<std::pair<std::string, double>> by_archetype(const std::vector<double>& belief) const;
+
+    private:
+        const ArchetypeLibrary& library_;
+        double log_unexplained_ = 0.0;
+        std::vector<double> prior_;
     };
 
 } // namespace pokebot

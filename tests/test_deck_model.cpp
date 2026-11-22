@@ -1,27 +1,39 @@
 #include <algorithm>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <random>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <system_error>
 #include <utility>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include "agents/flat_mc/deck_model.hpp"
+#include "agents/random/random_agent.hpp"
+#include "engine/observation/observation.hpp"
+#include "harness/match.hpp"
+#include "support/real_decks.hpp"
 #include "support/test_cards.hpp"
 
 using Catch::Matchers::ContainsSubstring;
+using Catch::Matchers::WithinAbs;
+using Catch::Matchers::WithinRel;
 using pokebot::ArchetypeError;
 using pokebot::ArchetypeLibrary;
 using pokebot::ArchetypeList;
 using pokebot::CardDB;
 using pokebot::CardDef;
 using pokebot::CardKind;
+using pokebot::DeckModel;
 using pokebot::EnergyType;
+using pokebot::SeenCards;
 using pokebot::TrainerKind;
 
 namespace {
@@ -40,8 +52,26 @@ namespace {
         attack.text = "Flip a coin. If heads, something happens.";
         unwritten.attacks.push_back(attack);
         db.add(unwritten);
+        db.add(test::basic_pokemon("TST-4", "Card 4"));
         db.add(test::basic_energy("TST-6", "Card 6", EnergyType::Grass));
         return db;
+    }
+
+    ArchetypeLibrary belief_library(const CardDB& db) {
+        ArchetypeLibrary library;
+        library.add("ace", "main", test::deck({{4, 1}, {56, 6}}), db);
+        library.add("ace", "tech", test::deck({{4, 1}, {4, 2}, {52, 6}}), db);
+        library.add("box", "main", test::deck({{4, 4}, {56, 6}}), db);
+        return library;
+    }
+
+    double archetype_weight(const DeckModel& model, const std::vector<double>& belief, const std::string& archetype) {
+        for (const auto& [name, weight] : model.by_archetype(belief)) {
+            if (name == archetype) {
+                return weight;
+            }
+        }
+        return 0.0;
     }
 
     struct TempDir {
@@ -195,4 +225,132 @@ TEST_CASE("the project's archetype library", "[deck_model]") {
         distinct.insert(cards);
     }
     CHECK(distinct.size() == library.size());
+}
+
+TEST_CASE("with nothing seen, the belief is the prior: archetypes alike, then their variants", "[deck_model]") {
+    const CardDB db = test_db();
+    const ArchetypeLibrary library = belief_library(db);
+    const DeckModel model(library);
+    const std::vector<double> belief = model.belief(SeenCards{});
+    REQUIRE(belief.size() == 3);
+    CHECK_THAT(belief[0], WithinAbs(0.25, 1e-12));
+    CHECK_THAT(belief[1], WithinAbs(0.25, 1e-12));
+    CHECK_THAT(belief[2], WithinAbs(0.5, 1e-12));
+}
+
+TEST_CASE("a card only one archetype plays settles the archetype", "[deck_model]") {
+    const CardDB db = test_db();
+    const ArchetypeLibrary library = belief_library(db);
+    const DeckModel model(library);
+    const std::vector<double> belief = model.belief(SeenCards{{"TST-4", 1}});
+    CHECK(belief[2] > 0.99);
+    CHECK_THAT(belief[0], WithinRel(belief[1], 1e-12));
+    CHECK_THAT(archetype_weight(model, belief, "box"), WithinAbs(belief[2], 1e-12));
+}
+
+TEST_CASE("a tech card picks the variant", "[deck_model]") {
+    const CardDB db = test_db();
+    const ArchetypeLibrary library = belief_library(db);
+    const DeckModel model(library, 0.01);
+    const std::vector<double> belief = model.belief(SeenCards{{"TST-1", 1}, {"TST-2", 1}});
+    CHECK_THAT(belief[1] / belief[0], WithinRel(400.0, 1e-9));
+    CHECK(belief[1] > 0.99);
+}
+
+TEST_CASE("how many copies are seen matters, by the hypergeometric count", "[deck_model]") {
+    const CardDB db = test_db();
+    ArchetypeLibrary library;
+    library.add("x", "four", test::deck({{4, 1}, {56, 6}}), db);
+    library.add("x", "two", test::deck({{2, 1}, {58, 6}}), db);
+    const DeckModel model(library, 0.01);
+    const std::vector<double> one = model.belief(SeenCards{{"TST-1", 1}});
+    CHECK_THAT(one[0], WithinAbs(2.0 / 3.0, 1e-12));
+    const std::vector<double> three = model.belief(SeenCards{{"TST-1", 3}});
+    CHECK_THAT(three[1] / three[0], WithinRel(0.01 / 4.0, 1e-9));
+}
+
+TEST_CASE("cards no list explains keep the belief defined", "[deck_model]") {
+    const CardDB db = test_db();
+    const ArchetypeLibrary library = belief_library(db);
+    const DeckModel model(library);
+    const std::vector<double> belief = model.belief(SeenCards{{"TST-9", 2}});
+    for (std::size_t i = 0; i < belief.size(); ++i) {
+        CHECK_THAT(belief[i], WithinAbs(model.prior(i), 1e-12));
+    }
+    double total = 0.0;
+    for (const double weight : model.belief(SeenCards{{"TST-9", 60}, {"TST-4", 5}})) {
+        CHECK(weight >= 0.0);
+        total += weight;
+    }
+    CHECK_THAT(total, WithinAbs(1.0, 1e-12));
+}
+
+TEST_CASE("the belief summed by archetype", "[deck_model]") {
+    const CardDB db = test_db();
+    const ArchetypeLibrary library = belief_library(db);
+    const DeckModel model(library);
+    const auto sums = model.by_archetype(model.belief(SeenCards{{"TST-1", 1}}));
+    REQUIRE(sums.size() == 2);
+    CHECK(sums[0].first == "ace");
+    CHECK(sums[1].first == "box");
+    CHECK_THAT(sums[0].second + sums[1].second, WithinAbs(1.0, 1e-12));
+    CHECK(sums[0].second > 0.99);
+}
+
+TEST_CASE("a deck model needs lists and a chance in (0, 1]", "[deck_model]") {
+    const CardDB db = test_db();
+    const ArchetypeLibrary empty;
+    CHECK_THROWS_AS(DeckModel(empty), std::invalid_argument);
+    const ArchetypeLibrary library = belief_library(db);
+    CHECK_THROWS_AS(DeckModel(library, 0.0), std::invalid_argument);
+    CHECK_THROWS_AS(DeckModel(library, 1.5), std::invalid_argument);
+    CHECK_NOTHROW(DeckModel(library, 1.0));
+}
+
+TEST_CASE("on the real decks, the belief depends only on the cards seen and finds the archetype", "[deck_model]") {
+    const auto real = test::load_real_decks();
+    if (!real) {
+        SKIP("no generated card data; run pokebot-import first");
+    }
+    const std::filesystem::path root = POKEBOT_SOURCE_DIR;
+    const ArchetypeLibrary library = ArchetypeLibrary::load(root / "data/archetypes", real->db);
+    const DeckModel model(library);
+    std::map<SeenCards, std::vector<double>> by_seen;
+    std::uint64_t seed = 1;
+    for (const ArchetypeList& opponent : library.lists()) {
+        ArchetypeLibrary without;
+        for (const ArchetypeList& list : library.lists()) {
+            if (&list != &opponent) {
+                without.add(list.archetype, list.variant, list.list, real->db);
+            }
+        }
+        const DeckModel missing(without);
+        const pokebot::CardTable table(real->db, real->decks.front(), opponent.list);
+        for (int game = 0; game < 2; ++game, ++seed) {
+            INFO(opponent.archetype << "/" << opponent.variant << " game " << game);
+            pokebot::BiasedRandomAgent a(seed), b(seed + 1000);
+            pokebot::MatchOptions options;
+            options.check_invariants = false;
+            pokebot::Observation last;
+            options.on_action = [&](const pokebot::GameState&, const pokebot::Action&, const pokebot::GameState& after) {
+                if (after.turn == 0) {
+                    return;
+                }
+                last = pokebot::observe(after, 0);
+                const std::vector<double> belief = model.belief(last);
+                const auto [it, added] = by_seen.emplace(pokebot::opponent_cards_seen(last), belief);
+                if (!added) {
+                    CHECK(it->second == belief);
+                }
+            };
+            const pokebot::GameRecord record = pokebot::play_game(table, seed, a, b, options);
+            if (record.turns < 10) {
+                continue;
+            }
+            CHECK(archetype_weight(model, model.belief(last), opponent.archetype) > 0.9);
+            const auto sums = missing.by_archetype(missing.belief(last));
+            const auto best = std::max_element(sums.begin(), sums.end(), [](const auto& x, const auto& y) { return x.second < y.second; });
+            CHECK(best->first == opponent.archetype);
+        }
+    }
 }
