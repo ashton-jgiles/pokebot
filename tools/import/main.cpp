@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -28,9 +29,25 @@
 namespace {
 
     void print_usage() {
-        std::cerr << "usage: pokebot-import [--refresh] [--offline] <decklist.txt>...\n"
+        std::cerr << "usage: pokebot-import [--refresh] [--offline] <decklist.txt or directory>...\n"
+                     "  a directory means every .txt decklist in it and its subdirectories\n"
                      "  --refresh  download every card again, ignoring the cache\n"
                      "  --offline  use only cached files\n";
+    }
+
+    void add_decklists(const std::filesystem::path& path, std::vector<std::filesystem::path>& decklists) {
+        if (!std::filesystem::is_directory(path)) {
+            decklists.push_back(path);
+            return;
+        }
+        std::vector<std::filesystem::path> found;
+        for (const auto& entry : std::filesystem::recursive_directory_iterator(path)) {
+            if (entry.is_regular_file() && entry.path().extension() == ".txt") {
+                found.push_back(entry.path());
+            }
+        }
+        std::sort(found.begin(), found.end());
+        decklists.insert(decklists.end(), found.begin(), found.end());
     }
 
     // True if the card's effects file already states its rules (e.g. ["ex", "tera"]),
@@ -73,7 +90,7 @@ int main(int argc, char** argv) {
             print_usage();
             return 2;
         } else {
-            decklists.emplace_back(arg);
+            add_decklists(arg, decklists);
         }
     }
     if (decklists.empty()) {

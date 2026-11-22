@@ -5,8 +5,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <nlohmann/json.hpp>
 
-#include "agents/greedy_agent.hpp"
-#include "agents/random_agent.hpp"
+#include "agents/greedy/greedy_agent.hpp"
+#include "agents/random/random_agent.hpp"
 #include "engine/engine.hpp"
 #include "engine/knowledge/knowledge.hpp"
 #include "engine/observation/observation.hpp"

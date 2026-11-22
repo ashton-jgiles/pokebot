@@ -16,6 +16,8 @@ namespace pokebot {
 
     nlohmann::json merge_effects(nlohmann::json generated, const nlohmann::json& overrides);
 
+    std::vector<std::string> missing_effects(const CardDef& card);
+
     class CardDB {
     public:
         static CardDB load(const std::filesystem::path& generated_dir, const std::filesystem::path& effects_dir);

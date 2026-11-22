@@ -5,7 +5,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "agents/random_agent.hpp"
+#include "agents/random/random_agent.hpp"
 #include "cards/db/card_db.hpp"
 #include "engine/describe/describe.hpp"
 #include "engine/engine.hpp"

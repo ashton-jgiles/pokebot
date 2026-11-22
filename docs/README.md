@@ -57,17 +57,20 @@ legal actions.
 | | [describe.md](src/engine/describe/describe.md) | States, observations and actions as text |
 | | [fixed_vector.md](src/engine/shared/fixed_vector.md), [rng.md](src/engine/shared/rng.md) | Fixed-capacity list, seeded RNG |
 | `src/agents` | [agent.md](src/agents/agent.md) | The `Agent` interface |
-| | [random_agent.md](src/agents/random_agent.md) | Random and biased random agents |
+| | [random_agent.md](src/agents/random/random_agent.md) | Random and biased random agents |
 | | [human_agent.md](src/agents/human_agent.md) | A person typing their choices |
 | | [world.md](src/agents/world.md) | `World`: a game state consistent with an observation, to try actions on |
-| | [evaluation.md](src/agents/evaluation.md) | The evaluation function e: features, weights, utility |
-| | [greedy_agent.md](src/agents/greedy_agent.md) | The greedy agent: one action ahead in a few worlds |
-| | [action_class.md](src/agents/action_class.md) | Det, Fin and the rest of Bnd: which actions the turn planner searches through |
-| | [state_hash.md](src/agents/state_hash.md) | State hashes and the turn planner's closed set |
-| | [plan.md](src/agents/plan.md) | Plans (macro-actions), δ*, plan values and follow-up choices |
-| | [or_tree.md](src/agents/or_tree.md) | The turn planner's or-tree mode: a line this turn that reaches a goal |
-| | [and_tree.md](src/agents/and_tree.md) | The turn planner's and-tree mode: the best plans this turn, by branch-and-bound |
-| | [planner_agent.md](src/agents/planner_agent.md) | The Planner agent: Model 1 playing a game |
+| | [evaluation.md](src/agents/evaluation/evaluation.md) | The evaluation function e: features, weights, utility |
+| | [greedy_agent.md](src/agents/greedy/greedy_agent.md) | The greedy agent: one action ahead in a few worlds |
+| | [action_class.md](src/agents/planner/action_class.md) | Det, Fin and the rest of Bnd: which actions the turn planner searches through |
+| | [state_hash.md](src/agents/planner/state_hash.md) | State hashes and the turn planner's closed set |
+| | [plan.md](src/agents/planner/plan.md) | Plans (macro-actions), δ*, plan values and follow-up choices |
+| | [or_tree.md](src/agents/planner/or_tree.md) | The turn planner's or-tree mode: a line this turn that reaches a goal |
+| | [and_tree.md](src/agents/planner/and_tree.md) | The turn planner's and-tree mode: the best plans this turn, by branch-and-bound |
+| | [planner_agent.md](src/agents/planner/planner_agent.md) | The Planner agent: Model 1 playing a game |
+| | [deck_model.md](src/agents/flat_mc/deck_model.md) | The archetype library: the decklists agents know, to guess the opponent's from |
+| | [playout.md](src/agents/flat_mc/playout.md) | Playouts: playing a determinization on for r turns and scoring it |
+| | [flat_mc_agent.md](src/agents/flat_mc/flat_mc_agent.md) | The flat MC agent: the turn planner's best plans, each played out in determinized worlds |
 | `src/harness` | [match.md](src/harness/match.md) | `play_game`, how games end |
 | | [replay.md](src/harness/replay.md) | Saving games and playing them back, as either player |
 | | [arena.md](src/harness/arena.md) | The match harness: one agent against another, in parallel, with confidence intervals |
@@ -81,6 +84,7 @@ legal actions.
 | `tests` | [README.md](tests/README.md) | Test suite and helpers |
 | `data/cards` | [README.md](data/cards/README.md) | `sets.json`, card JSON format, effects files |
 | `data/decks` | [README.md](data/decks/README.md) | Decklists |
+| `data/archetypes` | [README.md](data/archetypes/README.md) | The archetype library: each deck's list and its variants |
 
 ## Libraries and executables
 

@@ -6,8 +6,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "agents/planner_agent.hpp"
-#include "agents/random_agent.hpp"
+#include "agents/planner/planner_agent.hpp"
+#include "agents/random/random_agent.hpp"
 #include "engine/engine.hpp"
 #include "engine/knowledge/knowledge.hpp"
 #include "engine/observation/observation.hpp"

@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <string>
 
+#include "agents/flat_mc/deck_model.hpp"
 #include "engine/knowledge/knowledge.hpp"
 
 namespace pokebot {
@@ -19,10 +20,25 @@ namespace pokebot {
             Cards hand;
         };
 
-        CardTable table_for(const Observation& observation) {
+        CardTable table_for(const Observation& observation, const DeckModel* model, Rng& rng, const ArchetypeList*& drawn) {
             std::array<const CardDef*, kMaxCards> defs{};
             for (std::size_t i = 0; i < kMaxCards; ++i) {
                 defs[i] = observation.defs[i] != nullptr ? observation.defs[i] : &unknown_card();
+            }
+            if (model == nullptr) {
+                return CardTable(defs);
+            }
+            const auto first = static_cast<std::size_t>(opponent_of(observation.viewer)) * kDeckSize;
+            Cards unseen;
+            for (std::size_t i = first; i < first + kDeckSize; ++i) {
+                if (observation.defs[i] == nullptr) {
+                    unseen.push_back(static_cast<CardIndex>(i));
+                }
+            }
+            drawn = &model->library().lists()[model->draw(model->belief(observation), rng)];
+            const DealtCards dealt = DeckModel::deal(*drawn, opponent_cards_seen(observation), unseen.size(), rng);
+            for (std::size_t i = 0; i < unseen.size(); ++i) {
+                defs[unseen[i]] = dealt[i];
             }
             return CardTable(defs);
         }
@@ -146,7 +162,7 @@ namespace pokebot {
         return card;
     }
 
-    World::World(const Observation& observation, Rng& rng) : cards_(table_for(observation)) {
+    World::World(const Observation& observation, Rng& rng, const DeckModel* model) : cards_(table_for(observation, model, rng, list_)) {
         if (observation.turn == 0 || observation.is_over()) {
             throw std::invalid_argument("World: the observation must be from a game past setup and not over");
         }

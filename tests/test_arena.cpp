@@ -10,7 +10,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers.hpp>
 
-#include "agents/random_agent.hpp"
+#include "agents/random/random_agent.hpp"
 #include "engine/engine.hpp"
 #include "harness/arena.hpp"
 #include "harness/replay.hpp"

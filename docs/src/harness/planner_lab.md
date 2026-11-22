@@ -15,13 +15,13 @@ const PlannerLabResult result = run_planner_lab(db, decks, options);
 
 ## What it does
 
-It plays `games` games of [Greedy](../agents/greedy_agent.md) against Greedy, game i on deck pairing
+It plays `games` games of [Greedy](../agents/greedy/greedy_agent.md) against Greedy, game i on deck pairing
 (i mod n, (i / n) mod n). At one in every `every` main-phase decisions, it searches the position from
 the deciding player's side:
 
-1. the [or-tree](../agents/or_tree.md) for a win this turn, with the Planner's budget (`or_budget`);
+1. the [or-tree](../agents/planner/or_tree.md) for a win this turn, with the Planner's budget (`or_budget`);
 2. the same, with no budget to speak of (`limit` nodes), with the closed set and without;
-3. the [and-tree](../agents/and_tree.md) for the best plan, with `limit` nodes, in all four
+3. the [and-tree](../agents/planner/and_tree.md) for the best plan, with `limit` nodes, in all four
    combinations of the closed set and f_bound.
 
 A win the or-tree finds is checked by playing the plan. Positions where any search in 2 or 3 runs out of

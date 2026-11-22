@@ -1,6 +1,8 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
+#include <map>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -8,7 +10,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "agents/random_agent.hpp"
+#include "agents/flat_mc/deck_model.hpp"
+#include "agents/random/random_agent.hpp"
 #include "agents/world.hpp"
 #include "engine/engine.hpp"
 #include "engine/invariants/invariants.hpp"
@@ -21,10 +24,13 @@
 using nlohmann::json;
 using pokebot::Action;
 using pokebot::ActionKind;
+using pokebot::ArchetypeLibrary;
+using pokebot::ArchetypeList;
 using pokebot::CardDB;
 using pokebot::CardDef;
 using pokebot::CardIndex;
 using pokebot::CardTable;
+using pokebot::DeckModel;
 using pokebot::GameState;
 using pokebot::Observation;
 using pokebot::observe;
@@ -96,6 +102,43 @@ namespace {
             const auto actions = pokebot::legal_actions(game);
             pokebot::apply(game, actions[chooser.below(static_cast<std::uint32_t>(actions.size()))]);
         }
+    }
+
+    // A world dealt from `model` observes back to the view, keeps the invariants, offers the same
+    // actions, keeps every seen opponent card's definition, and deals the unseen ones only from the
+    // list drawn, no more of each than the list has left after the ones seen.
+    const ArchetypeList* check_modelled_world(const GameState& game, int viewer, Rng& rng, const DeckModel& model) {
+        const Observation view = observe(game, viewer);
+        const World world(view, rng, &model);
+        REQUIRE(observe(world.game(), viewer) == view);
+        const auto problems = pokebot::check_invariants(world.game());
+        INFO((problems.empty() ? std::string() : problems.front()));
+        REQUIRE(problems.empty());
+        if (game.decision().player == viewer) {
+            const auto actions = pokebot::legal_actions(game);
+            const auto offered = pokebot::legal_actions(world.game());
+            REQUIRE(std::is_permutation(actions.begin(), actions.end(), offered.begin(), offered.end()));
+        }
+        const ArchetypeList* list = world.list();
+        REQUIRE(list != nullptr);
+        const pokebot::SeenCards seen = pokebot::opponent_cards_seen(view);
+        std::map<std::string, int> dealt;
+        const std::size_t first = static_cast<std::size_t>(pokebot::opponent_of(viewer)) * pokebot::kDeckSize;
+        for (std::size_t i = first; i < first + pokebot::kDeckSize; ++i) {
+            const CardDef& def = world.game().cards->def(static_cast<CardIndex>(i));
+            if (view.defs[i] != nullptr) {
+                REQUIRE(&def == view.defs[i]);
+            } else {
+                ++dealt[def.id];
+            }
+        }
+        for (const auto& [id, count] : dealt) {
+            INFO(id);
+            const auto it = seen.find(id);
+            const int shown = it == seen.end() ? 0 : it->second;
+            CHECK(count <= list->count(id) - std::min(list->count(id), shown));
+        }
+        return list;
     }
 
 } // namespace
@@ -254,4 +297,63 @@ TEST_CASE("a world can't be built during setup", "[world]") {
     const GameState game = pokebot::new_game(table, 1);
     Rng rng(1);
     CHECK_THROWS_AS(World(observe(game, 0), rng), std::invalid_argument);
+}
+
+TEST_CASE("on the real decks, a world with a deck model deals the opponent's unseen cards from the list drawn", "[world]") {
+    const auto real = test::load_real_decks();
+    if (!real) {
+        SKIP("no generated card data; run pokebot-import first");
+    }
+    const std::filesystem::path root = POKEBOT_SOURCE_DIR;
+    const ArchetypeLibrary library = ArchetypeLibrary::load(root / "data/archetypes", real->db);
+    const DeckModel model(library);
+    Rng rng(9);
+    std::set<const ArchetypeList*> drawn;
+    std::uint64_t seed = 100;
+    for (const ArchetypeList& opponent : library.lists()) {
+        ArchetypeLibrary without;
+        for (const ArchetypeList& list : library.lists()) {
+            if (&list != &opponent) {
+                without.add(list.archetype, list.variant, list.list, real->db);
+            }
+        }
+        const DeckModel missing(without);
+        const CardTable table = CardTable(real->db, real->decks.front(), opponent.list).shuffled(~seed);
+        pokebot::BiasedRandomAgent agent(seed);
+        GameState game = pokebot::new_game(table, seed);
+        for (int step = 0; step < 3000 && !game.is_over(); ++step) {
+            if (game.turn > 0 && step % 5 == 0) {
+                INFO(opponent.archetype << "/" << opponent.variant << ", step " << step);
+                drawn.insert(check_modelled_world(game, 0, rng, model));
+                check_modelled_world(game, 1, rng, model);
+                const ArchetypeList* guess = check_modelled_world(game, 0, rng, missing);
+                CHECK((guess->archetype != opponent.archetype || guess->variant != opponent.variant));
+            }
+            const auto actions = pokebot::legal_actions(game);
+            pokebot::apply_legal(game, pokebot::ask(agent, game, actions));
+        }
+        ++seed;
+    }
+    CHECK(drawn.size() > 4);
+}
+
+TEST_CASE("without a deck model a world is dealt exactly as before", "[world]") {
+    const CardDB db = sample_db();
+    const CardTable table(db, kDeck, kDeck);
+    GameState game = pokebot::new_game(table, 6);
+    Rng chooser(6);
+    play_random(game, chooser, 40);
+    REQUIRE(!game.is_over());
+    const Observation view = observe(game, 0);
+    Rng a(21);
+    Rng b(21);
+    const World plain(view, a);
+    const World none(view, b, nullptr);
+    CHECK(none.list() == nullptr);
+    GameState x = plain.game();
+    GameState y = none.game();
+    x.cards = nullptr;
+    y.cards = nullptr;
+    CHECK(x == y);
+    CHECK(a.next() == b.next());
 }

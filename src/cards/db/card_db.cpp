@@ -1,6 +1,7 @@
 #include "cards/db/card_db.hpp"
 
 #include <fstream>
+#include <utility>
 
 namespace pokebot {
 
@@ -123,22 +124,30 @@ namespace pokebot {
         throw CardDataError("unknown card '" + std::string(id) + "'");
     }
 
+    std::vector<std::string> missing_effects(const CardDef& c) {
+        std::vector<std::string> missing;
+        const std::string label = c.id + " " + c.name;
+        if (!c.text.empty() && c.effects.empty() && c.passive.empty() && c.provides_when.empty()) {
+            missing.push_back(label);
+        }
+        for (const auto& a : c.abilities) {
+            if (!a.text.empty() && a.effects.empty() && a.passive.empty() && a.no_effect.empty()) {
+                missing.push_back(label + ": ability " + a.name);
+            }
+        }
+        for (const auto& a : c.attacks) {
+            if (!a.text.empty() && a.effects.empty()) {
+                missing.push_back(label + ": attack " + a.name);
+            }
+        }
+        return missing;
+    }
+
     std::vector<std::string> CardDB::missing_effects() const {
         std::vector<std::string> missing;
-        for (const auto& [id, c] : cards_) {
-            const std::string label = id + " " + c.name;
-            if (!c.text.empty() && c.effects.empty() && c.passive.empty() && c.provides_when.empty()) {
-                missing.push_back(label);
-            }
-            for (const auto& a : c.abilities) {
-                if (!a.text.empty() && a.effects.empty() && a.passive.empty() && a.no_effect.empty()) {
-                    missing.push_back(label + ": ability " + a.name);
-                }
-            }
-            for (const auto& a : c.attacks) {
-                if (!a.text.empty() && a.effects.empty()) {
-                    missing.push_back(label + ": attack " + a.name);
-                }
+        for (const auto& entry : cards_) {
+            for (std::string& item : pokebot::missing_effects(entry.second)) {
+                missing.push_back(std::move(item));
             }
         }
         return missing;

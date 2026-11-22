@@ -13,17 +13,18 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 `data/decks/*.txt`, so run `pokebot-import` first.
 
 ```bash
-./build/debug/tools/sim/pokebot-sim.exe [--games N] [--agent random|biased|greedy|planner] [--seed S] [--no-check]
+./build/debug/tools/sim/pokebot-sim.exe [--games N] [--agent random|biased|greedy|planner|flatmc] [--seed S] [--no-check]
                                         [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]
                                         [--agents A,B [--threads N] [--save-replays K]]
                                         [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]
+                                        [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W] [--mc-greedy-choices]
                                         [--planner-lab N [--every K]]
 ```
 
 | Option | Default | Meaning |
 |---|---|---|
 | `--games N` | 1000 | Games to play |
-| `--agent A` | `biased` | `random`, `biased` (see [random agents](../../src/agents/random_agent.md)) `greedy` ([greedy agent](../../src/agents/greedy_agent.md)) or `planner` ([planner](../../src/agents/planner_agent.md)); both players get the same kind |
+| `--agent A` | `biased` | `random`, `biased` (see [random agents](../../src/agents/random/random_agent.md)) `greedy` ([greedy agent](../../src/agents/greedy/greedy_agent.md)), `planner` ([planner](../../src/agents/planner/planner_agent.md)) or `flatmc` ([flat MC](../../src/agents/flat_mc/flat_mc_agent.md)); both players get the same kind |
 | `--seed S` | 1 | Game `i` uses seed `S + i`; agents are seeded from it too |
 | `--no-check` | | Skip the invariant check after every action (about 2.5× faster) |
 | `--print` | | Play **one** game with seed `S` and print every action |
@@ -34,9 +35,20 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 | `--agents A,B` | | Play agent `A` against agent `B` instead (see [below](#one-agent-against-another)). `--games` is then the number of games **per deck pairing** |
 | `--threads N` | one per hardware thread | With `--agents`: games played at once |
 | `--save-replays K` | | With `--agents`: save every `K`th game to `replays/arena/` |
-| `--planner-samples M` | 1 | The [planner](../../src/agents/planner_agent.md)'s sampled worlds for a plan that ends in chance or hidden cards |
+| `--planner-samples M` | 1 | The [planner](../../src/agents/planner/planner_agent.md)'s sampled worlds for a plan that ends in chance or hidden cards |
 | `--planner-or-budget N` | 200 | The planner's node budget for its win search (the or-tree) |
 | `--planner-and-budget N` | 300 | The planner's node budget for its best-plan search (the and-tree) |
+| | | The three `--planner-*` settings apply to `flatmc`'s searches too, so the two agents compared search the same |
+| `--mc-plans K` | 16 | [Flat MC](../../src/agents/flat_mc/flat_mc_agent.md)'s plans played out each decision: the and-tree's top K |
+| `--mc-playouts N` | 64 | Flat MC's playouts each decision, split evenly over its plans |
+| `--mc-depth R` | 2 | How far a [playout](../../src/agents/flat_mc/playout.md) runs: to the start of the searching player's R-th next turn (0 scores right after the plan) |
+| `--mc-policy P` | `greedy` | Who plays the playouts: `greedy` or `biased` |
+| `--mc-greedy-worlds W` | 1 | Worlds for each decision of a Greedy playout |
+| `--mc-greedy-choices` | | Flat MC leaves its decisions outside the main phase to Greedy, as the Planner does. By default it plays them out like its plans |
+
+With `flatmc`, the [archetype library](../../data/archetypes/README.md) is loaded from
+`data/archetypes/`, and a match prints a line with flat MC's settings. Its counters include
+`playouts`, `playout actions` and `playout s`, so a run shows what a playout costs.
 | `--planner-lab N` | | Play `N` Greedy-against-Greedy games and measure the planner's searches at one in every `K` main-phase decisions ([planner lab](../../src/harness/planner_lab.md)). Uses `--seed`, `--planner-samples` and `--planner-or-budget`, and prints its progress after each game to stderr |
 | `--every K` | 5 | With `--planner-lab`: which main-phase decisions to measure |
 
@@ -59,7 +71,7 @@ interval, the same split by who went first and by deck pairing, how the games en
 and lost: by Prize cards, by the loser having no Pokémon left, or by the loser's deck running out
 (a loss by deck-out is A's own deck running out). With a planner on either side, the header also gives
 its settings. For an agent that measures itself (the
-[planner](../../src/agents/planner_agent.md)) it then prints its counters per game. While it plays, it
+[planner](../../src/agents/planner/planner_agent.md)) it then prints its counters per game. While it plays, it
 prints a progress line about every 5% of the games to the error stream, with the time so far and an
 estimate of the time left. Results
 don't depend on `--threads`. With the same agent on both sides (`--agents random,random`) they're
@@ -76,6 +88,8 @@ games; the reference machine has 16 hardware threads):
 | `greedy,random` at sign-off (Greedy also plays out its follow-up choices) | about 856 games/s; 840 with invariant checks | about 92 games/s |
 | `greedy,biased` at sign-off | about 892 games/s | |
 | `planner,greedy` at the Milestone 6 sign-off (1 sampled world, budgets 200 and 300) | about 33.9 games/s; 32.5 with invariant checks | about 3.5 games/s (`--games 10`) |
+| `flatmc,planner` at step 7.5 (K = 4, N = 32, r = 1, Greedy playouts with 1 world; `--games 100`) | about 18.4 games/s | |
+| `flatmc,planner` at the Milestone 7 sign-off (K = 16, N = 64, r = 2, choices played out; `--games 1000`) | about 5.3 games/s with invariant checks | |
 
 Greedy builds 3 worlds per decision and tries every action in each, so it costs about 9 ms per game
 on one thread against Random. Playing out follow-up choices (step 5.6c) made it about 3.3 times

@@ -12,7 +12,7 @@
 | `void apply(GameState& game, const Action& action)` | Carries out one action, then runs the game forward to the next decision |
 | `void apply_legal(GameState& game, const Action& action)` | The same without the legality check, for an action just taken from `legal_actions(game)`. Building the list again doubled the cost of every action |
 | `int choice_owner(const GameState& game)` | Whose Pokémon the slots in the pending decision's actions mean. Usually the deciding player's, but an effect such as Boss's Orders has them choose one of the opponent's. [Descriptions](describe/describe.md) use it to say `choose the opponent's Bench 2 Dreepy` |
-| `bool can_pay_attack(const GameState& game, const PokemonInPlay& pokemon, std::size_t attack)` | Whether the Energy attached to the Pokémon pays that attack's cost, by the same exact matching the engine uses to offer attacks. For the [evaluation function](../agents/evaluation.md)'s ready attackers |
+| `bool can_pay_attack(const GameState& game, const PokemonInPlay& pokemon, std::size_t attack)` | Whether the Energy attached to the Pokémon pays that attack's cost, by the same exact matching the engine uses to offer attacks. For the [evaluation function](../agents/evaluation/evaluation.md)'s ready attackers |
 
 `apply` throws:
 - `std::invalid_argument` if the action isn't in `legal_actions(game)` (`apply_legal` doesn't check: an illegal action there is a bug in the caller);

@@ -15,7 +15,7 @@ pokebot replay FILE [--as 0|1|all] [--step]
 |---|---|---|
 | `--deck D` | the first deck in `data/decks` | Your deck (player 0's when watching): a file, or a name there such as `dragapult` |
 | `--against D` | the second deck in `data/decks` | The other deck |
-| `--agent A` | `biased` | The agent to play: `random` or `biased` ([random agents](../agents/random_agent.md)), `greedy` ([greedy agent](../agents/greedy_agent.md)), or `planner` ([planner](../agents/planner_agent.md)) |
+| `--agent A` | `biased` | The agent to play: `random` or `biased` ([random agents](../agents/random/random_agent.md)), `greedy` ([greedy agent](../agents/greedy/greedy_agent.md)), or `planner` ([planner](../agents/planner/planner_agent.md)) |
 | `--seat P` | 0 | Play as player 0 or 1 |
 | `--seed S` | a random one | The game's seed, printed at the start |
 | `--as P` | `all` | Show what player 0 or 1 saw, or everything |

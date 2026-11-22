@@ -6,9 +6,9 @@
 #include <catch2/catch_test_macros.hpp>
 #include <nlohmann/json.hpp>
 
-#include "agents/action_class.hpp"
-#include "agents/evaluation.hpp"
-#include "agents/random_agent.hpp"
+#include "agents/planner/action_class.hpp"
+#include "agents/evaluation/evaluation.hpp"
+#include "agents/random/random_agent.hpp"
 #include "agents/world.hpp"
 #include "engine/engine.hpp"
 #include "engine/knowledge/knowledge.hpp"
