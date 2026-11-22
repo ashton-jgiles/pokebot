@@ -24,17 +24,17 @@ add_library(pokebot_lib
   engine/observation/observation.cpp
   engine/invariants/invariants.cpp
   engine/describe/describe.cpp
-  agents/random_agent.cpp
+  agents/random/random_agent.cpp
   agents/human_agent.cpp
   agents/world.cpp
-  agents/evaluation.cpp
-  agents/greedy_agent.cpp
-  agents/action_class.cpp
-  agents/state_hash.cpp
-  agents/plan.cpp
-  agents/or_tree.cpp
-  agents/and_tree.cpp
-  agents/planner_agent.cpp
+  agents/evaluation/evaluation.cpp
+  agents/greedy/greedy_agent.cpp
+  agents/planner/action_class.cpp
+  agents/planner/state_hash.cpp
+  agents/planner/plan.cpp
+  agents/planner/or_tree.cpp
+  agents/planner/and_tree.cpp
+  agents/planner/planner_agent.cpp
   agents/deck_model.cpp
   harness/match.cpp
   harness/replay.cpp

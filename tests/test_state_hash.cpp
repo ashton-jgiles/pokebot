@@ -8,8 +8,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "agents/random_agent.hpp"
-#include "agents/state_hash.hpp"
+#include "agents/random/random_agent.hpp"
+#include "agents/planner/state_hash.hpp"
 #include "engine/engine.hpp"
 #include "engine/knowledge/knowledge.hpp"
 #include "harness/match.hpp"

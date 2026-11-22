@@ -6,10 +6,10 @@
 #include <catch2/catch_test_macros.hpp>
 #include <nlohmann/json.hpp>
 
-#include "agents/action_class.hpp"
-#include "agents/or_tree.hpp"
-#include "agents/plan.hpp"
-#include "agents/random_agent.hpp"
+#include "agents/planner/action_class.hpp"
+#include "agents/planner/or_tree.hpp"
+#include "agents/planner/plan.hpp"
+#include "agents/random/random_agent.hpp"
 #include "engine/engine.hpp"
 #include "engine/knowledge/knowledge.hpp"
 #include "harness/match.hpp"
