@@ -14,7 +14,7 @@ The milestone plan from the project proposal, with the current status of each.
 | M5 | Greedy agent, match harness, profiling | ✅ Done |
 | M6 | Model 1: turn planner (or-tree and and-tree modes) | ✅ Done |
 | M7 | Determinization and flat Monte Carlo | ✅ Done |
-| M8 | Model 2: IS-MCTS | ⬜ Not started |
+| M8 | Model 2: IS-MCTS | 🔄 In progress |
 | M9 | Model 3: endgame solver (expectiminimax) | ⬜ Not started |
 | M10 | Learned evaluation function | ⬜ Not started |
 | M11+ | Stretch: policy prior, deck-building GA, more decks, opponent inference | ⬜ Not started |
@@ -439,6 +439,40 @@ Known limits, each documented where it lives:
   where they matter.
 - **The cost is mostly playouts:** 2.6 of its roughly 2.8 s of search a game. One playout is comparable to one IS-MCTS
   iteration, so M8 starts from the same budget: 64 playouts a decision, about 0.1 s.
+
+## M8 — Model 2: IS-MCTS 🔄
+
+**Done when:** IS-MCTS beats Flat MC over at least 1,000 seeded games per deck pairing in both seat orders, and its
+win rate is measured as a function of the time budget.
+
+IS-MCTS shares one tree across determinizations: each iteration deals a world ŵ, walks down the tree choosing by UCB1
+among the moves legal in ŵ, adds one move, plays out from it and backs the result up. Nodes are information sets of the
+searching player, so plays that only work when the hidden cards are known aren't overvalued (strategy fusion).
+
+**Decisions (2026-11-22):**
+- **A node is the searcher's information set:** children are keyed by a hash of the searcher's observation after the
+  move, so an opponent move or chance outcome that looks the same to the searcher in every world leads to the same
+  node. Cards are hashed by what they are, not by their number, since the opponent's unseen cards are numbered
+  differently in each world.
+- **Macro-actions:** the searcher's from the full and-tree, cached by information set; the opponent's from a cheap
+  and-tree, since its hand changes from world to world; decisions outside the main phase as single actions. The
+  and-tree costs about 23 ms mid-game, so the opponent's budget is chosen from measurements.
+- **Compared with Flat MC at equal time,** set as iteration counts so runs repeat: the iteration budget that matches
+  Flat MC's time per decision, and for the time curve about 0.5, 1, 2 and 4 times it, with the measured time per
+  decision as the x-axis.
+- **It follows its most-visited plan** while the observation is the one it expected, as the Planner and Flat MC do,
+  and searches again otherwise.
+- **Rewards** are e in [−1, 1] (u at the end of a game), negated for the opponent; C starts at 0.7 and is tuned.
+
+| Step | Builds | Status |
+|---|---|---|
+| 8.1 | **Information-set key:** a 64-bit hash of an `Observation`, with every card hashed by its definition (or as unseen) rather than its number, the hand and the unordered lists sorted. Tests: equal observations and the hand's order; two worlds where the opponent attaches a different-numbered copy of the same Energy hashing the same; changes the viewer can see changing it. See [information-set key](src/agents/is_mcts/info_set.md) | ✅ |
+| 8.2 | **The tree:** nodes (actor, N, Q for each player, A), children keyed by the observation after the move, UCB1 with availability counts over the children legal in ŵ, backpropagation with Q negated for the other player. Tests on a small hand-built game: visits concentrate on the best move, and availability counts only legal siblings | ⬜ |
+| 8.3 | **Macro-actions at a node:** the actor's moves in ŵ, the searcher's from the full and-tree cached by information set, the opponent's from a cheap and-tree, single actions outside the main phase; cost and quality measured, and the opponent's budget chosen | ⬜ |
+| 8.4 | **IS-MCTS search:** determinize, select, expand one untried macro-action, evaluate (r turns of Greedy, then e or u), backpropagate; an iteration budget; the most-visited root plan, with the root's visits and means as the analysis. Tests: the same seed gives the same result; the hidden-card leak test | ⬜ |
+| 8.5 | **IS-MCTS agent:** the or-tree's win, else IS-MCTS for every decision after setup, the plan followed while the observation matches; `--agent ismcts` and its settings; counters for iterations, nodes and time | ⬜ |
+| 8.6 | **Tuning against Flat MC** at matched time, one change at a time on the same seeded games: C, r, the opponent's macro-action budget, K at the searcher's nodes | ⬜ |
+| 8.7 | **Sign-off:** IS-MCTS against Flat MC on every deck pairing with invariant checks; win rate against the time budget (4 points); speed; known limits | ⬜ |
 
 ## M5 onward
 
