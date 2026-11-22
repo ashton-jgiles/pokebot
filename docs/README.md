@@ -73,6 +73,7 @@ legal actions.
 | | [flat_mc_agent.md](src/agents/flat_mc/flat_mc_agent.md) | The flat MC agent: the turn planner's best plans, each played out in determinized worlds |
 | | [info_set.md](src/agents/is_mcts/info_set.md) | IS-MCTS's information-set key: an observation hashed with cards by what they are |
 | | [tree.md](src/agents/is_mcts/tree.md) | The IS-MCTS tree: nodes, UCB1 with availability counts, backpropagation |
+| | [is_mcts.md](src/agents/is_mcts/is_mcts.md) | The IS-MCTS search: determinize, select or expand, play out, back up |
 | | [macro_actions.md](src/agents/is_mcts/macro_actions.md) | The moves at an IS-MCTS node: and-tree plans, cached for the searcher, or single actions |
 | `src/harness` | [match.md](src/harness/match.md) | `play_game`, how games end |
 | | [replay.md](src/harness/replay.md) | Saving games and playing them back, as either player |

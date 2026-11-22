@@ -59,6 +59,7 @@ add_executable(pokebot_tests
   test_info_set.cpp
   test_tree.cpp
   test_macro_actions.cpp
+  test_is_mcts.cpp
 )
 target_link_libraries(pokebot_tests PRIVATE
   pokebot_lib pokebot_import_lib pokebot_warnings Catch2::Catch2WithMain)
