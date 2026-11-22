@@ -297,7 +297,7 @@ TEST_CASE("the belief summed by archetype", "[deck_model]") {
     CHECK(sums[0].second > 0.99);
 }
 
-TEST_CASE("a deck model needs lists and a chance in (0, 1]", "[deck_model]") {
+TEST_CASE("a deck model needs lists and a chance between 0 and 1", "[deck_model]") {
     const CardDB db = test_db();
     const ArchetypeLibrary empty;
     CHECK_THROWS_AS(DeckModel(empty), std::invalid_argument);

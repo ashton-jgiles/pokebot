@@ -125,3 +125,8 @@ Milestone 3's sign-off asks for a test per card. It's covered three ways:
 3. Give its tests a tag like `[name]` so the group can be run on its own.
 
 `catch_discover_tests` registers each `TEST_CASE` with CTest automatically.
+
+Keep square brackets in test names balanced, as in `[-1, 1]`, or leave them out. CMake reads the whole
+test listing as one value and doesn't split it at a `;` inside brackets, so a lone `]`, as in `(0, 1]`,
+lets the `;` in another test's name cut the listing in two, and discovery fails with a JSON
+syntax error. The test executable then gets deleted, and a stale test list can hide new tests.
