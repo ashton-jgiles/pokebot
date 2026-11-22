@@ -1,6 +1,6 @@
-# `src/agents/and_tree` — the turn planner's and-tree mode (branch-and-bound)
+# `src/agents/planner/and_tree` — the turn planner's and-tree mode (branch-and-bound)
 
-**Files:** [`src/agents/and_tree.hpp`](../../../src/agents/and_tree.hpp), [`src/agents/and_tree.cpp`](../../../src/agents/and_tree.cpp)
+**Files:** [`src/agents/planner/and_tree.hpp`](../../../../src/agents/planner/and_tree.hpp), [`src/agents/planner/and_tree.cpp`](../../../../src/agents/planner/and_tree.cpp)
 **Library:** `pokebot_lib` · **Namespace:** `pokebot`
 
 Model 1's and-tree mode answers *"what are the best ways to play this turn?"*. It returns the top-K
@@ -74,7 +74,7 @@ children `generated`, nodes skipped as `closed`, children `pruned` by f_bound, a
 
 ## Tests
 
-[`tests/test_and_tree.cpp`](../../../tests/test_and_tree.cpp), tag `[planner]`:
+[`tests/test_and_tree.cpp`](../../../../tests/test_and_tree.cpp), tag `[planner]`:
 
 - the best plan evolves, attaches and attacks for the Knock Out;
 - the best plan is worth at least any one action that ends a plan at the root, and a fresh scorer

@@ -1,6 +1,6 @@
-# `src/agents/action_class` — Det, Fin and the rest of Bnd
+# `src/agents/planner/action_class` — Det, Fin and the rest of Bnd
 
-**Files:** [`src/agents/action_class.hpp`](../../../src/agents/action_class.hpp), [`src/agents/action_class.cpp`](../../../src/agents/action_class.cpp)
+**Files:** [`src/agents/planner/action_class.hpp`](../../../../src/agents/planner/action_class.hpp), [`src/agents/planner/action_class.cpp`](../../../../src/agents/planner/action_class.cpp)
 **Library:** `pokebot_lib` · **Namespace:** `pokebot`
 
 The turn planner (Model 1, M6) searches the part of a turn whose outcome is certain. It needs to know,
@@ -28,7 +28,7 @@ tried.after; // the game after it, so the planner needn't apply it again
 1. **Chance:** whether the game's random number generator moved. Coin flips, shuffles and random
    discards all draw from it.
 2. **Revealing:** whether the player now knows the place of, or has seen, a card they didn't before
-   ([knowledge](../engine/knowledge/knowledge.md)). A draw puts an unknown card in the hand; a deck
+   ([knowledge](../../engine/knowledge/knowledge.md)). A draw puts an unknown card in the hand; a deck
    search shows the player their whole deck; looking at the top of the deck shows those cards.
    Attaching, benching or evolving move cards the player already knew.
 3. **Still in the main phase:** the game isn't over, it's the same turn and phase, and the decision
@@ -45,9 +45,9 @@ leaves the player in their main phase (an Ability's damage counters) is `Final` 
 `Deterministic`: the planner stops there, because later actions could use the new card.
 
 The engine takes Prize cards from the end of the pile, not at random (see
-[combat](../engine/actions/combat.md)), so a Knock Out uses no chance.
+[combat](../../engine/actions/combat.md)), so a Knock Out uses no chance.
 
-It looks only at the deciding player's knowledge, so it works the same on a [`World`](world.md) as on
+It looks only at the deciding player's knowledge, so it works the same on a [`World`](../world.md) as on
 the real game.
 
 **A known gap:** an effect whose result depends on a hidden card without revealing it ("if your
@@ -64,7 +64,7 @@ comparison, as a check on the rule.
 
 ## Tests
 
-[`tests/test_action_class.cpp`](../../../tests/test_action_class.cpp), tag `[planner]`:
+[`tests/test_action_class.cpp`](../../../../tests/test_action_class.cpp), tag `[planner]`:
 
 - attaching Energy, benching, evolving and retreating are deterministic;
 - ending the turn and attacking are final, and so is a Knock Out, which takes a Prize card without

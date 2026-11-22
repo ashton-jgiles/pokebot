@@ -1,6 +1,6 @@
-# `src/agents/evaluation` — the evaluation function e
+# `src/agents/evaluation/evaluation` — the evaluation function e
 
-**Files:** [`src/agents/evaluation.hpp`](../../../src/agents/evaluation.hpp), [`src/agents/evaluation.cpp`](../../../src/agents/evaluation.cpp)
+**Files:** [`src/agents/evaluation/evaluation.hpp`](../../../../src/agents/evaluation/evaluation.hpp), [`src/agents/evaluation/evaluation.cpp`](../../../../src/agents/evaluation/evaluation.cpp)
 **Library:** `pokebot_lib` · **Namespace:** `pokebot`
 
 The proposal's heuristic estimate of how good a state is for player i:
@@ -37,7 +37,7 @@ e_opponent(w) = −e_i(w): the evaluation is zero-sum, as Model 3's minimax need
 
 **Turns to Knock Out** (φ3) is relaxed, as in the proposal: the attacking side's strongest attack
 among all its Pokémon in play, with Weakness, Resistance and other effects through
-[`rules::attack_damage`](../engine/rules/rules.md), as if it could be used every turn whatever its
+[`rules::attack_damage`](../../engine/rules/rules.md), as if it could be used every turn whatever its
 cost. An attack that does no damage, or no attack at all, counts as 5 turns. Damage formulas (such as
 "30×") count only their printed damage.
 
@@ -60,16 +60,16 @@ one.
 It takes a `GameState`, because the rules it needs (HP after Tools, damage after Weakness, Energy
 cost matching) all take one, but **it reads only what both players can see**: the Pokémon in play,
 the open zones, lasting effects, and the sizes of the hands, decks and Prize cards. So it gives the
-same value for a [`World`](world.md) as for the real game it was built from, which the tests check
+same value for a [`World`](../world.md) as for the real game it was built from, which the tests check
 at every action of real-deck games. The greedy agent can evaluate the states it tries in a world
 directly, without observing them first.
 
-Whether an attack's cost is paid comes from [`can_pay_attack`](../engine/engine.md), the engine's
+Whether an attack's cost is paid comes from [`can_pay_attack`](../../engine/engine.md), the engine's
 own cost matching.
 
 ## Tests
 
-[`tests/test_evaluation.cpp`](../../../tests/test_evaluation.cpp), tag `[evaluation]`:
+[`tests/test_evaluation.cpp`](../../../../tests/test_evaluation.cpp), tag `[evaluation]`:
 
 - a finished game scores 1, −1 or 0, and `utility` throws if it isn't finished;
 - an even position scores about 0, with every feature but hand and deck size 0, and zero weights give 0;

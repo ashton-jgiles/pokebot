@@ -1,10 +1,10 @@
-# `src/agents/greedy_agent` — one action ahead
+# `src/agents/greedy/greedy_agent` — one action ahead
 
-**Files:** [`src/agents/greedy_agent.hpp`](../../../src/agents/greedy_agent.hpp), [`src/agents/greedy_agent.cpp`](../../../src/agents/greedy_agent.cpp)
+**Files:** [`src/agents/greedy/greedy_agent.hpp`](../../../../src/agents/greedy/greedy_agent.hpp), [`src/agents/greedy/greedy_agent.cpp`](../../../../src/agents/greedy/greedy_agent.cpp)
 **Library:** `pokebot_lib` · **Namespace:** `pokebot`
 
 The second rung of the agent ladder (M5): Random → **Greedy** → turn planner (M6). It looks one
-action ahead and takes the action whose result the [evaluation function](evaluation.md) scores best.
+action ahead and takes the action whose result the [evaluation function](../evaluation/evaluation.md) scores best.
 In CPSC 433 terms it's hill climbing, or greedy best-first search to depth 1, in the or-tree of the
 deciding player's actions, with e as the heuristic.
 
@@ -15,9 +15,9 @@ GreedyAgent tuned(seed, 5, weights); // more worlds, other weights
 
 ## How it chooses
 
-It only ever gets an [`Observation`](../engine/observation/observation.md), so at each decision:
+It only ever gets an [`Observation`](../../engine/observation/observation.md), so at each decision:
 
-1. It builds `worlds` (3 by default) [worlds](world.md) from the observation: games that look
+1. It builds `worlds` (3 by default) [worlds](../world.md) from the observation: games that look
    exactly like what it sees, with the cards it can't see dealt at random.
 2. For each legal action and each world, it copies the world's game, applies the action with
    `apply_legal` (which runs on to the next decision, whoever's it is), **makes its own follow-up
@@ -39,7 +39,7 @@ using Trade with an empty deck looked as good as doing nothing, because the disc
 choice. So after an action, while the next decision is still the agent's and isn't a new main-phase
 decision (`MainPhase` or `ExtraAttack`), it makes that choice too, taking the option that scores
 best right after it (the first of any tied), up to 64 choices. Only then is the action scored.
-The rule lives in [plans](plan.md) (`finish_choices`), where the turn planner uses it too.
+The rule lives in [plans](../planner/plan.md) (`finish_choices`), where the turn planner uses it too.
 
 **A single legal action** is taken without building any world.
 
@@ -62,7 +62,7 @@ scores higher. That's what the turn planner (M6) is for.
 
 ## Results
 
-The Milestone 5 sign-off (2026-11-19), with the [match harness](../harness/arena.md): 1,000 games
+The Milestone 5 sign-off (2026-11-19), with the [match harness](../../harness/arena.md): 1,000 games
 on each of the 16 deck pairings, every seed played once with Greedy in each seat.
 
 | Against | Greedy's score (95% CI) | Lowest pairing (95% CI) | How Greedy lost |
@@ -78,16 +78,16 @@ How each change in step 5.6 moved it, on the same 16,000 games against Random:
 | Deck counted up to 30, hand up to 7 (5.6b) | 82.5% (81.9% to 83.1%) | 2,667 | 46.2% |
 | Follow-up choices played out (5.6c) | 91.3% (90.8% to 91.7%) | 1,321 | 76.8% |
 
-It's about 92 games/s against Random on one thread, 856 on 16 (see the [sim](../../tools/sim/main.md)).
+It's about 92 games/s against Random on one thread, 856 on 16 (see the [sim](../../../tools/sim/main.md)).
 
 ## Where it's used
 
-`pokebot-sim --agent greedy` ([sim](../../tools/sim/main.md)) and `pokebot play|watch --agent greedy`
-([client](../client/main.md)).
+`pokebot-sim --agent greedy` ([sim](../../../tools/sim/main.md)) and `pokebot play|watch --agent greedy`
+([client](../../client/main.md)).
 
 ## Tests
 
-[`tests/test_greedy.cpp`](../../../tests/test_greedy.cpp), tag `[greedy]`:
+[`tests/test_greedy.cpp`](../../../../tests/test_greedy.cpp), tag `[greedy]`:
 
 - it takes a Knock Out when it can;
 - it attaches Energy rather than ending the turn, and scores attaching higher;

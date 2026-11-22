@@ -1,10 +1,10 @@
 # `src/agents/flat_mc/deck_model` — what the opponent might be playing
 
-**Files:** [`src/agents/flat_mc/deck_model.hpp`](../../../src/agents/flat_mc/deck_model.hpp), [`src/agents/flat_mc/deck_model.cpp`](../../../src/agents/flat_mc/deck_model.cpp)
+**Files:** [`src/agents/flat_mc/deck_model.hpp`](../../../../src/agents/flat_mc/deck_model.hpp), [`src/agents/flat_mc/deck_model.cpp`](../../../../src/agents/flat_mc/deck_model.cpp)
 **Library:** `pokebot_lib` · **Namespace:** `pokebot`
 
 Agents never get the opponent's decklist (decided 2026-11-18). To deal the opponent's unseen cards
-in a [`World`](world.md), they guess the list from a library of known lists, the way a player
+in a [`World`](../world.md), they guess the list from a library of known lists, the way a player
 recognises Dragapult from a Dreepy and then wonders which version it is. This file holds that
 library and the belief over its lists, worked out from the cards seen. Dealing from them is
 step 7.3.
@@ -20,8 +20,8 @@ for (const auto& [archetype, weight] : model.by_archetype(belief)) {
 
 ## The library
 
-The lists are in [`data/archetypes/`](../../data/archetypes/README.md): one folder per archetype,
-one decklist file per variant, in the usual [decklist format](../core/decklist.md#input-format).
+The lists are in [`data/archetypes/`](../../../data/archetypes/README.md): one folder per archetype,
+one decklist file per variant, in the usual [decklist format](../../core/decklist.md#input-format).
 
 | Member | Behavior |
 |---|---|
@@ -42,9 +42,9 @@ The lists point at the `CardDB`'s definitions, so the `CardDB` must outlive the 
 
 `add`, and so `load`, throws `ArchetypeError` with the list's name (`archetype/variant`) when the list:
 
-- isn't a legal deck, by the [deck validator](../cards/validator/deck_validator.md): every problem
+- isn't a legal deck, by the [deck validator](../../cards/validator/deck_validator.md): every problem
   is in the message;
-- has a card whose effects aren't written ([`missing_effects`](../cards/db/card_db.md#missing_effects)):
+- has a card whose effects aren't written ([`missing_effects`](../../cards/db/card_db.md#missing_effects)):
   a world dealt from it would hold a card the engine can't play properly;
 - has the same archetype and variant as a list already added.
 
@@ -101,7 +101,7 @@ observation, and nothing about the real decklist, goes into the belief.
 
 ## Tests
 
-[`tests/test_deck_model.cpp`](../../../tests/test_deck_model.cpp), tag `[deck_model]`:
+[`tests/test_deck_model.cpp`](../../../../tests/test_deck_model.cpp), tag `[deck_model]`:
 
 - a list's cards counted by card id, with entries for the same card added together;
 - lists kept in order by archetype and then variant, `archetypes()` and `find`;

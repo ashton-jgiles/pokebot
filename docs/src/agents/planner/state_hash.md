@@ -1,6 +1,6 @@
-# `src/agents/state_hash` — state hashes and the closed set
+# `src/agents/planner/state_hash` — state hashes and the closed set
 
-**Files:** [`src/agents/state_hash.hpp`](../../../src/agents/state_hash.hpp), [`src/agents/state_hash.cpp`](../../../src/agents/state_hash.cpp)
+**Files:** [`src/agents/planner/state_hash.hpp`](../../../../src/agents/planner/state_hash.hpp), [`src/agents/planner/state_hash.cpp`](../../../../src/agents/planner/state_hash.cpp)
 **Library:** `pokebot_lib` · **Namespace:** `pokebot`
 
 The turn planner (Model 1) keeps a **closed set**: the states it has already expanded in one search.
@@ -45,7 +45,7 @@ catch a forgotten field only if it ever made two states with the same hash diffe
 
 ## Tests
 
-[`tests/test_state_hash.cpp`](../../../tests/test_state_hash.cpp), tag `[planner]`:
+[`tests/test_state_hash.cpp`](../../../../tests/test_state_hash.cpp), tag `[planner]`:
 
 - attaching then benching and benching then attaching reach the same state and hash, and so do
   evolving then attaching and attaching then evolving;

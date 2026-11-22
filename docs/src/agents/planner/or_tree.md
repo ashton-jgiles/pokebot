@@ -1,6 +1,6 @@
-# `src/agents/or_tree` — the turn planner's or-tree mode
+# `src/agents/planner/or_tree` — the turn planner's or-tree mode
 
-**Files:** [`src/agents/or_tree.hpp`](../../../src/agents/or_tree.hpp), [`src/agents/or_tree.cpp`](../../../src/agents/or_tree.cpp)
+**Files:** [`src/agents/planner/or_tree.hpp`](../../../../src/agents/planner/or_tree.hpp), [`src/agents/planner/or_tree.cpp`](../../../../src/agents/planner/or_tree.cpp)
 **Library:** `pokebot_lib` · **Namespace:** `pokebot`
 
 Model 1's or-tree mode answers *"is there a line this turn that achieves goal γ?"*. It's the first
@@ -39,7 +39,7 @@ A node is (w, γ) with a solution of yes, no or unknown.
 
   goes first, where maxDmg is the most damage any of the player's Pokémon in play could do to it with
   one attack, ignoring Energy (a relaxed problem; Weakness, Resistance and other effects still apply,
-  through [`rules::attack_damage`](../engine/rules/rules.md)). Ties go to the deepest leaf, then the
+  through [`rules::attack_damage`](../../engine/rules/rules.md)). Ties go to the deepest leaf, then the
   first made. `knock_out_distance` computes h_KO.
 - **f_trans:** a node's children are made in the order of their action class: actions that make an
   attack possible (none was legal before, one is after) first, then evolving, attaching Energy,
@@ -60,7 +60,7 @@ it saves.
 
 ## Tests
 
-[`tests/test_or_tree.cpp`](../../../tests/test_or_tree.cpp), tag `[planner]`:
+[`tests/test_or_tree.cpp`](../../../../tests/test_or_tree.cpp), tag `[planner]`:
 
 - attaching Energy and attacking for a Knock Out;
 - evolve, attach, attack, the proposal's demonstration: Tackle can't Knock Out, Big Tackle can;

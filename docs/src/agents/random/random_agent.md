@@ -1,9 +1,9 @@
-# `src/agents/random_agent` — random agents
+# `src/agents/random/random_agent` — random agents
 
-**Files:** [`src/agents/random_agent.hpp`](../../../src/agents/random_agent.hpp), [`src/agents/random_agent.cpp`](../../../src/agents/random_agent.cpp)
+**Files:** [`src/agents/random/random_agent.hpp`](../../../../src/agents/random/random_agent.hpp), [`src/agents/random/random_agent.cpp`](../../../../src/agents/random/random_agent.cpp)
 **Library:** `pokebot_lib` · **Namespace:** `pokebot`
 
-Two baseline [agents](agent.md). Both take a seed, so the same seed always makes the same choices.
+Two baseline [agents](../agent.md). Both take a seed, so the same seed always makes the same choices.
 
 ## `RandomAgent` (`"random"`)
 
@@ -32,6 +32,6 @@ well.
 
 ## Tests
 
-[`tests/test_agents.cpp`](../../../tests/test_agents.cpp), tag `[agents]`: the random agent picks
+[`tests/test_agents.cpp`](../../../../tests/test_agents.cpp), tag `[agents]`: the random agent picks
 every choice and only offered ones; the biased agent attacks whenever it can, over 95% of the time;
 the same seed repeats choices. They ignore the observation, so the tests hand them an empty one.

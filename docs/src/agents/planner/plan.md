@@ -1,6 +1,6 @@
-# `src/agents/plan` — plans and plan values
+# `src/agents/planner/plan` — plans and plan values
 
-**Files:** [`src/agents/plan.hpp`](../../../src/agents/plan.hpp), [`src/agents/plan.cpp`](../../../src/agents/plan.cpp)
+**Files:** [`src/agents/planner/plan.hpp`](../../../../src/agents/planner/plan.hpp), [`src/agents/planner/plan.cpp`](../../../../src/agents/planner/plan.cpp)
 **Library:** `pokebot_lib` · **Namespace:** `pokebot`
 
 The turn planner's (Model 1) unit of play is a **plan**, the proposal's macro-action τ = (a₁, …, a_k):
@@ -26,17 +26,17 @@ The proposal's
   val(w, τ) = 1/m · Σ_j e_i(δ*(w, τ)^(j))
 
 averaged over m sampled outcomes if the last action involves chance or hidden cards, and with m = 1
-otherwise; a finished game is scored with u_i instead of e_i ([evaluation](evaluation.md)).
+otherwise; a finished game is scored with u_i instead of e_i ([evaluation](../evaluation/evaluation.md)).
 
 - **A `Final` plan** is scored once, on the state after it: by its class, its result is the same
   whatever the hidden cards are.
-- **An `Uncertain` plan** is scored in `samples` [worlds](world.md) dealt from what the player sees
+- **An `Uncertain` plan** is scored in `samples` [worlds](../world.md) dealt from what the player sees
   just before its last action, each with its own luck (its own hidden cards and random number
   generator), and the scores are averaged. A draw is scored over different draws, a coin-flip attack
   over heads and tails.
 - **The worlds dealt for one state are kept** until a different state is scored. A planner scores
   every way of ending a plan at one state together, so they're all tried with the same luck: common
-  random numbers, as in the [greedy agent](greedy_agent.md).
+  random numbers, as in the [greedy agent](../greedy/greedy_agent.md).
 - **The worlds for a state depend only on the scorer's seed and the state** (its
   [hash](state_hash.md)), not on what was scored before. So a plan has the same value however a search
   reaches it, and two searches (with f_bound on and off, say) can be compared plan for plan.
@@ -55,7 +55,7 @@ step 5.6c and moved here so the planner uses the same rule.
 
 ## Tests
 
-[`tests/test_plan.cpp`](../../../tests/test_plan.cpp), tag `[planner]`:
+[`tests/test_plan.cpp`](../../../../tests/test_plan.cpp), tag `[planner]`:
 
 - `apply_plan` plays a plan's actions in order;
 - a final plan's value is e after it, with one sample or eight;

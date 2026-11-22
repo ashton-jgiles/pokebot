@@ -3,7 +3,7 @@
 What an agent knows about the decks it might face: one folder per archetype, one decklist per
 variant, in the [decklist format](../../src/core/decklist.md#input-format). Agents never get the
 opponent's real list; they guess it from these, using the cards they've seen. The library is loaded
-by [`ArchetypeLibrary`](../../src/agents/deck_model.md).
+by [`ArchetypeLibrary`](../../src/agents/flat_mc/deck_model.md).
 
 Each archetype's `main.txt` is the deck of the same name in [`data/decks/`](../decks/README.md); a
 test checks they stay equal. The variants change a few slots, using only cards whose effects are
