@@ -39,6 +39,7 @@ add_library(pokebot_lib
   agents/flat_mc/playout.cpp
   agents/flat_mc/flat_mc_agent.cpp
   agents/is_mcts/info_set.cpp
+  agents/is_mcts/tree.cpp
   harness/match.cpp
   harness/replay.cpp
   harness/arena.cpp

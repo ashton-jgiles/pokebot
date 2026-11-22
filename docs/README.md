@@ -72,6 +72,7 @@ legal actions.
 | | [playout.md](src/agents/flat_mc/playout.md) | Playouts: playing a determinization on for r turns and scoring it |
 | | [flat_mc_agent.md](src/agents/flat_mc/flat_mc_agent.md) | The flat MC agent: the turn planner's best plans, each played out in determinized worlds |
 | | [info_set.md](src/agents/is_mcts/info_set.md) | IS-MCTS's information-set key: an observation hashed with cards by what they are |
+| | [tree.md](src/agents/is_mcts/tree.md) | The IS-MCTS tree: nodes, UCB1 with availability counts, backpropagation |
 | `src/harness` | [match.md](src/harness/match.md) | `play_game`, how games end |
 | | [replay.md](src/harness/replay.md) | Saving games and playing them back, as either player |
 | | [arena.md](src/harness/arena.md) | The match harness: one agent against another, in parallel, with confidence intervals |
