@@ -1,7 +1,7 @@
 # Roadmap
 
 The milestone plan from the project proposal, with the current status of each.
-**Last reviewed:** 2026-11-21.
+**Last reviewed:** 2026-11-22.
 
 | # | Milestone | Status |
 |---|---|---|
@@ -13,7 +13,7 @@ The milestone plan from the project proposal, with the current status of each.
 | M4 | Observation layer, command-line client, replays | ✅ Done |
 | M5 | Greedy agent, match harness, profiling | ✅ Done |
 | M6 | Model 1: turn planner (or-tree and and-tree modes) | ✅ Done |
-| M7 | Determinization and flat Monte Carlo | 🔄 In progress |
+| M7 | Determinization and flat Monte Carlo | ✅ Done |
 | M8 | Model 2: IS-MCTS | ⬜ Not started |
 | M9 | Model 3: endgame solver (expectiminimax) | ⬜ Not started |
 | M10 | Learned evaluation function | ⬜ Not started |
@@ -308,7 +308,7 @@ Known limits, each documented where it lives:
 - **The opponent's unseen cards are a placeholder** in the worlds until M7 deals them from a
   guessed decklist.
 
-## M7 — Determinization and flat Monte Carlo 🔄
+## M7 — Determinization and flat Monte Carlo ✅
 
 **Done when:** Flat MC beats the Planner over at least 1,000 seeded games per deck pairing in both
 seat orders.
@@ -348,7 +348,7 @@ playing on from it in m determinizations and takes the best average.
 | 7.4 | **Playouts:** from ŵ, play until the searching player's r-th next main phase with a policy (Greedy with w worlds, or biased random), each player deciding from its own observation, then score with e, or u if the game is over: `play_out` stops at the start of the searching player's r-th next main phase (counting only later turns), the game's end or 2,000 actions, its agents seeded from one seed. Leak test: on the real decks, games differing only in cards the searcher can't see give exactly the same playouts. See [playout](src/agents/flat_mc/playout.md). *Cost, from Flat MC's counters in its first match (step 7.5, release, 16 threads): 624 playouts a game, 7.1 actions each, about 0.56 ms a playout with Greedy (1 world) at r = 1, so 0.35 s a game, more than its and-tree's 0.22 s* | ✅ |
 | 7.5 | **Flat MC agent:** the or-tree's win, else the and-tree's top-K plans, each scored by its mean over the same m determinized playouts; the best mean is played and followed as the Planner does; Greedy for every other decision. It also reports its ranked plans with their means and playout counts (for the analysis mode later). `--agent flatmc` and its settings. *Done: `FlatMcAgent` with K = 4, N = 32 (m = 8), r = 1 and Greedy with 1 world by default, every plan played out in the same worlds with the same seeds, the root world and playouts dealt from the deck model, the `--planner-*` budgets shared with the Planner; `--mc-plans`, `--mc-playouts`, `--mc-depth`, `--mc-policy`, `--mc-greedy-worlds`; counters for playouts and their time. See [flat MC](src/agents/flat_mc/flat_mc_agent.md). First match, `--agents flatmc,planner --games 100` (1,600 games): Flat MC 55.2% (95% CI 52.8% to 57.7%) against the Planner at 18.4 games/s on 16 threads; 28% to 88% by pairing, lowest ns-zoroark against mega-greninja (28%), basic-box (34%) and dragapult against basic-box (36%); it lost 60 games by its own deck running out and won 18 that way. Per game: 20.0 plans, 19.5 of them played out, 624 playouts, 0.22 s in the and-tree and 0.35 s in playouts* | ✅ |
 | 7.6 | **Tuning against the Planner,** one change at a time on the same seeded games: playout policy, r, K, m, searching decisions outside the main phase, and the Planner with the deck model as a control. *First six runs below: the deck model alone adds nothing (K = 1 scores 49.4%), so the gain is the playouts; playing further (r = 2) and more playouts (N = 64) each add about 5 points; Greedy with 3 worlds adds 2 at 3.5 times the playout cost; biased playouts and r = 0 are worse than the defaults. Next three: r = 3 no better than r = 2; r = 2 with N = 64 62.1%; and with K = 8 as well, 67.1% (95% CI 64.7% to 69.3%) at 6.7 games/s. Then K = 16: 67.9% at the same cost, and 69.6% with N = 128 at half the speed. Defaults set to r = 2, N = 64, K = 16. Playing out the decisions outside the main phase too: 73.8% (95% CI 71.5% to 75.8%) at 4.7 games/s, the best of 7.6, so it's on by default (`--mc-greedy-choices` turns it off). Final defaults: K = 16, N = 64, r = 2, Greedy playouts with 1 world, choices played out* | ✅ |
-| 7.7 | **Sign-off:** Flat MC against the Planner on every deck pairing, with invariant checks; speed; known limits | ⬜ |
+| 7.7 | **Sign-off:** Flat MC against the Planner on every deck pairing, with invariant checks; speed; known limits. *Done: 72.9% (95% CI 72.2% to 73.6%) over 16,000 games, no invariant problems, 5.3 games/s* | ✅ |
 
 How each setting moved Flat MC against the Planner in 7.6, on the same 1,600 seeded games (`--agents flatmc,planner
 --games 100 --no-check`, release, 16 threads), one change at a time from the defaults (K = 4, N = 32, r = 1, Greedy
@@ -392,6 +392,53 @@ playouts with 1 world):
   Greedy's one action ahead was the weakest part of Flat MC's play, more than its plan ranking.
 - **Deck-outs grow with depth:** Flat MC loses more games to its own deck running out (65 at r = 2, 21 at r = 0). Longer
   playouts reward drawing, and e counts the deck only up to 30 cards. A limit to keep in mind for M10's learned e.
+
+**Sign-off run (2026-11-22):** `pokebot-sim --agents flatmc,planner --games 1000` on all 16 deck pairings (16,000
+games, every seed once with Flat MC in each seat; Flat MC with K = 16, N = 64, r = 2, Greedy playouts with 1 world
+and its choices played out; the Planner as signed off in M6, 1 sampled world and budgets 200 and 300, which Flat MC
+shares), with the invariant checker after every action: **no problems found**.
+
+| Measure | Result |
+|---|---|
+| Flat MC's score against the Planner | **72.9%** (95% CI 72.2% to 73.6%): 11,668 won, 4,332 lost, 0 drawn |
+| By who went first | Flat MC first 75.7% (74.8% to 76.7%), Planner first 70.1% (69.1% to 71.1%) |
+| Every deck pairing | 45.5% to 92.1%; only ns-zoroark against basic-box is below 50% (45.5%, 42.4% to 48.6%), and ns-zoroark against mega-greninja is even (50.7%); every other pairing's lower end is above 50% |
+| How Flat MC won | Prize cards 10,642, no Pokémon left 921, the Planner's deck ran out 105 |
+| How Flat MC lost | Prize cards 3,588, its own deck ran out 518, no Pokémon left 226 |
+| Per game | 18.7 plans, 0.64 wins found by the or-tree, 26.8 decisions played out (8.8 of them choices outside the main phase), 1,686 playouts of 17.1 actions each, 57.4 plan actions, 2.3 Greedy decisions (setup); 1,347 or-tree and 1,735 and-tree nodes |
+| Time per game (on 16 busy threads) | 0.18 s in the and-tree, 2.59 s in playouts (0.88 s of it for choices), about 0.1 s a searched decision |
+| Speed, Flat MC against the Planner | about 5.3 games/s on 16 threads with invariant checks |
+
+Flat MC beats the Planner on 15 of the 16 pairings. The one it loses, ns-zoroark against basic-box, is the deck the
+evaluation reads worst (M5 and M6): with the M7 defaults Flat MC won only 28% to 34% there, and playing the opponent's
+reply out has brought it to 45.5%.
+
+How M7 got there, on the same 1,600 seeded games (the full table is above):
+
+| Flat MC | Score against the Planner |
+|---|---|
+| As built in 7.5: K = 4, N = 32, r = 1, choices to Greedy | 55.2% |
+| K = 1, no playouts: the Planner with the deck model (control) | 49.4% |
+| r = 2, N = 64, K = 16 | 67.9% |
+| and choices played out (the sign-off settings) | 73.8%, and 72.9% over the 16,000 sign-off games |
+
+Known limits, each documented where it lives:
+- **Flat MC decks itself out:** 518 of its 4,332 losses are its own deck running out, against 105 wins that way.
+  Playouts reward drawing, and e counts the deck only up to 30 cards, however many turns the game has left. M10's
+  learned e is where this belongs.
+- **e still decides what a playout's end is worth.** ns-zoroark's Abilities and copied attacks are worth little to e's
+  10 features, which is why its pairing against basic-box is still below even.
+- **The deck model adds nothing measurable on its own** (49.4% with K = 1). The opponent's hidden cards matter in
+  playouts, where the opponent has to play real cards, not to e or to Det plans. The library holds the real lists as
+  each archetype's `main`; agents facing lists the library doesn't hold are tested in the deck model's and world's
+  tests, not yet in an arena.
+- **Opponents in a determinization forget what they saw.** In ŵ the opponent knows its own sampled hand and what's in
+  the open, but not the searcher's cards it was shown earlier (a mulligan, a revealed search).
+- **Flat MC is flat:** each plan's playouts are averaged with no tree below it, and every plan gets the same
+  playouts, however clearly it's losing. IS-MCTS (M8) shares one tree across determinizations and puts its playouts
+  where they matter.
+- **The cost is mostly playouts:** 2.6 of its roughly 2.8 s of search a game. One playout is comparable to one IS-MCTS
+  iteration, so M8 starts from the same budget: 64 playouts a decision, about 0.1 s.
 
 ## M5 onward
 
