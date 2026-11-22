@@ -18,3 +18,6 @@ All four decks together use **80 distinct cards**.
 2. Run `pokebot-import` on it. If it reports an unknown set code, add the set to
    [`sets.json`](../cards/README.md#setsjson).
 3. Check the **Needs review** notes and add effects files where needed.
+4. Copy it to `data/archetypes/<name>/main.txt`, so agents know the list (see
+   [archetypes](../archetypes/README.md)). Changing a deck means changing that copy too: a test
+   checks they're equal.

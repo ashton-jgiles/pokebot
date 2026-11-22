@@ -53,6 +53,8 @@ Run `pokebot-import` first.
 ### `missing_effects()`
 
 A card, Ability or attack counts as written when it has `effects` or a `passive` list.
+The free function `missing_effects(const CardDef&)` gives the same lines for one card; the
+[archetype library](../../agents/deck_model.md) uses it to reject lists with unwritten cards.
 
 Returns lines like:
 

@@ -10,8 +10,11 @@ format, and checks that the result loads.
 Run from the repository root; all paths are relative to it.
 
 ```bash
-./build/debug/tools/import/pokebot-import.exe [--refresh] [--offline] <decklist.txt>...
+./build/debug/tools/import/pokebot-import.exe [--refresh] [--offline] <decklist.txt or directory>...
 ```
+
+A directory stands for every `.txt` decklist in it and its subdirectories, in sorted order, so
+`data/decks data/archetypes` imports and checks every deck and every [archetype list](../../data/archetypes/README.md).
 
 | Option | Meaning |
 |---|---|
@@ -23,6 +26,7 @@ Examples:
 ```bash
 ./build/debug/tools/import/pokebot-import.exe data/decks/dragapult.txt data/decks/ns-zoroark.txt
 ./build/debug/tools/import/pokebot-import.exe --offline data/decks/dragapult.txt
+./build/debug/tools/import/pokebot-import.exe --offline data/decks data/archetypes
 ```
 
 ## What it does

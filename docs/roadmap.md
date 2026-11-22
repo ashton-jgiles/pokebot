@@ -1,7 +1,7 @@
 # Roadmap
 
 The milestone plan from the project proposal, with the current status of each.
-**Last reviewed:** 2026-11-19.
+**Last reviewed:** 2026-11-21.
 
 | # | Milestone | Status |
 |---|---|---|
@@ -13,7 +13,7 @@ The milestone plan from the project proposal, with the current status of each.
 | M4 | Observation layer, command-line client, replays | ✅ Done |
 | M5 | Greedy agent, match harness, profiling | ✅ Done |
 | M6 | Model 1: turn planner (or-tree and and-tree modes) | ✅ Done |
-| M7 | Determinization and flat Monte Carlo | ⬜ Not started |
+| M7 | Determinization and flat Monte Carlo | 🔄 In progress |
 | M8 | Model 2: IS-MCTS | ⬜ Not started |
 | M9 | Model 3: endgame solver (expectiminimax) | ⬜ Not started |
 | M10 | Learned evaluation function | ⬜ Not started |
@@ -307,6 +307,48 @@ Known limits, each documented where it lives:
   little to its 10 features, which is why that deck gains least. M10 learns the weights.
 - **The opponent's unseen cards are a placeholder** in the worlds until M7 deals them from a
   guessed decklist.
+
+## M7 — Determinization and flat Monte Carlo 🔄
+
+**Done when:** Flat MC beats the Planner over at least 1,000 seeded games per deck pairing in both
+seat orders.
+
+A determinization ŵ deals the cards the searching player can't see over the hidden zones (the
+opponent's hand, both decks, both Prize piles), each at its observed size. The opponent's cards are
+dealt from a decklist guessed from a library of archetype lists, never from the list they're really
+playing. Flat MC, the stepping stone to IS-MCTS (M8), scores each of the and-tree's top-K plans by
+playing on from it in m determinizations and takes the best average.
+
+**Decisions (2026-11-21):**
+- **Archetype library:** each deck's list plus two variants of it, in `data/archetypes/<archetype>/<variant>.txt`,
+  with a uniform prior over archetypes and then over each archetype's variants.
+- **Belief:** P(L | S) ∝ P(L)·∏_c f(n_c(L), k_c(S)) over the opponent cards seen S, where
+  f(n, k) = C(n, k) when k ≤ n and ε^(k−n) otherwise (a card no list explains). Every list has 60
+  cards, so the hypergeometric denominator cancels.
+- **Playouts:** each player decides from its own observation of ŵ, so nothing that decides for the
+  searching player sees more than they can. The deck model is needed for playouts: with placeholder
+  cards the opponent's reply turn can't play anything. Agents inside playouts keep the placeholder
+  in their own worlds.
+- **Decisions outside the main phase** go to Greedy, as in the Planner; searching the ones with
+  several actions is measured in 7.6.
+- **Budgets are counts, not time:** N playouts a decision, split evenly over the plans, so results
+  repeat and don't depend on the thread count. One playout is comparable to one IS-MCTS iteration.
+  Time budgets come later for live play.
+- **Speed (profiled 2026-11-19, release, one thread, mid-game):** an and-tree search 23 ms at budget
+  300 (the same for keep 1, 4 or 8); one turn played by Greedy with 3 worlds 0.79 ms, with 1 world
+  0.28 ms, by biased random 0.018 ms; a `World` 2.2 µs. Starting point K = 4, m = 8, r = 1, Greedy
+  with 1 world: about 0.8 s a game of Flat MC against the Planner on one thread, so about 23 minutes
+  for 16,000 games on 16 threads.
+
+| Step | Builds | Status |
+|---|---|---|
+| 7.1 | **Archetype library:** `data/archetypes/<archetype>/<variant>.txt` in the decklist format, each deck's list as `main` plus two variants using only cards with effects (12 lists); loaded and checked (legal, every card's effects written) on its own, never from the decks a game uses; `pokebot-import` takes folders, so `pokebot-import data/decks data/archetypes` checks every list. See [deck model](src/agents/deck_model.md) and [archetypes](data/archetypes/README.md) | ✅ |
+| 7.2 | **Belief over lists** from the opponent's seen cards, with ε for cards no list explains. Tests: a Dreepy points to Dragapult, a tech card picks the variant, an unexplained card keeps the belief defined, the same seen cards give the same belief whatever the real list | ⬜ |
+| 7.3 | **Determinization:** `World` deals the opponent's unseen cards from a list drawn from the belief, each hidden zone at its observed size; without a model it keeps the placeholder. Tests: worlds observe back to the same observation, dealt cards come only from the list and the seen cards, no unseen card from the real list appears when the library leaves it out | ⬜ |
+| 7.4 | **Playouts:** from ŵ, play until the searching player's r-th next main phase with a policy (Greedy with w worlds, or biased random), each player deciding from its own observation, then score with e, or u if the game is over. Leak test: games differing only in hidden cards give the same results | ⬜ |
+| 7.5 | **Flat MC agent:** the or-tree's win, else the and-tree's top-K plans, each scored by its mean over the same m determinized playouts; the best mean is played and followed as the Planner does; Greedy for every other decision. It also reports its ranked plans with their means and playout counts (for the analysis mode later). `--agent flatmc` and its settings | ⬜ |
+| 7.6 | **Tuning against the Planner,** one change at a time on the same seeded games: playout policy, r, K, m, searching decisions outside the main phase, and the Planner with the deck model as a control | ⬜ |
+| 7.7 | **Sign-off:** Flat MC against the Planner on every deck pairing, with invariant checks; speed; known limits | ⬜ |
 
 ## M5 onward
 
