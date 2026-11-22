@@ -115,11 +115,28 @@ namespace pokebot {
             ++stats_.followed;
             return plan_[next_++];
         }
+        if (options_.search_choices && observation.turn > 0) {
+            return choose_by_playouts(observation, actions);
+        }
         ++stats_.greedy;
         const auto greedy_start = std::chrono::steady_clock::now();
         const Action action = greedy_.choose(observation, actions);
         stats_.greedy_seconds += seconds_since(greedy_start);
         return action;
+    }
+
+    Action FlatMcAgent::choose_by_playouts(const Observation& observation, const std::vector<Action>& actions) {
+        const auto start = std::chrono::steady_clock::now();
+        std::vector<RankedPlan> candidates;
+        for (const Action& action : actions) {
+            RankedPlan candidate;
+            candidate.plan.actions = {action};
+            candidates.push_back(candidate);
+        }
+        analysis_ = score(observation, observation.decision.player, candidates);
+        ++stats_.choices;
+        stats_.choice_seconds += seconds_since(start);
+        return analysis_.front().plan.actions.front();
     }
 
     std::vector<std::pair<std::string, double>> FlatMcAgent::counters() const {
@@ -131,12 +148,14 @@ namespace pokebot {
             {"playout actions", static_cast<double>(stats_.playout_actions)},
             {"plan actions", static_cast<double>(stats_.followed)},
             {"greedy decisions", static_cast<double>(stats_.greedy)},
+            {"choices played out", static_cast<double>(stats_.choices)},
             {"or-tree nodes", static_cast<double>(stats_.or_nodes)},
             {"and-tree nodes", static_cast<double>(stats_.and_nodes)},
             {"or-tree s", stats_.or_seconds},
             {"and-tree s", stats_.and_seconds},
             {"playout s", stats_.playout_seconds},
             {"greedy s", stats_.greedy_seconds},
+            {"choices s", stats_.choice_seconds},
         };
     }
 

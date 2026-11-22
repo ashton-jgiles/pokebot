@@ -11,7 +11,7 @@ happens next: the opponent's reply, played out in worlds dealt from the [deck mo
 ```cpp
 const ArchetypeLibrary library = ArchetypeLibrary::load("data/archetypes", db);
 const DeckModel model(library);
-FlatMcAgent agent(seed, model);   // defaults: K = 4 plans, N = 32 playouts, r = 1, Greedy with 1 world
+FlatMcAgent agent(seed, model);   // defaults: K = 16 plans, N = 64 playouts, r = 2, Greedy with 1 world
 agent.analysis();                 // the last decision's plans, best first, with their means
 ```
 
@@ -35,8 +35,12 @@ In its main phase (or when offered an extra attack), after setup:
    again when not, as in the Planner.
 
 Every other decision (setup, a new Active, choices inside the opponent's effects) goes to
-[Greedy](../greedy/greedy_agent.md) with 3 worlds, as in the Planner. M7's step 7.6 measures searching
-the ones with several choices too.
+[Greedy](../greedy/greedy_agent.md) with 3 worlds, as in the Planner, unless `search_choices` is on
+(`--mc-choices`). Then every decision after setup that flat MC isn't following a plan through is
+scored like the plans: each action as a one-action plan, played out in the same m = N / (number of
+actions) worlds with the same seeds, the best mean taken. Setup still goes to Greedy's setup rule,
+since a `World` can't be built before both players have set up. It's off by default until step 7.6
+has measured it: it adds about 64 playouts to each of about 11 decisions a game.
 
 **The same worlds for every plan.** All K plans are played out in the same m worlds with the same
 playout seeds (common random numbers), so the difference between two plans' means comes from the
@@ -59,10 +63,17 @@ One playout is comparable to one IS-MCTS iteration (M8).
 | `or_budget` | 200 | Nodes for the win search |
 | `and_budget` | 300 | Nodes for the best-plans search |
 | `samples` | 1 | The and-tree's sampled worlds for a plan that ends in chance |
-| `plans` | 4 | K: the and-tree's top plans played out |
-| `playouts` | 32 | N: playouts each decision, split evenly over the plans |
-| `playout` | depth 1, Greedy with 1 world | The [playout options](playout.md#where-it-stops): r, the policy, its worlds |
+| `plans` | 16 | K: the and-tree's top plans played out |
+| `playouts` | 64 | N: playouts each decision, split evenly over the plans |
+| `playout` | depth 2, Greedy with 1 world | The [playout options](playout.md#where-it-stops): r, the policy, its worlds |
 | `weights` | `default_weights()` | θ for e |
+| `search_choices` | off | Play out the decisions outside the main phase too, instead of asking Greedy |
+
+The defaults are step 7.6's choice: of the settings measured against the Planner, r = 2 with N = 64
+and K = 16 scored best for its cost, 67.9% (95% CI 65.6% to 70.2%) at 6.6 games/s on 16 threads
+(see the [roadmap](../../../roadmap.md)). Seeing the opponent's reply mattered most (r = 1 against
+0), then more plans (K = 8 against 4); deeper than r = 2, more playouts and better playout play all
+paid less for their time.
 
 The `DeckModel` (and its library and `CardDB`) must outlive the agent. It's only read, so one model
 can serve every agent in an arena at once.
@@ -77,8 +88,10 @@ analysis mode in the client will show (see the roadmap's long-term goals).
 ## Counters
 
 `stats()` and the arena's counters: plans played, wins found, decisions played out, playouts,
-playout actions, plan actions, Greedy decisions, or-tree and and-tree nodes, and the seconds spent in
-the or-tree, the and-tree, playouts and Greedy. `playout s` over `playouts` is what one playout costs.
+playout actions, plan actions, Greedy decisions, choices played out, or-tree and and-tree nodes, and
+the seconds spent in the or-tree, the and-tree, playouts, Greedy and choices. `playout s` over
+`playouts` is what one playout costs. Choices played out are counted in the decisions played out,
+playouts and playout seconds too; `choices` and `choices s` are their share.
 
 ## Tests
 
@@ -92,4 +105,8 @@ sample cards with a one-archetype library:
 - whole real-deck games against random (skipped without generated card data);
 - on the real decks, games that differ only in cards the player can't see getting the same choice
   and the same means;
-- its counters and timings.
+- its counters and timings;
+- the defaults chosen in step 7.6;
+- on the real decks, with `search_choices`, decisions outside the main phase played out (fewer left
+  to Greedy than without), games still the same for the same seed. The sample cards have no
+  searches or discards and offer each new Active only once, so only real decks have such choices.

@@ -17,7 +17,7 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
                                         [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]
                                         [--agents A,B [--threads N] [--save-replays K]]
                                         [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]
-                                        [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W]
+                                        [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W] [--mc-choices]
                                         [--planner-lab N [--every K]]
 ```
 
@@ -39,11 +39,12 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 | `--planner-or-budget N` | 200 | The planner's node budget for its win search (the or-tree) |
 | `--planner-and-budget N` | 300 | The planner's node budget for its best-plan search (the and-tree) |
 | | | The three `--planner-*` settings apply to `flatmc`'s searches too, so the two agents compared search the same |
-| `--mc-plans K` | 4 | [Flat MC](../../src/agents/flat_mc/flat_mc_agent.md)'s plans played out each decision: the and-tree's top K |
-| `--mc-playouts N` | 32 | Flat MC's playouts each decision, split evenly over its plans |
-| `--mc-depth R` | 1 | How far a [playout](../../src/agents/flat_mc/playout.md) runs: to the start of the searching player's R-th next turn (0 scores right after the plan) |
+| `--mc-plans K` | 16 | [Flat MC](../../src/agents/flat_mc/flat_mc_agent.md)'s plans played out each decision: the and-tree's top K |
+| `--mc-playouts N` | 64 | Flat MC's playouts each decision, split evenly over its plans |
+| `--mc-depth R` | 2 | How far a [playout](../../src/agents/flat_mc/playout.md) runs: to the start of the searching player's R-th next turn (0 scores right after the plan) |
 | `--mc-policy P` | `greedy` | Who plays the playouts: `greedy` or `biased` |
 | `--mc-greedy-worlds W` | 1 | Worlds for each decision of a Greedy playout |
+| `--mc-choices` | off | Flat MC also plays out its decisions outside the main phase, instead of asking Greedy |
 
 With `flatmc`, the [archetype library](../../data/archetypes/README.md) is loaded from
 `data/archetypes/`, and a match prints a line with flat MC's settings. Its counters include

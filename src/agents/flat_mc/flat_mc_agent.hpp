@@ -21,10 +21,11 @@ namespace pokebot {
         int or_budget = 200;
         int and_budget = 300;
         int samples = 1;
-        int plans = 4;
-        int playouts = 32;
-        PlayoutOptions playout;
+        int plans = 16;
+        int playouts = 64;
+        PlayoutOptions playout{.depth = 2};
         Weights weights = default_weights();
+        bool search_choices = false;
     };
 
     struct FlatMcStats {
@@ -41,6 +42,8 @@ namespace pokebot {
         double and_seconds = 0.0;
         double playout_seconds = 0.0;
         double greedy_seconds = 0.0;
+        long long choices = 0;
+        double choice_seconds = 0.0;
     };
 
     struct ScoredPlan {
@@ -64,6 +67,7 @@ namespace pokebot {
         bool following(const Observation& observation, const std::vector<Action>& actions) const;
         bool plan_turn(const Observation& observation);
         std::vector<ScoredPlan> score(const Observation& observation, int me, const std::vector<RankedPlan>& plans);
+        Action choose_by_playouts(const Observation& observation, const std::vector<Action>& actions);
 
         const DeckModel& model_;
         FlatMcOptions options_;

@@ -283,3 +283,48 @@ TEST_CASE("flat MC counts its searches, playouts and the time they take", "[flat
     REQUIRE(!counters.empty());
     CHECK(counters.front() == std::pair<std::string, double>{"plans", 1.0});
 }
+
+TEST_CASE("flat MC's defaults are the ones tuned in step 7.6", "[flat_mc]") {
+    const FlatMcOptions o;
+    CHECK(o.plans == 16);
+    CHECK(o.playouts == 64);
+    CHECK(o.playout.depth == 2);
+    CHECK(o.playout.policy == pokebot::PlayoutPolicy::Greedy);
+    CHECK(o.playout.greedy_worlds == 1);
+    CHECK_FALSE(o.search_choices);
+}
+
+TEST_CASE("on the real decks, with search_choices flat MC plays out its decisions outside the main phase", "[flat_mc]") {
+    const auto real = test::load_real_decks();
+    if (!real) {
+        SKIP("no generated card data; run pokebot-import first");
+    }
+    const std::filesystem::path root = POKEBOT_SOURCE_DIR;
+    const ArchetypeLibrary library = ArchetypeLibrary::load(root / "data/archetypes", real->db);
+    const DeckModel model(library);
+    const CardTable table(real->db, real->decks[0], real->decks[1]);
+    const auto play = [&](std::uint64_t seed, FlatMcAgent& agent) {
+        pokebot::RandomAgent random(seed);
+        return pokebot::play_game(table, seed, agent, random);
+    };
+    FlatMcOptions options = quick();
+    options.search_choices = true;
+    long long choices = 0;
+    long long greedy_with = 0;
+    long long greedy_without = 0;
+    for (std::uint64_t seed = 0; seed < 2; ++seed) {
+        INFO("seed " << seed);
+        FlatMcAgent agent(seed, model, options);
+        FlatMcAgent again(seed, model, options);
+        FlatMcAgent plain(seed, model, quick());
+        const auto record = play(seed, agent);
+        CHECK(record.end != pokebot::GameEnd::ActionLimit);
+        CHECK(play(seed, again).moves == record.moves);
+        play(seed, plain);
+        choices += agent.stats().choices;
+        greedy_with += agent.stats().greedy;
+        greedy_without += plain.stats().greedy;
+    }
+    CHECK(choices > 0);
+    CHECK(greedy_with < greedy_without);
+}
