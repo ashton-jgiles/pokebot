@@ -2,8 +2,8 @@
 
 #include <vector>
 
-#include "agents/evaluation.hpp"
-#include "agents/plan.hpp"
+#include "agents/evaluation/evaluation.hpp"
+#include "agents/planner/plan.hpp"
 #include "engine/game/game_state.hpp"
 
 namespace pokebot {

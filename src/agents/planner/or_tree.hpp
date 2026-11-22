@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include "agents/plan.hpp"
+#include "agents/planner/plan.hpp"
 #include "engine/game/game_state.hpp"
 
 namespace pokebot {

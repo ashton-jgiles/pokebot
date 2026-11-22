@@ -4,8 +4,8 @@
 #include <memory>
 #include <vector>
 
-#include "agents/action_class.hpp"
-#include "agents/evaluation.hpp"
+#include "agents/planner/action_class.hpp"
+#include "agents/evaluation/evaluation.hpp"
 #include "agents/world.hpp"
 #include "engine/actions/action.hpp"
 #include "engine/game/game_state.hpp"

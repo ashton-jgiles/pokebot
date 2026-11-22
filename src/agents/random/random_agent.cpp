@@ -1,4 +1,4 @@
-#include "agents/random_agent.hpp"
+#include "agents/random/random_agent.hpp"
 
 namespace pokebot {
 

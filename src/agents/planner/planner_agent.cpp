@@ -1,11 +1,11 @@
-#include "agents/planner_agent.hpp"
+#include "agents/planner/planner_agent.hpp"
 
 #include <algorithm>
 #include <chrono>
 
-#include "agents/and_tree.hpp"
-#include "agents/or_tree.hpp"
-#include "agents/plan.hpp"
+#include "agents/planner/and_tree.hpp"
+#include "agents/planner/or_tree.hpp"
+#include "agents/planner/plan.hpp"
 #include "agents/world.hpp"
 #include "engine/engine.hpp"
 

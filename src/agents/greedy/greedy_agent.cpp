@@ -1,4 +1,4 @@
-#include "agents/greedy_agent.hpp"
+#include "agents/greedy/greedy_agent.hpp"
 
 #include <algorithm>
 #include <cstddef>

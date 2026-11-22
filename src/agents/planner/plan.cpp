@@ -1,11 +1,11 @@
-#include "agents/plan.hpp"
+#include "agents/planner/plan.hpp"
 
 #include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <stdexcept>
 
-#include "agents/state_hash.hpp"
+#include "agents/planner/state_hash.hpp"
 #include "engine/engine.hpp"
 #include "engine/observation/observation.hpp"
 

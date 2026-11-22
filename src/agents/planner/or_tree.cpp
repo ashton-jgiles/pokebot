@@ -6,8 +6,8 @@
 #include <stdexcept>
 #include <vector>
 
-#include "agents/action_class.hpp"
-#include "agents/state_hash.hpp"
+#include "agents/planner/action_class.hpp"
+#include "agents/planner/state_hash.hpp"
 #include "engine/engine.hpp"
 #include "engine/rules/rules.hpp"
 

@@ -7,8 +7,8 @@
 #include <vector>
 
 #include "agents/agent.hpp"
-#include "agents/evaluation.hpp"
-#include "agents/greedy_agent.hpp"
+#include "agents/evaluation/evaluation.hpp"
+#include "agents/greedy/greedy_agent.hpp"
 #include "engine/shared/rng.hpp"
 
 namespace pokebot {

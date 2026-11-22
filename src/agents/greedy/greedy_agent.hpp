@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "agents/agent.hpp"
-#include "agents/evaluation.hpp"
+#include "agents/evaluation/evaluation.hpp"
 #include "engine/shared/rng.hpp"
 
 namespace pokebot {

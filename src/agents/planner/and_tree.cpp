@@ -1,4 +1,4 @@
-#include "agents/and_tree.hpp"
+#include "agents/planner/and_tree.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -9,9 +9,9 @@
 #include <unordered_set>
 #include <utility>
 
-#include "agents/action_class.hpp"
-#include "agents/or_tree.hpp"
-#include "agents/state_hash.hpp"
+#include "agents/planner/action_class.hpp"
+#include "agents/planner/or_tree.hpp"
+#include "agents/planner/state_hash.hpp"
 #include "engine/engine.hpp"
 #include "engine/rules/rules.hpp"
 
