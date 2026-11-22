@@ -18,6 +18,7 @@
 #include "agents/flat_mc/deck_model.hpp"
 #include "agents/random/random_agent.hpp"
 #include "engine/observation/observation.hpp"
+#include "engine/shared/rng.hpp"
 #include "harness/match.hpp"
 #include "support/real_decks.hpp"
 #include "support/test_cards.hpp"
@@ -353,4 +354,57 @@ TEST_CASE("on the real decks, the belief depends only on the cards seen and find
             CHECK(best->first == opponent.archetype);
         }
     }
+}
+
+TEST_CASE("a list is drawn as often as the belief says", "[deck_model]") {
+    const CardDB db = test_db();
+    const ArchetypeLibrary library = belief_library(db);
+    const DeckModel model(library);
+    pokebot::Rng rng(11);
+    std::vector<int> drawn(3, 0);
+    for (int i = 0; i < 4000; ++i) {
+        ++drawn[model.draw(model.belief(SeenCards{}), rng)];
+    }
+    CHECK_THAT(drawn[0] / 4000.0, WithinAbs(0.25, 0.03));
+    CHECK_THAT(drawn[1] / 4000.0, WithinAbs(0.25, 0.03));
+    CHECK_THAT(drawn[2] / 4000.0, WithinAbs(0.5, 0.03));
+    for (int i = 0; i < 100; ++i) {
+        CHECK(model.draw({0.0, 1.0, 0.0}, rng) == 1);
+    }
+    CHECK_THROWS_AS(model.draw({1.0}, rng), std::invalid_argument);
+}
+
+TEST_CASE("dealing a list gives its cards less the ones seen", "[deck_model]") {
+    const CardDB db = test_db();
+    const ArchetypeLibrary library = belief_library(db);
+    const ArchetypeList& tech = *library.find("ace", "tech");
+    pokebot::Rng rng(3);
+    const pokebot::DealtCards dealt = DeckModel::deal(tech, SeenCards{{"TST-1", 2}, {"TST-6", 10}}, 48, rng);
+    std::map<std::string, int> counts;
+    for (std::size_t i = 0; i < dealt.size(); ++i) {
+        ++counts[dealt[i]->id];
+    }
+    CHECK(dealt.size() == 48);
+    CHECK(counts == std::map<std::string, int>{{"TST-1", 2}, {"TST-2", 4}, {"TST-6", 42}});
+}
+
+TEST_CASE("cards seen that the list doesn't explain leave out random cards instead", "[deck_model]") {
+    const CardDB db = test_db();
+    const ArchetypeLibrary library = belief_library(db);
+    const ArchetypeList& main = *library.find("ace", "main");
+    pokebot::Rng rng(4);
+    std::set<int> first_cards;
+    for (int round = 0; round < 50; ++round) {
+        const pokebot::DealtCards dealt = DeckModel::deal(main, SeenCards{{"TST-4", 3}, {"TST-1", 1}}, 56, rng);
+        REQUIRE(dealt.size() == 56);
+        int first = 0;
+        for (std::size_t i = 0; i < dealt.size(); ++i) {
+            CHECK(main.count(dealt[i]->id) > 0);
+            first += dealt[i]->id == "TST-1" ? 1 : 0;
+        }
+        CHECK(first <= 3);
+        first_cards.insert(first);
+    }
+    CHECK(first_cards.size() > 1);
+    CHECK_THROWS_AS(DeckModel::deal(main, SeenCards{}, 61, rng), std::logic_error);
 }

@@ -204,4 +204,39 @@ namespace pokebot {
         return sums;
     }
 
+    std::size_t DeckModel::draw(const std::vector<double>& belief, Rng& rng) const {
+        if (belief.size() != library_.size()) {
+            throw std::invalid_argument("DeckModel::draw: the belief has a weight for each list in the library");
+        }
+        const double u = static_cast<double>(rng.next() >> 11) * 0x1.0p-53;
+        double total = 0.0;
+        for (std::size_t i = 0; i < belief.size(); ++i) {
+            total += belief[i];
+            if (u < total) {
+                return i;
+            }
+        }
+        return belief.size() - 1;
+    }
+
+    DealtCards DeckModel::deal(const ArchetypeList& list, const SeenCards& seen, std::size_t unseen, Rng& rng) {
+        DealtCards pool;
+        for (const ArchetypeCard& card : list.cards) {
+            const auto it = seen.find(card.def->id);
+            const int shown = it == seen.end() ? 0 : it->second;
+            for (int copy = shown; copy < card.count; ++copy) {
+                pool.push_back(card.def);
+            }
+        }
+        if (pool.size() < unseen) {
+            throw std::logic_error("DeckModel::deal: " + list.archetype + "/" + list.variant + " has " + std::to_string(pool.size()) + " cards left for " + std::to_string(unseen) + " unseen");
+        }
+        rng.shuffle(pool);
+        DealtCards dealt;
+        for (std::size_t i = 0; i < unseen; ++i) {
+            dealt.push_back(pool[i]);
+        }
+        return dealt;
+    }
+
 } // namespace pokebot

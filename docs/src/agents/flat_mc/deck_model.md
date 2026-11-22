@@ -6,8 +6,8 @@
 Agents never get the opponent's decklist (decided 2026-11-18). To deal the opponent's unseen cards
 in a [`World`](../world.md), they guess the list from a library of known lists, the way a player
 recognises Dragapult from a Dreepy and then wonders which version it is. This file holds that
-library and the belief over its lists, worked out from the cards seen. Dealing from them is
-step 7.3.
+library, the belief over its lists, worked out from the cards seen, and drawing a list and dealing
+its unseen cards, which a [`World`](../world.md#with-a-deck-model) uses.
 
 ```cpp
 const ArchetypeLibrary library = ArchetypeLibrary::load("data/archetypes", db);
@@ -77,6 +77,13 @@ P(L | S) ∝ P(L) · ∏_c f(n_c, k_c), where f(n, k) = C(n, k) if k ≤ n, and 
 | `belief(seen)` | The same from a `SeenCards` (card id → copies seen), such as in tests |
 | `by_archetype(belief)` | The weights summed for each archetype, in the library's order |
 | `prior(i)` | List i's prior |
+| `draw(belief, rng)` | One list's index, drawn with the belief's weights. Throws `std::invalid_argument` if the belief doesn't have a weight for each list |
+| `static deal(list, seen, unseen, rng)` | `unseen` cards for the opponent's never-seen card numbers: the list's cards less the ones seen, shuffled, the first `unseen` kept. Throws `std::logic_error` if the list has fewer left |
+
+`deal` keeps the first `unseen` cards of the shuffled pool so that cards seen which the list doesn't
+explain, say a fifth copy or a card it doesn't have, each leave out one random card: they weren't
+taken off the list, so the pool has that many too many. A [`World`](../world.md#with-a-deck-model)
+draws a list and deals from it this way.
 
 `opponent_cards_seen(observation)` counts the opponent cards the viewer has seen by card id. It reads
 only `opponent_seen` and those cards' definitions: every card the viewer has seen this game,
@@ -120,4 +127,7 @@ observation, and nothing about the real decklist, goes into the belief.
 - on the real decks (skipped without generated card data), with the opponent playing each of the
   12 lists in two biased random games: the same cards seen always give exactly the same belief,
   whatever the opponent's real list; after any game of 10 turns or more, the opponent's archetype
-  has over 90%, and it's still the likeliest with its exact list taken out of the library.
+  has over 90%, and it's still the likeliest with its exact list taken out of the library;
+- lists drawn as often as the belief says, and a belief of the wrong size rejected;
+- dealing a list's cards less the ones seen, exactly; cards seen that the list doesn't explain
+  leaving out random cards instead, every card dealt from the list; too few cards left rejected.

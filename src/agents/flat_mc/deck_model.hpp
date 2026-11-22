@@ -13,6 +13,7 @@
 #include "cards/db/card_db.hpp"
 #include "core/decklist.hpp"
 #include "engine/observation/observation.hpp"
+#include "engine/shared/rng.hpp"
 
 namespace pokebot {
 
@@ -51,6 +52,7 @@ namespace pokebot {
     };
 
     using SeenCards = std::map<std::string, int, std::less<>>;
+    using DealtCards = FixedVector<const CardDef*, kDeckSize>;
 
     SeenCards opponent_cards_seen(const Observation& observation);
 
@@ -63,6 +65,8 @@ namespace pokebot {
         std::vector<double> belief(const SeenCards& seen) const;
         std::vector<double> belief(const Observation& observation) const;
         std::vector<std::pair<std::string, double>> by_archetype(const std::vector<double>& belief) const;
+        std::size_t draw(const std::vector<double>& belief, Rng& rng) const;
+        static DealtCards deal(const ArchetypeList& list, const SeenCards& seen, std::size_t unseen, Rng& rng);
 
     private:
         const ArchetypeLibrary& library_;
