@@ -35,7 +35,7 @@ add_library(pokebot_lib
   agents/planner/or_tree.cpp
   agents/planner/and_tree.cpp
   agents/planner/planner_agent.cpp
-  agents/deck_model.cpp
+  agents/flat_mc/deck_model.cpp
   harness/match.cpp
   harness/replay.cpp
   harness/arena.cpp

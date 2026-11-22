@@ -1,4 +1,4 @@
-#include "agents/deck_model.hpp"
+#include "agents/flat_mc/deck_model.hpp"
 
 #include <algorithm>
 #include <exception>

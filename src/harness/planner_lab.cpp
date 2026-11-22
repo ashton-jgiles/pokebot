@@ -3,10 +3,10 @@
 #include <chrono>
 #include <cstddef>
 
-#include "agents/and_tree.hpp"
-#include "agents/greedy_agent.hpp"
-#include "agents/or_tree.hpp"
-#include "agents/plan.hpp"
+#include "agents/planner/and_tree.hpp"
+#include "agents/greedy/greedy_agent.hpp"
+#include "agents/planner/or_tree.hpp"
+#include "agents/planner/plan.hpp"
 #include "engine/engine.hpp"
 #include "harness/match.hpp"
 

@@ -11,9 +11,9 @@
 #include <string>
 #include <vector>
 
-#include "agents/greedy_agent.hpp"
-#include "agents/planner_agent.hpp"
-#include "agents/random_agent.hpp"
+#include "agents/greedy/greedy_agent.hpp"
+#include "agents/planner/planner_agent.hpp"
+#include "agents/random/random_agent.hpp"
 #include "cards/db/card_db.hpp"
 #include "core/decklist.hpp"
 #include "harness/arena.hpp"

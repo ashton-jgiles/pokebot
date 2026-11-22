@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <memory>
 
-#include "agents/plan.hpp"
+#include "agents/planner/plan.hpp"
 #include "agents/world.hpp"
 #include "engine/engine.hpp"
 

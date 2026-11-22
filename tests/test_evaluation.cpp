@@ -6,8 +6,8 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "agents/evaluation.hpp"
-#include "agents/random_agent.hpp"
+#include "agents/evaluation/evaluation.hpp"
+#include "agents/random/random_agent.hpp"
 #include "agents/world.hpp"
 #include "engine/engine.hpp"
 #include "engine/observation/observation.hpp"

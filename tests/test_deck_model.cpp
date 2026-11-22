@@ -11,7 +11,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
-#include "agents/deck_model.hpp"
+#include "agents/flat_mc/deck_model.hpp"
 #include "support/test_cards.hpp"
 
 using Catch::Matchers::ContainsSubstring;
