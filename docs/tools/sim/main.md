@@ -19,7 +19,7 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
                                         [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]
                                         [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W] [--mc-greedy-choices]
                                         [--mcts-iterations N] [--mcts-c C] [--mcts-depth R] [--mcts-plans K]
-                                        [--mcts-opponent-budget B] [--mcts-opponent-plans K] [--mcts-matched-worlds] [--mcts-final-mean [--mcts-min-visits N]]
+                                        [--mcts-opponent-budget B] [--mcts-opponent-plans K] [--mcts-fresh-worlds] [--mcts-final-mean [--mcts-min-visits N]]
                                         [--planner-lab N [--every K]] [--budget-lab N [--every K]]
 ```
 
@@ -47,13 +47,13 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 | `--mc-policy P` | `greedy` | Who plays the playouts: `greedy` or `biased` |
 | `--mc-greedy-worlds W` | 1 | Worlds for each decision of a Greedy playout |
 | `--mc-greedy-choices` | | Flat MC leaves its decisions outside the main phase to Greedy, as the Planner does. By default it plays them out like its plans |
-| `--mcts-iterations N` | 64 | [IS-MCTS](../../src/agents/is_mcts/is_mcts_agent.md)'s iterations each decision |
+| `--mcts-iterations N` | 48 | [IS-MCTS](../../src/agents/is_mcts/is_mcts_agent.md)'s iterations each decision |
 | `--mcts-c C` | 0.7 | Its exploration constant |
-| `--mcts-depth R` | 1 | How far its playouts run past a leaf, as `--mc-depth` |
+| `--mcts-depth R` | 2 | How far its playouts run past a leaf, as `--mc-depth` |
 | `--mcts-plans K` | 16 | Plans at the searcher's nodes |
 | `--mcts-opponent-budget B` | 25 | Nodes for the opponent's and-tree at an opponent node (from the [budget lab](../../src/harness/budget_lab.md)) |
 | `--mcts-opponent-plans K` | 4 | Plans at the opponent's nodes |
-| `--mcts-matched-worlds` | off | The n-th visit to every root move sees the same world and playout seed ([matched worlds](../../src/agents/is_mcts/is_mcts.md#matched-worlds-matched_worlds)) |
+| `--mcts-fresh-worlds` | off | Deal every iteration a fresh world, instead of the [matched worlds](../../src/agents/is_mcts/is_mcts.md#matched-worlds-matched_worlds) the agent uses by default |
 | `--mcts-final-mean` | off | Play the best mean among the root moves visited often enough, not the most visited |
 | `--mcts-min-visits N` | 3 | With `--mcts-final-mean`: the visits a move needs (at least 1) |
 | `--planner-lab N` | | Play `N` Greedy-against-Greedy games and measure the planner's searches at one in every `K` main-phase decisions ([planner lab](../../src/harness/planner_lab.md)). Uses `--seed`, `--planner-samples` and `--planner-or-budget`, and prints its progress after each game to stderr |
@@ -104,6 +104,7 @@ games; the reference machine has 16 hardware threads):
 | `flatmc,planner` at step 7.5 (K = 4, N = 32, r = 1, Greedy playouts with 1 world; `--games 100`) | about 18.4 games/s | |
 | `flatmc,planner` at the Milestone 7 sign-off (K = 16, N = 64, r = 2, choices played out; `--games 1000`) | about 5.3 games/s with invariant checks | |
 | `ismcts,flatmc` at step 8.5 (64 iterations, C = 0.7, r = 1; `--games 100`) | about 2.6 games/s | |
+| `ismcts,flatmc` in 8.6 (matched worlds, r = 2, 42 iterations; `--games 100`) | about 3.1 games/s | |
 
 Greedy builds 3 worlds per decision and tries every action in each, so it costs about 9 ms per game
 on one thread against Random. Playing out follow-up choices (step 5.6c) made it about 3.3 times

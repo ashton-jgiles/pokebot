@@ -132,7 +132,7 @@ TEST_CASE("with no win, the IS-MCTS agent searches and plays its most visited pl
     REQUIRE(!agent.analysis().empty());
     CHECK(agent.stats().plans == 1);
     CHECK(agent.search_stats().searches == 1);
-    CHECK(agent.search_stats().iterations == 30);
+    CHECK(agent.search_stats().iterations + agent.search_stats().skipped == 30);
     CHECK(agent.stats().followed == static_cast<long long>(agent.analysis().front().plan.actions.size()));
     for (std::size_t i = 1; i < agent.analysis().size(); ++i) {
         CHECK(agent.analysis()[i - 1].visits >= agent.analysis()[i].visits);

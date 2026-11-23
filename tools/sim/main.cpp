@@ -70,7 +70,7 @@ namespace {
                      "                   [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]\n"
                      "                   [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W] [--mc-greedy-choices]\n"
                      "                   [--mcts-iterations N] [--mcts-c C] [--mcts-depth R] [--mcts-plans K]\n"
-                     "                   [--mcts-opponent-budget B] [--mcts-opponent-plans K] [--mcts-matched-worlds]\n"
+                     "                   [--mcts-opponent-budget B] [--mcts-opponent-plans K] [--mcts-fresh-worlds]\n"
                      "                   [--mcts-final-mean [--mcts-min-visits N]]\n"
                      "                   [--planner-lab N [--every K]] [--budget-lab N [--every K]]\n"
                      "  --games N            games to play (default 1000)\n"
@@ -97,13 +97,13 @@ namespace {
                      "  --mc-policy P            greedy or biased: who plays the playouts (default greedy)\n"
                      "  --mc-greedy-worlds W     worlds for a greedy playout's decisions (default 1)\n"
                      "  --mc-greedy-choices      flat MC leaves its decisions outside the main phase to Greedy (default: plays them out)\n"
-                     "  --mcts-iterations N      IS-MCTS's iterations each decision (default 64)\n"
+                     "  --mcts-iterations N      IS-MCTS's iterations each decision (default 48)\n"
                      "  --mcts-c C               IS-MCTS's exploration constant (default 0.7)\n"
-                     "  --mcts-depth R           turns of the searching player an IS-MCTS playout runs to (default 1)\n"
+                     "  --mcts-depth R           turns of the searching player an IS-MCTS playout runs to (default 2)\n"
                      "  --mcts-plans K           IS-MCTS's plans at the searcher's nodes (default 16)\n"
                      "  --mcts-opponent-budget B nodes for the opponent's and-tree at an IS-MCTS node (default 25)\n"
                      "  --mcts-opponent-plans K  plans at the opponent's IS-MCTS nodes (default 4)\n"
-                     "  --mcts-matched-worlds    the k-th visit to every root move uses the same world and playout seed\n"
+                     "  --mcts-fresh-worlds      deal every iteration a fresh world, not the k-th world shared by every root move\n"
                      "  --mcts-final-mean        play the root move with the best mean among those visited often enough\n"
                      "  --mcts-min-visits N      with --mcts-final-mean: visits a root move needs (default 3)\n"
                      "  --planner-lab N          play N greedy games and measure the planner's searches at every Kth\n"
@@ -165,8 +165,8 @@ namespace {
                 options.is_mcts.search.macros.opponent_budget = std::stoi(argv[++i]);
             } else if (arg == "--mcts-opponent-plans" && has_value) {
                 options.is_mcts.search.macros.opponent_plans = std::stoi(argv[++i]);
-            } else if (arg == "--mcts-matched-worlds") {
-                options.is_mcts.search.matched_worlds = true;
+            } else if (arg == "--mcts-fresh-worlds") {
+                options.is_mcts.search.matched_worlds = false;
             } else if (arg == "--mcts-final-mean") {
                 options.is_mcts.search.final_by_mean = true;
             } else if (arg == "--mcts-min-visits" && has_value) {
