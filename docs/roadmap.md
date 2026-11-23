@@ -15,7 +15,7 @@ The milestone plan from the project proposal, with the current status of each.
 | M6 | Model 1: turn planner (or-tree and and-tree modes) | ✅ Done |
 | M7 | Determinization and flat Monte Carlo | ✅ Done |
 | M8 | Model 2: IS-MCTS | ✅ Done |
-| M9 | Model 3: endgame solver (expectiminimax) | ⬜ Not started |
+| M9 | Model 3: endgame solver (expectiminimax) | 🔄 In progress |
 | M10 | Learned evaluation function | ⬜ Not started |
 | M11+ | Stretch: policy prior, deck-building GA, more decks, opponent inference | ⬜ Not started |
 
@@ -561,6 +561,60 @@ At a quarter of Flat MC's time IS-MCTS still wins 40.8%.
   IS-MCTS gains from time against a fixed opponent, not how the two compare at every budget.
 - **Going second it is slightly behind** (48.1%), and ns-zoroark is still the weakest deck for both agents.
 - **Times are noisy:** both long runs stalled once, which inflates both agents' seconds.
+
+## M9 — Model 3: endgame solver 🔄
+
+**Done when:** the solver's values match a brute-force search without pruning on small positions, and IS-MCTS with the
+solver beats IS-MCTS alone over at least 1,000 seeded games per deck pairing in both seat orders.
+
+The endgame solver replaces sampling with enumeration where the game is short enough: an expectiminimax search over
+turn segments, the searcher's plans at OR nodes, the opponent's at AND-min nodes and chance outcomes at AND-chance
+nodes, pruned by alpha-beta and Star1, with iterative deepening under a budget.
+
+**What the proposal's trigger meets (2026-11-23).** The proposal enumerates every world at the root and triggers when
+there are at most N_end. A scratch measurement over 400 Greedy-against-Greedy games on all 16 pairings counted the
+worlds at each main-phase decision, by card definition, with the opponent's true list (so a lower bound):
+
+| Smaller prize count left | Decisions a game | Median worlds | With at most 10⁴ worlds | Opponent's hidden hand (median) |
+|---|---|---|---|---|
+| 1 | 4.2 | 10¹⁰ | 0.7% | 8 cards |
+| 2 | 5.9 | 10¹¹ | 0.2% | 8 cards |
+| 3 | 6.8 | 10¹² | 0.1% | 8 cards |
+
+The opponent's hidden hand gives about 10⁸ of them; the split of the searcher's own deck and Prize cards about 10².
+65% of games reach 2 or fewer prizes for someone, so endgames are common, but exact enumeration at the root almost
+never applies.
+
+**Decisions (2026-11-23):**
+- **The root:** the worlds are enumerated when there are at most N_end, and otherwise M are sampled from the
+  [deck model](src/agents/flat_mc/deck_model.md). The trigger is the smaller prize count at most P_end (2 to start,
+  about 10% of decisions). Only plans playable in every root world are compared. So the solver is exact over chance
+  and the next few turns, and a sampled search over the opponent's hand: the change from the proposal.
+- **Chance in the tree:** a one-card draw branches on each distinct card left in the deck (about 14 late in a game),
+  by moving a copy to the top of the world's deck; coin flips through a scripted `Rng`, replaying the action for each
+  heads and tails sequence; big draws (a Supporter's 6 or 7 cards) sampled, or the segment ends there. Cards whose
+  deck position the player knows stay where they are.
+- **Moves and depth:** the and-tree's top plans as in IS-MCTS (16 for the searcher, 4 for the opponent at 25 nodes),
+  not every end state; depth in turn segments, deepened one at a time, e at the depth limit, children ordered by e.
+  One turn and the opponent's draw and reply cost about 16 × 14 × 2 ms ≈ 0.45 s a world before pruning, so pruning
+  and ordering decide what's affordable; 9.1 measures it.
+- **Budgets:** a node budget, so runs repeat, set so a solver decision costs about an IS-MCTS search; only about 10%
+  of decisions qualify, so even three times that adds about 20% a game.
+- **The agent:** `EndgameAgent` (`--agent endgame`) runs the proposal's decision procedure: the solver if the
+  trigger holds, else the or-tree's win, else IS-MCTS; IS-MCTS too if the first depth doesn't finish.
+- **Checks:** brute-force agreement on small positions; an endgame suite of positions at 2 or fewer prizes saved
+  from IS-MCTS games, each played to the end many times by each agent; nodes pruned by alpha-beta and Star1. The
+  sign-off, `endgame,ismcts` at about 2.5 to 2.8 games/s, takes about 1.5 to 2 hours for 16,000 games.
+
+| Step | Builds | Status |
+|---|---|---|
+| 9.1 | **Endgame lab:** world counts, chance branching and the solver's cost on positions from real games (`pokebot-sim --endgame-lab N`); P_end, M and the depth chosen. *The scratch measurement above is its first table* | ⬜ |
+| 9.2 | **Chance outcomes:** a boundary action's outcomes in a world, with probabilities: one-card draws by card, coin flips through a scripted `Rng`, big draws sampled; tests that the probabilities add up to 1 and match brute force over deck orders | ⬜ |
+| 9.3 | **Expectiminimax with alpha-beta and Star1:** OR, AND-min and AND-chance nodes over and-tree plans, values in [−1, 1], depth in turn segments, children ordered by e; the same values as a brute-force search on small positions; nodes pruned counted | ⬜ |
+| 9.4 | **Root and iterative deepening:** worlds enumerated (at most N_end) or sampled from the deck model, only plans playable in every world, deepening under a node budget, the deepest finished iteration's best plan | ⬜ |
+| 9.5 | **Endgame agent:** the solver, else the or-tree's win, else IS-MCTS; `--agent endgame`, its settings and counters | ⬜ |
+| 9.6 | **Endgame suite and tuning:** positions at 2 or fewer prizes saved from IS-MCTS games; the solver's win rate from them against IS-MCTS alone; P_end, M, the depth and the budget tuned at matched time | ⬜ |
+| 9.7 | **Sign-off:** `endgame` against `ismcts` on every deck pairing, at least 1,000 games each, with invariant checks; brute-force agreement; nodes pruned by alpha-beta and Star1; speed; known limits | ⬜ |
 
 ## M5 onward
 
