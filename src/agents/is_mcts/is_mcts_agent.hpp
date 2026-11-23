@@ -19,7 +19,7 @@ namespace pokebot {
 
     struct IsMctsAgentOptions {
         int or_budget = 200;
-        IsMctsOptions search{.iterations = 48, .playout{.depth = 2}, .matched_worlds = true};
+        IsMctsOptions search{.iterations = 42, .playout{.depth = 2}, .matched_worlds = true};
         Weights weights = default_weights();
     };
 

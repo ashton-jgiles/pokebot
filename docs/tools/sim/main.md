@@ -47,7 +47,7 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 | `--mc-policy P` | `greedy` | Who plays the playouts: `greedy` or `biased` |
 | `--mc-greedy-worlds W` | 1 | Worlds for each decision of a Greedy playout |
 | `--mc-greedy-choices` | | Flat MC leaves its decisions outside the main phase to Greedy, as the Planner does. By default it plays them out like its plans |
-| `--mcts-iterations N` | 48 | [IS-MCTS](../../src/agents/is_mcts/is_mcts_agent.md)'s iterations each decision |
+| `--mcts-iterations N` | 42 | [IS-MCTS](../../src/agents/is_mcts/is_mcts_agent.md)'s iterations each decision |
 | `--mcts-c C` | 0.7 | Its exploration constant |
 | `--mcts-depth R` | 2 | How far its playouts run past a leaf, as `--mc-depth` |
 | `--mcts-plans K` | 16 | Plans at the searcher's nodes |

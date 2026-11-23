@@ -9,7 +9,7 @@ endgame solver, Model 3, comes in M9).
 ```cpp
 const ArchetypeLibrary library = ArchetypeLibrary::load("data/archetypes", db);
 const DeckModel model(library);
-IsMctsAgent agent(seed, model);   // 48 iterations, r = 2, matched worlds
+IsMctsAgent agent(seed, model);   // 42 iterations, r = 2, matched worlds
 agent.analysis();                 // the last search's root: plans, visits, means
 ```
 
@@ -43,12 +43,12 @@ and the action is offered.
 | `IsMctsAgentOptions` | Default | Meaning |
 |---|---|---|
 | `or_budget` | 200 | Nodes for the win search |
-| `search` | [`IsMctsOptions`](is_mcts.md#the-search) with 48 iterations, r = 2 and matched worlds | The search: iterations, C, r, the and-tree budgets, matched worlds, choosing by mean |
+| `search` | [`IsMctsOptions`](is_mcts.md#the-search) with 42 iterations, r = 2 and matched worlds | The search: iterations, C, r, the and-tree budgets, matched worlds, choosing by mean |
 | `weights` | `default_weights()` | θ for e (Greedy's setup rule) |
 
 Step 8.5 started at 64 iterations, to match Flat MC's 64 playouts. Step 8.6 tuned against Flat MC instead
 (see the roadmap's 8.6 table): matched worlds and r = 2 won. By search time a game, 42 iterations at r = 2
-match Flat MC's time (1.02 times it) and 48 take about 1.16 times it. The search's own `IsMctsOptions` defaults stay as they were
+match Flat MC's time (1.02 times it), so they are the default; the first sign-off ran 48, about 1.16 times it. The search's own `IsMctsOptions` defaults stay as they were
 (200 iterations, r = 1, fresh worlds).
 
 ## Counters

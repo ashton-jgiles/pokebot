@@ -97,7 +97,7 @@ namespace {
                      "  --mc-policy P            greedy or biased: who plays the playouts (default greedy)\n"
                      "  --mc-greedy-worlds W     worlds for a greedy playout's decisions (default 1)\n"
                      "  --mc-greedy-choices      flat MC leaves its decisions outside the main phase to Greedy (default: plays them out)\n"
-                     "  --mcts-iterations N      IS-MCTS's iterations each decision (default 48)\n"
+                     "  --mcts-iterations N      IS-MCTS's iterations each decision (default 42)\n"
                      "  --mcts-c C               IS-MCTS's exploration constant (default 0.7)\n"
                      "  --mcts-depth R           turns of the searching player an IS-MCTS playout runs to (default 2)\n"
                      "  --mcts-plans K           IS-MCTS's plans at the searcher's nodes (default 16)\n"
