@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "agents/endgame/chance.hpp"
+#include "agents/endgame/endgame_solver.hpp"
 #include "agents/flat_mc/deck_model.hpp"
 #include "cards/db/card_db.hpp"
 #include "harness/arena.hpp"
@@ -23,6 +24,8 @@ namespace pokebot {
         int opponent_plans = 4;
         int samples = 1;
         double list_threshold = 0.001;
+        int solver_worlds = 4;
+        int solver_depth = 2;
         const DeckModel* model = nullptr;
         std::function<void(long long, long long)> on_progress;
     };
@@ -42,6 +45,18 @@ namespace pokebot {
         double seconds = 0.0;
     };
 
+    struct EndgameSolve {
+        int depth = 0;
+        long long visited = 0;
+        long long chance_nodes = 0;
+        long long alpha_beta_cuts = 0;
+        long long star1_cuts = 0;
+        long long and_trees = 0;
+        long long dropped = 0;
+        double value = 0.0;
+        double seconds = 0.0;
+    };
+
     struct EndgamePosition {
         int min_prizes = 0;
         double own_worlds = 0.0;
@@ -52,6 +67,7 @@ namespace pokebot {
         int lists = 0;
         bool measured = false;
         EndgameTree tree;
+        EndgameSolve solve;
     };
 
     struct EndgameLabResult {
@@ -76,6 +92,10 @@ namespace pokebot {
         EndgameTree total;
         double median_seconds = 0.0;
         double p90_seconds = 0.0;
+        EndgameSolve solved;
+        std::array<long long, 4> solve_depths{};
+        double solve_median_seconds = 0.0;
+        double solve_p90_seconds = 0.0;
     };
 
     EndgameLabResult run_endgame_lab(const CardDB& db, const std::vector<ArenaDeck>& decks, const EndgameLabOptions& options = {});

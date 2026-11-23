@@ -63,6 +63,8 @@ namespace {
         int budget_lab_games = 0;
         int endgame_lab_games = 0;
         int endgame_prizes = 2;
+        int endgame_worlds = 4;
+        int endgame_depth = 2;
         int every = 5;
     };
 
@@ -76,7 +78,7 @@ namespace {
                      "                   [--mcts-opponent-budget B] [--mcts-opponent-plans K] [--mcts-fresh-worlds]\n"
                      "                   [--mcts-final-mean [--mcts-min-visits N]]\n"
                      "                   [--planner-lab N [--every K]] [--budget-lab N [--every K]]\n"
-                     "                   [--endgame-lab N [--every K] [--endgame-prizes P]]\n"
+                     "                   [--endgame-lab N [--every K] [--endgame-prizes P] [--endgame-worlds M] [--endgame-depth D]]\n"
                      "  --games N            games to play (default 1000)\n"
                      "  --agent A            random, biased, greedy, planner, flatmc or ismcts (default biased)\n"
                      "  --seed S             first game's seed; game i uses S + i (default 1)\n"
@@ -116,7 +118,9 @@ namespace {
                      "                           --planner-and-budget, at every Kth main-phase decision\n"
                      "  --endgame-lab N          play N greedy games, count the hidden-card worlds at every main-phase\n"
                      "                           decision and, at every Kth one with at most P prizes left\n"
-                     "                           (--endgame-prizes P, default 2), time a two-segment search\n"
+                     "                           (--endgame-prizes P, default 2), time a two-segment search and the\n"
+                     "                           endgame solver over M worlds to depth D (--endgame-worlds M, default 4;\n"
+                     "                           --endgame-depth D, default 2)\n"
                      "If an invariant breaks, the game is saved to replays/invariant-seed-S.json; with --agents, a game\n"
                      "that fails for any reason (a broken invariant or an agent's error) is saved to replays/failed-seed-S.json.\n";
     }
@@ -184,6 +188,10 @@ namespace {
                 options.endgame_lab_games = std::stoi(argv[++i]);
             } else if (arg == "--endgame-prizes" && has_value) {
                 options.endgame_prizes = std::stoi(argv[++i]);
+            } else if (arg == "--endgame-worlds" && has_value) {
+                options.endgame_worlds = std::stoi(argv[++i]);
+            } else if (arg == "--endgame-depth" && has_value) {
+                options.endgame_depth = std::stoi(argv[++i]);
             } else if (arg == "--planner-lab" && has_value) {
                 options.lab_games = std::stoi(argv[++i]);
             } else if (arg == "--every" && has_value) {
@@ -240,7 +248,8 @@ namespace {
             (options.budget_lab_games > 0 && (!options.agents.empty() || options.print || options.check_replays || options.lab_games > 0))) {
             return false;
         }
-        if (options.endgame_lab_games < 0 || options.endgame_prizes < 1 || options.endgame_prizes > 6 ||
+        if (options.endgame_lab_games < 0 || options.endgame_prizes < 1 || options.endgame_prizes > 6 || options.endgame_worlds < 1 ||
+            options.endgame_depth < 1 ||
             (options.endgame_lab_games > 0 &&
              (!options.agents.empty() || options.print || options.check_replays || options.lab_games > 0 || options.budget_lab_games > 0))) {
             return false;
@@ -447,6 +456,8 @@ namespace {
         lab.seed = options.seed;
         lab.every = options.every;
         lab.tree_prizes = options.endgame_prizes;
+        lab.solver_worlds = options.endgame_worlds;
+        lab.solver_depth = options.endgame_depth;
         lab.and_budget = options.planner.and_budget;
         lab.samples = options.planner.samples;
         lab.plans = options.is_mcts.search.macros.searcher_plans;
@@ -497,6 +508,24 @@ namespace {
                       << per(t.random) << std::setw(7) << per(t.chance) << std::setw(9) << per(t.opponent_plans) << std::setw(8) << per(t.leaves)
                       << std::setprecision(3) << std::setw(8) << t.seconds / static_cast<double>(s.trees) << std::setw(10) << s.median_seconds << std::setw(7)
                       << s.p90_seconds << '\n';
+        }
+        std::cout << "Endgame solver at the same decisions (" << lab.solver_worlds << " worlds from the deck model, alpha-beta and Star1, iterative deepening to depth "
+                  << lab.solver_depth << ", no node budget), averages a solve:\n";
+        std::cout << "  prizes  solves  depth 0/1/2+  nodes  chance nodes  alpha-beta cuts  Star1 cuts  and-trees  plans dropped  mean s  median s  p90 s\n";
+        for (int p = 1; p <= lab.tree_prizes; ++p) {
+            const EndgameSummary s = summarize(r, p);
+            if (s.trees == 0) {
+                continue;
+            }
+            const EndgameSolve& v = s.solved;
+            const auto per = [&](long long value) {
+                return static_cast<double>(value) / static_cast<double>(s.trees);
+            };
+            std::cout << std::setprecision(1) << std::setw(8) << p << std::setw(8) << s.trees << "   " << s.solve_depths[0] << " / " << s.solve_depths[1] << " / "
+                      << s.solve_depths[2] + s.solve_depths[3] << std::setw(9) << per(v.visited) << std::setw(14) << per(v.chance_nodes) << std::setw(17)
+                      << per(v.alpha_beta_cuts) << std::setw(12) << per(v.star1_cuts) << std::setw(11) << per(v.and_trees) << std::setw(15) << per(v.dropped)
+                      << std::setprecision(3) << std::setw(8) << v.seconds / static_cast<double>(s.trees) << std::setw(10) << s.solve_median_seconds << std::setw(7)
+                      << s.solve_p90_seconds << '\n';
         }
         std::cout << std::setprecision(1) << "Took " << r.seconds << " s\n";
         return 0;

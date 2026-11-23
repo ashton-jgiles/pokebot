@@ -175,6 +175,32 @@ namespace pokebot {
             return position;
         }
 
+        EndgameSolve measure_solver(const GameState& game, const EndgameLabOptions& options, std::uint64_t seed) {
+            EndgameOptions solver_options;
+            solver_options.worlds = options.solver_worlds;
+            solver_options.max_depth = options.solver_depth;
+            solver_options.max_nodes = 0;
+            solver_options.search.root_budget = options.and_budget;
+            solver_options.search.root_plans = options.plans;
+            solver_options.search.budget = options.opponent_budget;
+            solver_options.search.plans = options.opponent_plans;
+            solver_options.search.samples = options.samples;
+            EndgameSolver solver(options.model, seed, solver_options);
+            const EndgameResult r = solver.solve(observe(game, game.decision().player));
+            const EndgameStats& s = solver.stats();
+            EndgameSolve out;
+            out.depth = r.depth;
+            out.visited = r.visited;
+            out.chance_nodes = s.search.chance_nodes;
+            out.alpha_beta_cuts = s.search.alpha_beta_cuts;
+            out.star1_cuts = s.search.star1_cuts;
+            out.and_trees = s.search.and_trees;
+            out.dropped = s.dropped;
+            out.value = r.value;
+            out.seconds = s.seconds;
+            return out;
+        }
+
         double median(std::vector<double> values, double at = 0.5) {
             if (values.empty()) {
                 return 0.0;
@@ -223,6 +249,7 @@ namespace pokebot {
                 lowest = std::min(lowest, position.min_prizes);
                 if (position.min_prizes <= options.tree_prizes && ++qualifying % options.every == 0) {
                     position.tree = measure_tree(before, options, seed ^ static_cast<std::uint64_t>(qualifying));
+                    position.solve = measure_solver(before, options, seed ^ static_cast<std::uint64_t>(qualifying) ^ 0x5A5AULL);
                     position.measured = true;
                 }
                 result.positions.push_back(position);
@@ -248,6 +275,7 @@ namespace pokebot {
         std::vector<double> opponent_deck;
         std::vector<double> lists;
         std::vector<double> seconds;
+        std::vector<double> solve_seconds;
         for (const EndgamePosition& p : result.positions) {
             if (p.min_prizes != min_prizes) {
                 continue;
@@ -264,6 +292,16 @@ namespace pokebot {
                 ++summary.trees;
                 add(summary.total, p.tree);
                 seconds.push_back(p.tree.seconds);
+                EndgameSolve& s = summary.solved;
+                s.visited += p.solve.visited;
+                s.chance_nodes += p.solve.chance_nodes;
+                s.alpha_beta_cuts += p.solve.alpha_beta_cuts;
+                s.star1_cuts += p.solve.star1_cuts;
+                s.and_trees += p.solve.and_trees;
+                s.dropped += p.solve.dropped;
+                s.seconds += p.solve.seconds;
+                ++summary.solve_depths[static_cast<std::size_t>(std::clamp(p.solve.depth, 0, 3))];
+                solve_seconds.push_back(p.solve.seconds);
             }
         }
         if (summary.positions == 0) {
@@ -286,6 +324,8 @@ namespace pokebot {
         summary.median_lists = median(lists);
         summary.median_seconds = median(seconds);
         summary.p90_seconds = median(seconds, 0.9);
+        summary.solve_median_seconds = median(solve_seconds);
+        summary.solve_p90_seconds = median(solve_seconds, 0.9);
         return summary;
     }
 

@@ -4,8 +4,9 @@
 **Library:** `pokebot_lib` · **Namespace:** `pokebot`
 
 Model 3 (proposal Section 9): an expectiminimax search over turn segments in one world ŵ, pruned by
-alpha-beta at the players' decisions and Star1 at chance nodes. Step 9.4 runs it over the root's
-worlds with iterative deepening under a budget.
+alpha-beta at the players' decisions and Star1 at chance nodes. The
+[endgame solver](endgame_solver.md) runs it over the root's worlds with iterative deepening under a
+budget.
 
 ```cpp
 const SolveResult r = expectiminimax(world, options);   // depth 2 by default
@@ -52,8 +53,16 @@ search without it.
 | `budget`, `plans` | 25, 4 | The and-tree deeper, for either player |
 | `samples` | 1 | The plan scorer's sampled worlds |
 | `prune` | true | Alpha-beta and Star1; false is the brute-force reference |
+| `max_nodes` | 0 | Stop once this many nodes (decisions, chance nodes and leaves) are visited; 0 = no limit |
 | `chance` | `ChanceOptions` | How chance outcomes are enumerated or sampled |
 | `weights` | `default_weights()` | θ for e |
+
+**Over several worlds:** `solve_worlds(worlds, plans, options)` takes the root's plans (from
+`root_moves(game, options)`) and scores each by its average over the worlds, equally weighted: a
+chance node over the worlds under the OR node over the plans, with Star1 against the best plan so
+far. `expectiminimax(game)` is `solve_worlds({&game}, root_moves(game))`. Each plan must be playable in
+every world. With `max_nodes`, a search that reaches it stops, returns the plans it finished and is
+marked `complete = false`. `visited(stats)` counts decisions, chance nodes and leaves.
 
 `ExpectiminimaxStats`: decision nodes, chance nodes, leaves, and-tree searches, moves cut by
 alpha-beta, outcomes cut by Star1, the chance outcomes' own counters and seconds.

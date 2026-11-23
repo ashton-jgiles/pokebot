@@ -40,6 +40,12 @@ player, it also measures a **two-segment search** in the true world, without pru
 4. e at the leaves (u if the game is over), the minimum over replies, the expectation over draws, the
    maximum over plans.
 
+At the same decisions it also runs the [endgame solver](../agents/endgame/endgame_solver.md) from
+the deciding player's observation, over `solver_worlds` (4) worlds from the deck model to
+`solver_depth` (2), with the lab's plan settings and no node budget, and records the depth reached,
+nodes, chance nodes, alpha-beta and Star1 cuts, and-trees, plans dropped, value and seconds: what a
+full solve costs, for choosing the solver's node budget.
+
 Decisions between the segments (a new Active, an effect's choice) go to Greedy. A plan that stops in
 the searcher's own turn (it drew or searched) is a leaf here and is counted by the cards it drew; in
 the solver those are a chance layer of their own. A plan that used the random generator (a coin
@@ -54,7 +60,8 @@ would compute in that world.
 | `and_budget`, `plans` | 300, 16 | The searcher's and-tree |
 | `opponent_budget`, `opponent_plans` | 25, 4 | The opponent's and-tree |
 | `samples` | 1 | The plan scorer's sampled worlds |
-| `model` | none | The deck model, for counting lists |
+| `model` | none | The deck model, for counting lists and dealing the solver's worlds |
+| `solver_worlds`, `solver_depth` | 4, 2 | The endgame solver's worlds and depth |
 
 `summarize(result, p)` gives, for decisions with `p` Prize cards left as the smaller count, the
 medians (log₁₀ worlds, hidden hand, deck cards, lists), the share of decisions with at most 10², 10⁴,
@@ -62,9 +69,10 @@ medians (log₁₀ worlds, hidden hand, deck cards, lists), the share of decisio
 
 ## In the sim
 
-`--endgame-lab N [--every K] [--endgame-prizes P]` runs it with the sim's `--planner-and-budget`,
+`--endgame-lab N [--every K] [--endgame-prizes P] [--endgame-worlds M] [--endgame-depth D]` runs it with the sim's `--planner-and-budget`,
 `--planner-samples`, `--mcts-plans`, `--mcts-opponent-budget` and `--mcts-opponent-plans`, so the
-trees use the moves IS-MCTS uses, and prints a world table and a tree table by Prize cards left.
+trees use the moves IS-MCTS uses, and prints a world table, a tree table and a solver table by Prize
+cards left.
 
 ## Results
 
@@ -99,6 +107,25 @@ the counts above.
   drawing 1 to 3 cards, so they are a chance layer too.
 - **Coin flips and shuffles are rare:** about 1.3 plans a tree.
 
+**Step 9.4 (2026-11-23):** the same `--endgame-lab 160`, now also running the
+[endgame solver](../agents/endgame/endgame_solver.md) at each tree (4 worlds from the deck model,
+alpha-beta and Star1, depth 1 then 2, no node budget): 1,150 s, nearly all of it in the solver.
+
+| Prize cards left | Solves | Depth 0 / 1 / 2 | Nodes | Chance nodes | Alpha-beta cuts | Star1 cuts | And-trees | Plans dropped | Seconds: mean, median, p90 |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | 95 | 0 / 0 / 95 | 38,967 | 3,391 | 84 | 8,497 | 1,350 | 0 | 4.20, 1.18, 5.65 |
+| 2 | 237 | 3 / 0 / 234 | 38,742 | 3,005 | 89 | 4,581 | 1,193 | 0 | 2.74, 1.26, 6.33 |
+
+- **A full depth-2 solve costs about 1.2 s at the median and 3 s on average**, against IS-MCTS's
+  0.1 s a search, with a long tail (p90 about 6 s). Nodes cost about 0.1 ms each.
+- **The and-trees are most of it:** about 1,200 to 1,350 a solve, at about 2 ms each for 25 nodes
+  ([budget lab](budget_lab.md)), one at every decision below the root: each of the opponent's turns
+  after each draw, and the searcher's turn after a mid-turn draw.
+- **Star1 does most of the pruning** (4,600 to 8,500 outcomes cut a solve); alpha-beta cuts few
+  moves, as each decision has only 4.
+- **No root plan was dropped:** the searcher's plans played in every world. The 3 depth-0 solves had a
+  single plan.
+
 ## Tests
 
 [`tests/test_endgame_lab.cpp`](../../../tests/test_endgame_lab.cpp), tag `[endgame]`:
@@ -106,4 +133,5 @@ the counts above.
 - placements counted by card: two copies of one card and one of another give 2 ways to pick one card;
   five different cards give 10 ways to pick two; no way to pick 2 and 1 from two copies;
 - on the real decks, every world count at least 1, trees measured with values in [−1, 1] and leaves
-  covering the playable plans, and the same seed giving the same counts and values.
+  covering the playable plans, solver values in [−1, 1] with some solve reaching depth 2, and the same
+  seed giving the same counts and values.

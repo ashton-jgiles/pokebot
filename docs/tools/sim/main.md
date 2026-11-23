@@ -21,7 +21,7 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
                                         [--mcts-iterations N] [--mcts-c C] [--mcts-depth R] [--mcts-plans K]
                                         [--mcts-opponent-budget B] [--mcts-opponent-plans K] [--mcts-fresh-worlds] [--mcts-final-mean [--mcts-min-visits N]]
                                         [--planner-lab N [--every K]] [--budget-lab N [--every K]]
-                                        [--endgame-lab N [--every K] [--endgame-prizes P]]
+                                        [--endgame-lab N [--every K] [--endgame-prizes P] [--endgame-worlds M] [--endgame-depth D]]
 ```
 
 | Option | Default | Meaning |
@@ -61,6 +61,8 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 | `--budget-lab N` | | Play `N` Greedy-against-Greedy games and, at one in every `K` main-phase decisions, time the and-tree at budgets 25, 50, 100 and 150 against `--planner-and-budget` and report what each gives up ([budget lab](../../src/harness/budget_lab.md)). Uses `--seed` and `--planner-samples` |
 | `--endgame-lab N` | | Play `N` Greedy-against-Greedy games, count the hidden-card worlds at every main-phase decision and, at one in every `K` with at most `P` Prize cards left, time a two-segment search without pruning ([endgame lab](../../src/harness/endgame_lab.md)). Uses `--seed`, `--planner-and-budget`, `--planner-samples` and the `--mcts-*` plan settings, and loads the archetype library |
 | `--endgame-prizes P` | 2 | With `--endgame-lab`: the most Prize cards left (1 to 6) for a tree |
+| `--endgame-worlds M` | 4 | With `--endgame-lab`: the [endgame solver](../../src/agents/endgame/endgame_solver.md)'s worlds |
+| `--endgame-depth D` | 2 | With `--endgame-lab`: the endgame solver's deepest depth |
 | `--every K` | 5 | With `--planner-lab`, `--budget-lab` or `--endgame-lab`: which decisions to measure |
 
 With `flatmc` or `ismcts`, the [archetype library](../../data/archetypes/README.md) is loaded from

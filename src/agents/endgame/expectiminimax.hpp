@@ -17,6 +17,7 @@ namespace pokebot {
         int plans = 4;
         int samples = 1;
         bool prune = true;
+        long long max_nodes = 0;
         ChanceOptions chance{};
         Weights weights = default_weights();
     };
@@ -42,9 +43,13 @@ namespace pokebot {
         std::vector<SolvedPlan> plans;
         std::size_t best = 0;
         double value = -1.0;
+        bool complete = true;
         ExpectiminimaxStats stats;
     };
 
+    long long visited(const ExpectiminimaxStats& stats);
+    std::vector<Plan> root_moves(const GameState& game, const ExpectiminimaxOptions& options = {});
+    SolveResult solve_worlds(const std::vector<const GameState*>& worlds, const std::vector<Plan>& plans, const ExpectiminimaxOptions& options = {});
     SolveResult expectiminimax(const GameState& game, const ExpectiminimaxOptions& options = {});
 
 } // namespace pokebot

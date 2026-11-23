@@ -45,6 +45,7 @@ add_library(pokebot_lib
   agents/is_mcts/is_mcts_agent.cpp
   agents/endgame/chance.cpp
   agents/endgame/expectiminimax.cpp
+  agents/endgame/endgame_solver.cpp
   harness/match.cpp
   harness/replay.cpp
   harness/arena.cpp

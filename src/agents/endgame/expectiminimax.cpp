@@ -37,6 +37,8 @@ namespace pokebot {
         public:
             Solver(int me, const ExpectiminimaxOptions& options, ExpectiminimaxStats& stats) : me_(me), options_(options), stats_(stats) {}
 
+            bool aborted() const { return aborted_; }
+
             std::vector<Plan> moves(const GameState& game, bool root) {
                 std::vector<Plan> out;
                 if (!planning(game)) {
@@ -71,6 +73,10 @@ namespace pokebot {
             }
 
             double value(const GameState& game, int depth, double alpha, double beta) {
+                if (aborted_ || (options_.max_nodes > 0 && visited(stats_) >= options_.max_nodes)) {
+                    aborted_ = true;
+                    return 0.0;
+                }
                 if (game.is_over()) {
                     ++stats_.leaves;
                     return utility(game, me_);
@@ -87,7 +93,7 @@ namespace pokebot {
                 ++stats_.nodes;
                 const bool maximizing = game.decision().player == me_;
                 double best = maximizing ? -kInfinity : kInfinity;
-                for (std::size_t i = 0; i < list.size(); ++i) {
+                for (std::size_t i = 0; i < list.size() && !aborted_; ++i) {
                     const double v = move_value(game, list[i], depth, alpha, beta);
                     if (maximizing) {
                         best = std::max(best, v);
@@ -115,7 +121,7 @@ namespace pokebot {
                 std::stable_sort(outcomes.begin(), outcomes.end(), [](const Outcome& a, const Outcome& b) { return a.probability > b.probability; });
                 double sum = 0.0;
                 double left = 1.0;
-                for (std::size_t i = 0; i < outcomes.size(); ++i) {
+                for (std::size_t i = 0; i < outcomes.size() && !aborted_; ++i) {
                     const double p = outcomes[i].probability;
                     left = std::max(0.0, left - p);
                     double low = -kInfinity;
@@ -142,28 +148,75 @@ namespace pokebot {
             int me_;
             const ExpectiminimaxOptions& options_;
             ExpectiminimaxStats& stats_;
+            bool aborted_ = false;
         };
 
     } // namespace
 
-    SolveResult expectiminimax(const GameState& game, const ExpectiminimaxOptions& options) {
+    long long visited(const ExpectiminimaxStats& stats) {
+        return stats.nodes + stats.chance_nodes + stats.leaves;
+    }
+
+    std::vector<Plan> root_moves(const GameState& game, const ExpectiminimaxOptions& options) {
+        if (game.is_over()) {
+            return {};
+        }
+        ExpectiminimaxStats stats;
+        return Solver(game.decision().player, options, stats).moves(game, true);
+    }
+
+    SolveResult solve_worlds(const std::vector<const GameState*>& worlds, const std::vector<Plan>& plans, const ExpectiminimaxOptions& options) {
         const auto start = std::chrono::steady_clock::now();
         SolveResult result;
-        if (game.is_over()) {
+        if (worlds.empty() || worlds.front()->is_over()) {
             return result;
         }
-        const int me = game.decision().player;
+        const int me = worlds.front()->decision().player;
         Solver solver(me, options, result.stats);
+        const double p = 1.0 / static_cast<double>(worlds.size());
         double best = -kInfinity;
-        for (const Plan& plan : solver.moves(game, true)) {
-            const double v = solver.move_value(game, plan, options.depth, options.prune ? best : -kInfinity, kInfinity);
-            result.plans.push_back(SolvedPlan{plan, v, !options.prune || v > best});
-            if (v > best) {
-                best = v;
+        for (const Plan& plan : plans) {
+            const double alpha = options.prune ? best : -kInfinity;
+            double sum = 0.0;
+            double left = 1.0;
+            for (std::size_t w = 0; w < worlds.size(); ++w) {
+                left = std::max(0.0, left - p);
+                const double low = options.prune ? (alpha - sum - kHigh * left) / p : -kInfinity;
+                sum += p * solver.move_value(*worlds[w], plan, options.depth, low, kInfinity);
+                if (solver.aborted()) {
+                    break;
+                }
+                if (options.prune && w + 1 < worlds.size() && sum + kHigh * left <= alpha) {
+                    result.stats.star1_cuts += static_cast<long long>(worlds.size() - w - 1);
+                    sum += kHigh * left;
+                    break;
+                }
+            }
+            if (solver.aborted()) {
+                result.complete = false;
+                break;
+            }
+            result.plans.push_back(SolvedPlan{plan, sum, !options.prune || sum > best});
+            if (sum > best) {
+                best = sum;
                 result.best = result.plans.size() - 1;
             }
         }
-        result.value = result.plans.empty() ? evaluate(game, me, options.weights) : best;
+        result.value = result.plans.empty() ? evaluate(*worlds.front(), me, options.weights) : best;
+        result.stats.seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+        return result;
+    }
+
+    SolveResult expectiminimax(const GameState& game, const ExpectiminimaxOptions& options) {
+        const auto start = std::chrono::steady_clock::now();
+        if (game.is_over()) {
+            return SolveResult{};
+        }
+        const std::vector<Plan> plans = root_moves(game, options);
+        SolveResult result = solve_worlds({&game}, plans, options);
+        if (planning(game)) {
+            ++result.stats.and_trees;
+        }
         result.stats.seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
         return result;
     }

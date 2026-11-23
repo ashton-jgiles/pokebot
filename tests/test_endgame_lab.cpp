@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstddef>
 #include <vector>
 
@@ -33,9 +34,11 @@ TEST_CASE("on the real decks, the endgame lab counts worlds and measures two-seg
     options.tree_prizes = 6;
     options.plans = 4;
     options.and_budget = 100;
+    options.solver_worlds = 2;
     const pokebot::EndgameLabResult result = pokebot::run_endgame_lab(real->db, decks, options);
     REQUIRE(!result.positions.empty());
     long long trees = 0;
+    int deepest = 0;
     for (const pokebot::EndgamePosition& p : result.positions) {
         CHECK(p.own_worlds >= 1.0);
         CHECK(p.opponent_worlds >= 1.0);
@@ -49,9 +52,14 @@ TEST_CASE("on the real decks, the endgame lab counts worlds and measures two-seg
             CHECK(p.tree.leaves >= p.tree.plans - p.tree.unplayable);
             CHECK(p.tree.value >= -1.0);
             CHECK(p.tree.value <= 1.0);
+            CHECK(p.solve.value >= -1.0);
+            CHECK(p.solve.value <= 1.0);
+            CHECK(p.solve.depth <= 2);
+            deepest = std::max(deepest, p.solve.depth);
         }
     }
     CHECK(trees > 0);
+    CHECK(deepest == 2);
     CHECK(result.games == 2);
     const pokebot::EndgameLabResult again = pokebot::run_endgame_lab(real->db, decks, options);
     REQUIRE(again.positions.size() == result.positions.size());
