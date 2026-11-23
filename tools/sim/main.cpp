@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#include "agents/endgame/endgame_agent.hpp"
 #include "agents/flat_mc/deck_model.hpp"
 #include "agents/flat_mc/flat_mc_agent.hpp"
 #include "agents/flat_mc/playout.hpp"
@@ -58,6 +59,7 @@ namespace {
         PlannerOptions planner;
         FlatMcOptions flat_mc;
         IsMctsAgentOptions is_mcts;
+        EndgameAgentOptions endgame;
         const DeckModel* model = nullptr;
         int lab_games = 0;
         int budget_lab_games = 0;
@@ -69,7 +71,7 @@ namespace {
     };
 
     void print_usage() {
-        std::cerr << "usage: pokebot-sim [--games N] [--agent random|biased|greedy|planner|flatmc] [--seed S] [--no-check]\n"
+        std::cerr << "usage: pokebot-sim [--games N] [--agent random|biased|greedy|planner|flatmc|ismcts|endgame] [--seed S] [--no-check]\n"
                      "                   [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]\n"
                      "                   [--agents A,B [--threads N] [--save-replays K]]\n"
                      "                   [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]\n"
@@ -78,9 +80,10 @@ namespace {
                      "                   [--mcts-opponent-budget B] [--mcts-opponent-plans K] [--mcts-fresh-worlds]\n"
                      "                   [--mcts-final-mean [--mcts-min-visits N]]\n"
                      "                   [--planner-lab N [--every K]] [--budget-lab N [--every K]]\n"
-                     "                   [--endgame-lab N [--every K] [--endgame-prizes P] [--endgame-worlds M] [--endgame-depth D]]\n"
+                     "                   [--endgame-prizes P] [--endgame-worlds M] [--endgame-depth D] [--endgame-nodes N]\n"
+                     "                   [--endgame-lab N [--every K]]\n"
                      "  --games N            games to play (default 1000)\n"
-                     "  --agent A            random, biased, greedy, planner, flatmc or ismcts (default biased)\n"
+                     "  --agent A            random, biased, greedy, planner, flatmc, ismcts or endgame (default biased)\n"
                      "  --seed S             first game's seed; game i uses S + i (default 1)\n"
                      "  --no-check           skip the invariant check after every action (faster)\n"
                      "  --print              play one game with seed S and print every action\n"
@@ -116,6 +119,11 @@ namespace {
                      "                           main-phase decision (--every K, default 5)\n"
                      "  --budget-lab N           play N greedy games and time the and-tree at cheap budgets against\n"
                      "                           --planner-and-budget, at every Kth main-phase decision\n"
+                     "  --endgame-prizes P       the endgame agent solves when either player has at most P Prize cards\n"
+                     "                           left (default 2)\n"
+                     "  --endgame-worlds M       the endgame solver's worlds (default 4)\n"
+                     "  --endgame-depth D        the endgame solver's deepest depth (default 2)\n"
+                     "  --endgame-nodes N        the endgame solver's node budget, 0 for none (default 10000)\n"
                      "  --endgame-lab N          play N greedy games, count the hidden-card worlds at every main-phase\n"
                      "                           decision and, at every Kth one with at most P prizes left\n"
                      "                           (--endgame-prizes P, default 2), time a two-segment search and the\n"
@@ -192,6 +200,8 @@ namespace {
                 options.endgame_worlds = std::stoi(argv[++i]);
             } else if (arg == "--endgame-depth" && has_value) {
                 options.endgame_depth = std::stoi(argv[++i]);
+            } else if (arg == "--endgame-nodes" && has_value) {
+                options.endgame.solver.max_nodes = std::stoll(argv[++i]);
             } else if (arg == "--planner-lab" && has_value) {
                 options.lab_games = std::stoi(argv[++i]);
             } else if (arg == "--every" && has_value) {
@@ -222,7 +232,7 @@ namespace {
             return false;
         }
         const auto known = [](const std::string& name) {
-            return name == "random" || name == "biased" || name == "greedy" || name == "planner" || name == "flatmc" || name == "ismcts";
+            return name == "random" || name == "biased" || name == "greedy" || name == "planner" || name == "flatmc" || name == "ismcts" || name == "endgame";
         };
         if (options.planner.samples < 1 || options.planner.or_budget < 1 || options.planner.and_budget < 1 || options.every < 1) {
             return false;
@@ -241,6 +251,18 @@ namespace {
         options.is_mcts.or_budget = options.planner.or_budget;
         options.is_mcts.search.macros.searcher_budget = options.planner.and_budget;
         options.is_mcts.search.macros.samples = options.planner.samples;
+        if (options.endgame.solver.max_nodes < 0) {
+            return false;
+        }
+        options.endgame.prizes = options.endgame_prizes;
+        options.endgame.is_mcts = options.is_mcts;
+        options.endgame.solver.worlds = options.endgame_worlds;
+        options.endgame.solver.max_depth = options.endgame_depth;
+        options.endgame.solver.search.root_budget = options.planner.and_budget;
+        options.endgame.solver.search.root_plans = options.is_mcts.search.macros.searcher_plans;
+        options.endgame.solver.search.budget = options.is_mcts.search.macros.opponent_budget;
+        options.endgame.solver.search.plans = options.is_mcts.search.macros.opponent_plans;
+        options.endgame.solver.search.samples = options.planner.samples;
         if (options.lab_games < 0 || (options.lab_games > 0 && (!options.agents.empty() || options.print || options.check_replays))) {
             return false;
         }
@@ -280,6 +302,9 @@ namespace {
         }
         if (name == "ismcts") {
             return std::make_unique<IsMctsAgent>(seed, *options.model, options.is_mcts);
+        }
+        if (name == "endgame") {
+            return std::make_unique<EndgameAgent>(seed, *options.model, options.endgame);
         }
         return std::make_unique<BiasedRandomAgent>(seed);
     }
@@ -576,11 +601,17 @@ namespace {
         std::cout << std::fixed << std::setprecision(1);
         std::cout << a.name << " vs " << b.name << ": " << n << " decks, " << n * n << " pairings, " << per_pairing
                   << " games each (every seed once with " << a.name << " in each seat), " << result.threads << " threads\n";
-        if (options.agents[0] == "ismcts" || options.agents[1] == "ismcts") {
+        if (options.agents[0] == "ismcts" || options.agents[1] == "ismcts" || options.agents[0] == "endgame" || options.agents[1] == "endgame") {
             const IsMctsOptions& m = options.is_mcts.search;
             std::cout << "  ismcts: " << m.iterations << " iterations, C " << m.exploration << ", depth " << m.playout.depth << ", " << m.macros.searcher_plans
                       << " plans, opponent and-tree " << m.macros.opponent_budget << " nodes keeping " << m.macros.opponent_plans
                       << (m.matched_worlds ? ", matched worlds" : "") << (m.final_by_mean ? ", final by mean" : "") << '\n';
+        }
+        if (options.agents[0] == "endgame" || options.agents[1] == "endgame") {
+            const EndgameOptions& e = options.endgame.solver;
+            std::cout << "  endgame: the solver at " << options.endgame.prizes << " or fewer Prize cards left, " << e.worlds << " worlds, depth up to "
+                      << e.max_depth << ", " << e.max_nodes << " nodes, plans " << e.search.root_plans << " at the root and " << e.search.plans
+                      << " below; otherwise ismcts as above\n";
         }
         if (options.agents[0] == "flatmc" || options.agents[1] == "flatmc") {
             std::cout << "  flatmc: " << options.flat_mc.plans << " plans, " << options.flat_mc.playouts << " playouts, depth "
@@ -684,7 +715,7 @@ int main(int argc, char** argv) {
         const auto playing = [&](const char* name) {
             return options.agent == name || std::find(options.agents.begin(), options.agents.end(), name) != options.agents.end();
         };
-        if (playing("flatmc") || playing("ismcts") || options.endgame_lab_games > 0) {
+        if (playing("flatmc") || playing("ismcts") || playing("endgame") || options.endgame_lab_games > 0) {
             library = std::make_unique<ArchetypeLibrary>(ArchetypeLibrary::load("data/archetypes", db));
             model = std::make_unique<DeckModel>(*library);
             options.model = model.get();

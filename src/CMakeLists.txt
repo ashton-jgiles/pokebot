@@ -46,6 +46,7 @@ add_library(pokebot_lib
   agents/endgame/chance.cpp
   agents/endgame/expectiminimax.cpp
   agents/endgame/endgame_solver.cpp
+  agents/endgame/endgame_agent.cpp
   harness/match.cpp
   harness/replay.cpp
   harness/arena.cpp

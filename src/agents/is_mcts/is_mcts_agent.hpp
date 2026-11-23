@@ -42,9 +42,9 @@ namespace pokebot {
         const IsMctsStats& search_stats() const { return search_.stats(); }
         const std::vector<RootChoice>& analysis() const { return analysis_; }
         std::vector<std::pair<std::string, double>> counters() const override;
+        bool following(const Observation& observation, const std::vector<Action>& actions) const;
 
     private:
-        bool following(const Observation& observation, const std::vector<Action>& actions) const;
         Action follow(const GameState& world, int me, const Plan& plan);
 
         const DeckModel& model_;

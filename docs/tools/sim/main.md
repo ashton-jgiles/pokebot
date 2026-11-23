@@ -13,7 +13,7 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 `data/decks/*.txt`, so run `pokebot-import` first.
 
 ```bash
-./build/debug/tools/sim/pokebot-sim.exe [--games N] [--agent random|biased|greedy|planner|flatmc|ismcts] [--seed S] [--no-check]
+./build/debug/tools/sim/pokebot-sim.exe [--games N] [--agent random|biased|greedy|planner|flatmc|ismcts|endgame] [--seed S] [--no-check]
                                         [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]
                                         [--agents A,B [--threads N] [--save-replays K]]
                                         [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]
@@ -21,13 +21,14 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
                                         [--mcts-iterations N] [--mcts-c C] [--mcts-depth R] [--mcts-plans K]
                                         [--mcts-opponent-budget B] [--mcts-opponent-plans K] [--mcts-fresh-worlds] [--mcts-final-mean [--mcts-min-visits N]]
                                         [--planner-lab N [--every K]] [--budget-lab N [--every K]]
-                                        [--endgame-lab N [--every K] [--endgame-prizes P] [--endgame-worlds M] [--endgame-depth D]]
+                                        [--endgame-prizes P] [--endgame-worlds M] [--endgame-depth D] [--endgame-nodes N]
+                                        [--endgame-lab N [--every K]]
 ```
 
 | Option | Default | Meaning |
 |---|---|---|
 | `--games N` | 1000 | Games to play |
-| `--agent A` | `biased` | `random`, `biased` (see [random agents](../../src/agents/random/random_agent.md)) `greedy` ([greedy agent](../../src/agents/greedy/greedy_agent.md)), `planner` ([planner](../../src/agents/planner/planner_agent.md)), `flatmc` ([flat MC](../../src/agents/flat_mc/flat_mc_agent.md)) or `ismcts` ([IS-MCTS](../../src/agents/is_mcts/is_mcts_agent.md)); both players get the same kind |
+| `--agent A` | `biased` | `random`, `biased` (see [random agents](../../src/agents/random/random_agent.md)) `greedy` ([greedy agent](../../src/agents/greedy/greedy_agent.md)), `planner` ([planner](../../src/agents/planner/planner_agent.md)), `flatmc` ([flat MC](../../src/agents/flat_mc/flat_mc_agent.md)), `ismcts` ([IS-MCTS](../../src/agents/is_mcts/is_mcts_agent.md)) or `endgame` ([IS-MCTS with the endgame solver](../../src/agents/endgame/endgame_agent.md)); both players get the same kind |
 | `--seed S` | 1 | Game `i` uses seed `S + i`; agents are seeded from it too |
 | `--no-check` | | Skip the invariant check after every action (about 2.5× faster) |
 | `--print` | | Play **one** game with seed `S` and print every action |
@@ -60,9 +61,11 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 | `--planner-lab N` | | Play `N` Greedy-against-Greedy games and measure the planner's searches at one in every `K` main-phase decisions ([planner lab](../../src/harness/planner_lab.md)). Uses `--seed`, `--planner-samples` and `--planner-or-budget`, and prints its progress after each game to stderr |
 | `--budget-lab N` | | Play `N` Greedy-against-Greedy games and, at one in every `K` main-phase decisions, time the and-tree at budgets 25, 50, 100 and 150 against `--planner-and-budget` and report what each gives up ([budget lab](../../src/harness/budget_lab.md)). Uses `--seed` and `--planner-samples` |
 | `--endgame-lab N` | | Play `N` Greedy-against-Greedy games, count the hidden-card worlds at every main-phase decision and, at one in every `K` with at most `P` Prize cards left, time a two-segment search without pruning ([endgame lab](../../src/harness/endgame_lab.md)). Uses `--seed`, `--planner-and-budget`, `--planner-samples` and the `--mcts-*` plan settings, and loads the archetype library |
-| `--endgame-prizes P` | 2 | With `--endgame-lab`: the most Prize cards left (1 to 6) for a tree |
-| `--endgame-worlds M` | 4 | With `--endgame-lab`: the [endgame solver](../../src/agents/endgame/endgame_solver.md)'s worlds |
-| `--endgame-depth D` | 2 | With `--endgame-lab`: the endgame solver's deepest depth |
+| `--endgame-prizes P` | 2 | The [endgame agent](../../src/agents/endgame/endgame_agent.md) solves when either player has at most `P` Prize cards left (1 to 6); with `--endgame-lab`, the most Prize cards left for a tree |
+| `--endgame-worlds M` | 4 | The [endgame solver](../../src/agents/endgame/endgame_solver.md)'s worlds, for the agent and the lab |
+| `--endgame-depth D` | 2 | The endgame solver's deepest depth, for the agent and the lab |
+| `--endgame-nodes N` | 10000 | The endgame agent's node budget a solve, 0 for none (the lab always solves without one) |
+| | | The endgame solver's plans follow `--mcts-plans` at `--planner-and-budget` at the root and `--mcts-opponent-plans` at `--mcts-opponent-budget` below; the agent's IS-MCTS takes every `--mcts-*` setting |
 | `--every K` | 5 | With `--planner-lab`, `--budget-lab` or `--endgame-lab`: which decisions to measure |
 
 With `flatmc` or `ismcts`, the [archetype library](../../data/archetypes/README.md) is loaded from
