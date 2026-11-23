@@ -5,6 +5,7 @@
 #include <functional>
 #include <vector>
 
+#include "agents/endgame/chance.hpp"
 #include "agents/flat_mc/deck_model.hpp"
 #include "cards/db/card_db.hpp"
 #include "harness/arena.hpp"
@@ -77,7 +78,6 @@ namespace pokebot {
         double p90_seconds = 0.0;
     };
 
-    double count_placements(const std::vector<int>& copies, int first, int second = 0);
     EndgameLabResult run_endgame_lab(const CardDB& db, const std::vector<ArenaDeck>& decks, const EndgameLabOptions& options = {});
     EndgameSummary summarize(const EndgameLabResult& result, int min_prizes);
 

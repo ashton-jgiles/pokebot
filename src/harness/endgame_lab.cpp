@@ -201,34 +201,6 @@ namespace pokebot {
 
     } // namespace
 
-    double count_placements(const std::vector<int>& copies, int first, int second) {
-        if (first < 0 || second < 0) {
-            return 0.0;
-        }
-        const auto rows = static_cast<std::size_t>(first) + 1;
-        const auto cols = static_cast<std::size_t>(second) + 1;
-        std::vector<double> ways(rows * cols, 0.0);
-        ways[0] = 1.0;
-        for (const int n : copies) {
-            std::vector<double> next(ways.size(), 0.0);
-            for (std::size_t a = 0; a < rows; ++a) {
-                for (std::size_t b = 0; b < cols; ++b) {
-                    const double here = ways[a * cols + b];
-                    if (here == 0.0) {
-                        continue;
-                    }
-                    for (std::size_t x = 0; x <= static_cast<std::size_t>(n) && a + x < rows; ++x) {
-                        for (std::size_t y = 0; x + y <= static_cast<std::size_t>(n) && b + y < cols; ++y) {
-                            next[(a + x) * cols + b + y] += here;
-                        }
-                    }
-                }
-            }
-            ways = std::move(next);
-        }
-        return ways.back();
-    }
-
     EndgameLabResult run_endgame_lab(const CardDB& db, const std::vector<ArenaDeck>& decks, const EndgameLabOptions& options) {
         EndgameLabResult result;
         const auto start = std::chrono::steady_clock::now();

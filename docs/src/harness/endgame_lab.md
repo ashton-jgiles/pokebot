@@ -26,7 +26,7 @@ It plays `games` Greedy-against-Greedy games over every deck pairing, as the
   least `list_threshold` (0.001).
 
 Worlds are counted by card, not by copy: copies are interchangeable, so two Basic Energy in the
-Prize cards are one world however they're numbered. `count_placements(copies, first, second)` gives
+Prize cards are one world however they're numbered. [`count_placements(copies, first, second)`](../agents/endgame/chance.md) gives
 the number of ways to pick two disjoint groups of `first` and `second` cards from cards with the given
 numbers of copies.
 

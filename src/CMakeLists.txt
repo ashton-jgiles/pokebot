@@ -43,6 +43,7 @@ add_library(pokebot_lib
   agents/is_mcts/macro_actions.cpp
   agents/is_mcts/is_mcts.cpp
   agents/is_mcts/is_mcts_agent.cpp
+  agents/endgame/chance.cpp
   harness/match.cpp
   harness/replay.cpp
   harness/arena.cpp

@@ -62,6 +62,7 @@ add_executable(pokebot_tests
   test_is_mcts.cpp
   test_is_mcts_agent.cpp
   test_endgame_lab.cpp
+  test_chance.cpp
 )
 target_link_libraries(pokebot_tests PRIVATE
   pokebot_lib pokebot_import_lib pokebot_warnings Catch2::Catch2WithMain)
