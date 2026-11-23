@@ -68,8 +68,36 @@ trees use the moves IS-MCTS uses, and prints a world table and a tree table by P
 
 ## Results
 
-A first scratch measurement (400 games, M9's planning) is in the [roadmap](../../roadmap.md); the
-step 9.1 run goes here.
+A first scratch measurement (400 games, M9's planning) is in the [roadmap](../../roadmap.md).
+
+**Step 9.1 (2026-11-23):** `--endgame-lab 160`, release build: 160 Greedy games (10 a pairing),
+15,754 main-phase decisions (98 a game), a tree at one in every 5 qualifying decisions, 95 s. 68 games
+got down to 1 Prize card for someone and 33 more to 2: 63% of games reach P_end = 2.
+
+| Prize cards left (the smaller count) | Decisions a game | Median worlds (own, opponent, total) | At most 10⁴ / 10⁶ / 10⁸ | Hidden hand (median, at most 2) | Distinct deck cards |
+|---|---|---|---|---|---|
+| 1 | 3.0 | 10³·⁰, 10⁸·³, 10¹⁰·⁹ | 0.6% / 2.8% / 8.3% | 10, 0.8% | 15 / 16 |
+| 2 | 7.4 | 10²·⁶, 10⁷·⁹, 10¹¹·¹ | 0.3% / 1.9% / 10.8% | 8, 3.3% | 15 / 16 |
+| 3 | 8.0 | 10³·³, 10⁸·⁵, 10¹²·⁰ | 0.0% / 0.5% / 4.5% | 7, 3.5% | 16 / 17 |
+| 4 | 11.2 | 10³·⁹, 10⁹·⁸, 10¹³·⁸ | 0.1% / 0.3% / 2.6% | 9, 2.8% | 15 / 16 |
+| 5 | 8.1 | 10⁴·⁶, 10⁹·⁷, 10¹⁴·² | 0.0% / 0.2% / 0.7% | 7, 6.5% | 17 / 18 |
+| 6 | 60.8 | 10⁵·², 10¹⁰·⁰, 10¹⁵·⁰ | 0.0% / 0.1% / 0.4% | 5, 9.8% | 20 / 20 |
+
+The deck model kept 2 lists possible (3 before any Prize card was taken), which doubles or triples
+the counts above.
+
+| Prize cards left | Trees | Plans | Ending mid-turn (1 / 2–3 / 4+ cards drawn) | Using the random generator | Draw branches | Replies | Leaves | Seconds: mean, median, p90 |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 95 | 15.7 | 6.5 (5.0 / 1.4 / 0.0) | 1.2 | 108 | 433 | 442 | 0.271, 0.154, 0.635 |
+| 2 | 237 | 15.2 | 6.6 (4.8 / 1.7 / 0.1) | 1.4 | 107 | 425 | 433 | 0.271, 0.145, 0.723 |
+
+- **Exact enumeration at the root almost never applies:** at most 10⁴ worlds in 0.3% to 0.6% of
+  endgame decisions. The solver samples the opponent's hand.
+- **The opponent's turn is the cost:** about 9 plans end the turn, each with about 12 draw branches
+  and 4 replies, so one unpruned world takes 0.15 s at the median, more than an IS-MCTS search.
+- **Draws in the searcher's own turn are common:** 6.5 of 16 plans stop mid-turn, nearly all after
+  drawing 1 to 3 cards, so they are a chance layer too.
+- **Coin flips and shuffles are rare:** about 1.3 plans a tree.
 
 ## Tests
 
