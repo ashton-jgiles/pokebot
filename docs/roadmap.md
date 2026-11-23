@@ -608,7 +608,7 @@ never applies.
 
 | Step | Builds | Status |
 |---|---|---|
-| 9.1 | **Endgame lab:** world counts, chance branching and the solver's cost on positions from real games (`pokebot-sim --endgame-lab N`); P_end, M and the depth chosen. *The scratch measurement above is its first table* | ⬜ |
+| 9.1 | **Endgame lab:** world counts, chance branching and the solver's cost on positions from real games (`pokebot-sim --endgame-lab N`); P_end, M and the depth chosen. *The scratch measurement above is its first table. The [endgame lab](src/harness/endgame_lab.md) is built (`pokebot-sim --endgame-lab N [--every K] [--endgame-prizes P]`): world counts at every main-phase decision, and at qualifying ones a two-segment search in the true world without pruning, with its value, size and time. Results to come* | 🔄 |
 | 9.2 | **Chance outcomes:** a boundary action's outcomes in a world, with probabilities: one-card draws by card, coin flips through a scripted `Rng`, big draws sampled; tests that the probabilities add up to 1 and match brute force over deck orders | ⬜ |
 | 9.3 | **Expectiminimax with alpha-beta and Star1:** OR, AND-min and AND-chance nodes over and-tree plans, values in [−1, 1], depth in turn segments, children ordered by e; the same values as a brute-force search on small positions; nodes pruned counted | ⬜ |
 | 9.4 | **Root and iterative deepening:** worlds enumerated (at most N_end) or sampled from the deck model, only plans playable in every world, deepening under a node budget, the deepest finished iteration's best plan | ⬜ |
