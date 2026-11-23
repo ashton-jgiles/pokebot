@@ -53,7 +53,7 @@ to match Flat MC's time per decision instead.
 ## Counters
 
 The agent's (plans followed, wins found, plan actions, Greedy decisions, or-tree nodes and seconds) and
-its search's: searches, iterations, tree nodes, playout actions, the searcher's and-trees and cache
+its search's: searches, iterations, tree nodes, playout actions, moves unplayable in a world, outcome nodes, matched iterations skipped, the searcher's and-trees and cache
 hits, the opponent's and-trees, single-action nodes, and the seconds in the search, its playouts and
 each side's and-trees. `search s` over `iterations` is what an iteration costs.
 

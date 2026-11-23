@@ -70,7 +70,8 @@ namespace {
                      "                   [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]\n"
                      "                   [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W] [--mc-greedy-choices]\n"
                      "                   [--mcts-iterations N] [--mcts-c C] [--mcts-depth R] [--mcts-plans K]\n"
-                     "                   [--mcts-opponent-budget B] [--mcts-opponent-plans K]\n"
+                     "                   [--mcts-opponent-budget B] [--mcts-opponent-plans K] [--mcts-matched-worlds]\n"
+                     "                   [--mcts-final-mean [--mcts-min-visits N]]\n"
                      "                   [--planner-lab N [--every K]] [--budget-lab N [--every K]]\n"
                      "  --games N            games to play (default 1000)\n"
                      "  --agent A            random, biased, greedy, planner, flatmc or ismcts (default biased)\n"
@@ -102,6 +103,9 @@ namespace {
                      "  --mcts-plans K           IS-MCTS's plans at the searcher's nodes (default 16)\n"
                      "  --mcts-opponent-budget B nodes for the opponent's and-tree at an IS-MCTS node (default 25)\n"
                      "  --mcts-opponent-plans K  plans at the opponent's IS-MCTS nodes (default 4)\n"
+                     "  --mcts-matched-worlds    the k-th visit to every root move uses the same world and playout seed\n"
+                     "  --mcts-final-mean        play the root move with the best mean among those visited often enough\n"
+                     "  --mcts-min-visits N      with --mcts-final-mean: visits a root move needs (default 3)\n"
                      "  --planner-lab N          play N greedy games and measure the planner's searches at every Kth\n"
                      "                           main-phase decision (--every K, default 5)\n"
                      "  --budget-lab N           play N greedy games and time the and-tree at cheap budgets against\n"
@@ -161,6 +165,12 @@ namespace {
                 options.is_mcts.search.macros.opponent_budget = std::stoi(argv[++i]);
             } else if (arg == "--mcts-opponent-plans" && has_value) {
                 options.is_mcts.search.macros.opponent_plans = std::stoi(argv[++i]);
+            } else if (arg == "--mcts-matched-worlds") {
+                options.is_mcts.search.matched_worlds = true;
+            } else if (arg == "--mcts-final-mean") {
+                options.is_mcts.search.final_by_mean = true;
+            } else if (arg == "--mcts-min-visits" && has_value) {
+                options.is_mcts.search.final_min_visits = std::stoi(argv[++i]);
             } else if (arg == "--budget-lab" && has_value) {
                 options.budget_lab_games = std::stoi(argv[++i]);
             } else if (arg == "--planner-lab" && has_value) {
@@ -206,7 +216,7 @@ namespace {
         options.flat_mc.samples = options.planner.samples;
         const IsMctsOptions& mcts = options.is_mcts.search;
         if (mcts.iterations < 1 || mcts.exploration < 0.0 || mcts.playout.depth < 0 || mcts.macros.searcher_plans < 1 || mcts.macros.opponent_budget < 1 ||
-            mcts.macros.opponent_plans < 1) {
+            mcts.macros.opponent_plans < 1 || mcts.final_min_visits < 1) {
             return false;
         }
         options.is_mcts.or_budget = options.planner.or_budget;
@@ -459,7 +469,8 @@ namespace {
         if (options.agents[0] == "ismcts" || options.agents[1] == "ismcts") {
             const IsMctsOptions& m = options.is_mcts.search;
             std::cout << "  ismcts: " << m.iterations << " iterations, C " << m.exploration << ", depth " << m.playout.depth << ", " << m.macros.searcher_plans
-                      << " plans, opponent and-tree " << m.macros.opponent_budget << " nodes keeping " << m.macros.opponent_plans << '\n';
+                      << " plans, opponent and-tree " << m.macros.opponent_budget << " nodes keeping " << m.macros.opponent_plans
+                      << (m.matched_worlds ? ", matched worlds" : "") << (m.final_by_mean ? ", final by mean" : "") << '\n';
         }
         if (options.agents[0] == "flatmc" || options.agents[1] == "flatmc") {
             std::cout << "  flatmc: " << options.flat_mc.plans << " plans, " << options.flat_mc.playouts << " playouts, depth "

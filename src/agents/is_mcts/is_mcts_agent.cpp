@@ -100,6 +100,8 @@ namespace pokebot {
             {"tree nodes", static_cast<double>(s.nodes)},
             {"playout actions", static_cast<double>(s.playout_actions)},
             {"moves unplayable in a world", static_cast<double>(s.unplayable)},
+            {"outcome nodes", static_cast<double>(s.outcomes)},
+            {"matched iterations skipped", static_cast<double>(s.skipped)},
             {"searcher and-trees", static_cast<double>(s.macros.searcher_searches)},
             {"cache hits", static_cast<double>(s.macros.cache_hits)},
             {"opponent and-trees", static_cast<double>(s.macros.opponent_searches)},

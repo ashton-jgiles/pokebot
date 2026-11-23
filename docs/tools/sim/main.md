@@ -19,7 +19,7 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
                                         [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]
                                         [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W] [--mc-greedy-choices]
                                         [--mcts-iterations N] [--mcts-c C] [--mcts-depth R] [--mcts-plans K]
-                                        [--mcts-opponent-budget B] [--mcts-opponent-plans K]
+                                        [--mcts-opponent-budget B] [--mcts-opponent-plans K] [--mcts-matched-worlds] [--mcts-final-mean [--mcts-min-visits N]]
                                         [--planner-lab N [--every K]] [--budget-lab N [--every K]]
 ```
 
@@ -53,6 +53,9 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 | `--mcts-plans K` | 16 | Plans at the searcher's nodes |
 | `--mcts-opponent-budget B` | 25 | Nodes for the opponent's and-tree at an opponent node (from the [budget lab](../../src/harness/budget_lab.md)) |
 | `--mcts-opponent-plans K` | 4 | Plans at the opponent's nodes |
+| `--mcts-matched-worlds` | off | The n-th visit to every root move sees the same world and playout seed ([matched worlds](../../src/agents/is_mcts/is_mcts.md#matched-worlds-matched_worlds)) |
+| `--mcts-final-mean` | off | Play the best mean among the root moves visited often enough, not the most visited |
+| `--mcts-min-visits N` | 3 | With `--mcts-final-mean`: the visits a move needs (at least 1) |
 | `--planner-lab N` | | Play `N` Greedy-against-Greedy games and measure the planner's searches at one in every `K` main-phase decisions ([planner lab](../../src/harness/planner_lab.md)). Uses `--seed`, `--planner-samples` and `--planner-or-budget`, and prints its progress after each game to stderr |
 | `--budget-lab N` | | Play `N` Greedy-against-Greedy games and, at one in every `K` main-phase decisions, time the and-tree at budgets 25, 50, 100 and 150 against `--planner-and-budget` and report what each gives up ([budget lab](../../src/harness/budget_lab.md)). Uses `--seed` and `--planner-samples` |
 | `--every K` | 5 | With `--planner-lab` or `--budget-lab`: which main-phase decisions to measure |

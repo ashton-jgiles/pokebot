@@ -168,7 +168,7 @@ TEST_CASE("every IS-MCTS iteration passes through one root move, and the same se
     }
     CHECK(visits == 60);
     CHECK(search.stats().iterations == 60);
-    CHECK(search.stats().nodes <= 61);
+    CHECK(search.stats().nodes <= 2 * 60 + 1);
     CHECK(search.stats().macros.cache_hits > 0);
     CHECK(search.stats().macros.opponent_searches > 0);
 
@@ -250,4 +250,77 @@ TEST_CASE("on the real decks, games that differ only in hidden cards get the sam
         ++compared;
     }
     CHECK(compared > 1);
+}
+
+TEST_CASE("on the real decks, IS-MCTS's root moves are distinct plans, however their outcomes fall", "[is_mcts]") {
+    const auto real = test::load_real_decks();
+    if (!real) {
+        SKIP("no generated card data; run pokebot-import first");
+    }
+    const std::filesystem::path root = POKEBOT_SOURCE_DIR;
+    const ArchetypeLibrary library = ArchetypeLibrary::load(root / "data/archetypes", real->db);
+    const DeckModel model(library);
+    const CardTable table = CardTable(real->db, real->decks[1], real->decks[2]).shuffled(9);
+    GameState game = pokebot::new_game(table, 9);
+    pokebot::BiasedRandomAgent agent(9);
+    int searched = 0;
+    for (int step = 0; step < 300 && !game.is_over() && searched < 5; ++step) {
+        const auto actions = pokebot::legal_actions(game);
+        if (game.turn > 0 && actions.size() > 1 && game.decision().kind == pokebot::DecisionKind::MainPhase && step % 7 == 0) {
+            INFO("step " << step);
+            IsMcts search(model, static_cast<std::uint64_t>(step), small(24));
+            const std::vector<RootChoice> choices = search.search(pokebot::observe(game, game.decision().player));
+            long long visits = 0;
+            for (std::size_t i = 0; i < choices.size(); ++i) {
+                visits += choices[i].visits;
+                for (std::size_t j = 0; j < i; ++j) {
+                    CHECK(choices[i].plan.actions != choices[j].plan.actions);
+                }
+            }
+            CHECK((choices.size() <= 1 || visits == 24));
+            ++searched;
+        }
+        pokebot::apply_legal(game, agent.choose(pokebot::observe(game, game.decision().player), actions));
+    }
+    CHECK(searched >= 3);
+}
+
+TEST_CASE("with matched worlds, IS-MCTS's visits add up to the iterations that ran, and the same seed searches the same", "[is_mcts]") {
+    Fixture f;
+    f.give("TST-2");
+    f.give("TST-4");
+    const DeckModel model(f.library);
+    IsMctsOptions options = small(40);
+    options.matched_worlds = true;
+    IsMcts search(model, 5, options);
+    const std::vector<RootChoice> choices = search.search(pokebot::observe(f.game, f.me));
+    REQUIRE(choices.size() > 1);
+    long long visits = 0;
+    for (const RootChoice& choice : choices) {
+        visits += choice.visits;
+        CHECK(legal_plan(f.game, choice.plan));
+    }
+    CHECK(visits == search.stats().iterations);
+    CHECK(search.stats().iterations + search.stats().skipped == 40);
+    IsMcts again(model, 5, options);
+    same_search(choices, again.search(pokebot::observe(f.game, f.me)));
+}
+
+TEST_CASE("with final_by_mean, IS-MCTS's first move has the best mean among those visited often enough", "[is_mcts]") {
+    Fixture f;
+    f.give("TST-2");
+    f.give("TST-4");
+    const DeckModel model(f.library);
+    IsMctsOptions options = small(60);
+    options.final_by_mean = true;
+    options.final_min_visits = 3;
+    IsMcts search(model, 7, options);
+    const std::vector<RootChoice> choices = search.search(pokebot::observe(f.game, f.me));
+    REQUIRE(choices.size() > 1);
+    REQUIRE(choices.front().visits >= 3);
+    for (const RootChoice& choice : choices) {
+        if (choice.visits >= 3) {
+            CHECK(choices.front().mean >= choice.mean);
+        }
+    }
 }

@@ -18,6 +18,9 @@ namespace pokebot {
         int max_depth = 32;
         PlayoutOptions playout{.depth = 1};
         MacroOptions macros{};
+        bool matched_worlds = false;
+        bool final_by_mean = false;
+        int final_min_visits = 3;
     };
 
     struct IsMctsStats {
@@ -26,6 +29,8 @@ namespace pokebot {
         long long nodes = 0;
         long long playout_actions = 0;
         long long unplayable = 0;
+        long long outcomes = 0;
+        long long skipped = 0;
         double seconds = 0.0;
         double playout_seconds = 0.0;
         MacroStats macros;
