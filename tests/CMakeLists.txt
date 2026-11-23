@@ -56,6 +56,11 @@ add_executable(pokebot_tests
   test_deck_model.cpp
   test_playout.cpp
   test_flat_mc.cpp
+  test_info_set.cpp
+  test_tree.cpp
+  test_macro_actions.cpp
+  test_is_mcts.cpp
+  test_is_mcts_agent.cpp
 )
 target_link_libraries(pokebot_tests PRIVATE
   pokebot_lib pokebot_import_lib pokebot_warnings Catch2::Catch2WithMain)

@@ -42,7 +42,12 @@ namespace pokebot {
             const World sample(observation, deal, &model_);
             const std::uint64_t seed = rng_.next();
             for (ScoredPlan& candidate : scored) {
-                const PlayoutResult result = play_out(apply_plan(sample.game(), candidate.plan), me, seed, options_.playout);
+                GameState after = sample.game();
+                if (!apply_plan_checked(after, candidate.plan)) {
+                    ++stats_.unplayable;
+                    continue;
+                }
+                const PlayoutResult result = play_out(after, me, seed, options_.playout);
                 candidate.mean += result.value;
                 ++candidate.playouts;
                 ++stats_.playouts;
@@ -50,7 +55,7 @@ namespace pokebot {
             }
         }
         for (ScoredPlan& candidate : scored) {
-            candidate.mean /= static_cast<double>(candidate.playouts);
+            candidate.mean = candidate.playouts == 0 ? candidate.plan_value : candidate.mean / static_cast<double>(candidate.playouts);
         }
         std::stable_sort(scored.begin(), scored.end(), [](const ScoredPlan& a, const ScoredPlan& b) { return a.mean > b.mean; });
         stats_.playout_seconds += seconds_since(start);
@@ -146,6 +151,7 @@ namespace pokebot {
             {"decisions played out", static_cast<double>(stats_.searched)},
             {"playouts", static_cast<double>(stats_.playouts)},
             {"playout actions", static_cast<double>(stats_.playout_actions)},
+            {"plans unplayable in a world", static_cast<double>(stats_.unplayable)},
             {"plan actions", static_cast<double>(stats_.followed)},
             {"greedy decisions", static_cast<double>(stats_.greedy)},
             {"choices played out", static_cast<double>(stats_.choices)},

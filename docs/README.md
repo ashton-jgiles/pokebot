@@ -71,9 +71,15 @@ legal actions.
 | | [deck_model.md](src/agents/flat_mc/deck_model.md) | The archetype library: the decklists agents know, to guess the opponent's from |
 | | [playout.md](src/agents/flat_mc/playout.md) | Playouts: playing a determinization on for r turns and scoring it |
 | | [flat_mc_agent.md](src/agents/flat_mc/flat_mc_agent.md) | The flat MC agent: the turn planner's best plans, each played out in determinized worlds |
+| | [info_set.md](src/agents/is_mcts/info_set.md) | IS-MCTS's information-set key: an observation hashed with cards by what they are |
+| | [tree.md](src/agents/is_mcts/tree.md) | The IS-MCTS tree: nodes, UCB1 with availability counts, backpropagation |
+| | [is_mcts.md](src/agents/is_mcts/is_mcts.md) | The IS-MCTS search: determinize, select or expand, play out, back up |
+| | [is_mcts_agent.md](src/agents/is_mcts/is_mcts_agent.md) | The IS-MCTS agent: Model 2 playing a game |
+| | [macro_actions.md](src/agents/is_mcts/macro_actions.md) | The moves at an IS-MCTS node: and-tree plans, cached for the searcher, or single actions |
 | `src/harness` | [match.md](src/harness/match.md) | `play_game`, how games end |
 | | [replay.md](src/harness/replay.md) | Saving games and playing them back, as either player |
 | | [arena.md](src/harness/arena.md) | The match harness: one agent against another, in parallel, with confidence intervals |
+| | [budget_lab.md](src/harness/budget_lab.md) | Timing the and-tree at cheap budgets against the full one, for IS-MCTS's opponent nodes |
 | | [planner_lab.md](src/harness/planner_lab.md) | Measuring the turn planner: wins found, and nodes with and without the closed set and f_bound |
 | `src/client` | [main.md](src/client/main.md) | The `pokebot` command: `play`, `watch`, `replay` |
 | `tools/import` | [main.md](tools/import/main.md) | The `pokebot-import` command |

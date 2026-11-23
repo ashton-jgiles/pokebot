@@ -4,8 +4,8 @@
 #include <memory>
 #include <vector>
 
-#include "agents/planner/action_class.hpp"
 #include "agents/evaluation/evaluation.hpp"
+#include "agents/planner/action_class.hpp"
 #include "agents/world.hpp"
 #include "engine/actions/action.hpp"
 #include "engine/game/game_state.hpp"
@@ -19,6 +19,7 @@ namespace pokebot {
     };
 
     GameState apply_plan(const GameState& game, const Plan& plan);
+    bool apply_plan_checked(GameState& game, const Plan& plan);
     bool follows_up(const GameState& game, int player);
     void finish_choices(GameState& game, int player, const Weights& weights);
 

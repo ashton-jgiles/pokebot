@@ -14,7 +14,7 @@ The milestone plan from the project proposal, with the current status of each.
 | M5 | Greedy agent, match harness, profiling | ✅ Done |
 | M6 | Model 1: turn planner (or-tree and and-tree modes) | ✅ Done |
 | M7 | Determinization and flat Monte Carlo | ✅ Done |
-| M8 | Model 2: IS-MCTS | ⬜ Not started |
+| M8 | Model 2: IS-MCTS | ✅ Done |
 | M9 | Model 3: endgame solver (expectiminimax) | ⬜ Not started |
 | M10 | Learned evaluation function | ⬜ Not started |
 | M11+ | Stretch: policy prior, deck-building GA, more decks, opponent inference | ⬜ Not started |
@@ -439,6 +439,128 @@ Known limits, each documented where it lives:
   where they matter.
 - **The cost is mostly playouts:** 2.6 of its roughly 2.8 s of search a game. One playout is comparable to one IS-MCTS
   iteration, so M8 starts from the same budget: 64 playouts a decision, about 0.1 s.
+
+## M8 — Model 2: IS-MCTS ✅
+
+**Done when:** IS-MCTS beats Flat MC over at least 1,000 seeded games per deck pairing in both seat orders, and its
+win rate is measured as a function of the time budget.
+
+IS-MCTS shares one tree across determinizations: each iteration deals a world ŵ, walks down the tree choosing by UCB1
+among the moves legal in ŵ, adds one move, plays out from it and backs the result up. Nodes are information sets of the
+searching player, so plays that only work when the hidden cards are known aren't overvalued (strategy fusion).
+
+**Decisions (2026-11-22):**
+- **A node is the searcher's information set:** children are keyed by a hash of the searcher's observation after the
+  move, so an opponent move or chance outcome that looks the same to the searcher in every world leads to the same
+  node. Cards are hashed by what they are, not by their number, since the opponent's unseen cards are numbered
+  differently in each world.
+- **Macro-actions:** the searcher's from the full and-tree, cached by information set; the opponent's from a cheap
+  and-tree, since its hand changes from world to world; decisions outside the main phase as single actions. The
+  and-tree costs about 23 ms mid-game, so the opponent's budget is chosen from measurements.
+- **Compared with Flat MC at equal time,** set as iteration counts so runs repeat: the iteration budget that matches
+  Flat MC's time per decision, and for the time curve about 0.5, 1, 2 and 4 times it, with the measured time per
+  decision as the x-axis.
+- **It follows its most-visited plan** while the observation is the one it expected, as the Planner and Flat MC do,
+  and searches again otherwise.
+- **Rewards** are e in [−1, 1] (u at the end of a game), negated for the opponent; C starts at 0.7 and is tuned.
+
+| Step | Builds | Status |
+|---|---|---|
+| 8.1 | **Information-set key:** a 64-bit hash of an `Observation`, with every card hashed by its definition (or as unseen) rather than its number, the hand and the unordered lists sorted. Tests: equal observations and the hand's order; two worlds where the opponent attaches a different-numbered copy of the same Energy hashing the same; changes the viewer can see changing it. See [information-set key](src/agents/is_mcts/info_set.md) | ✅ |
+| 8.2 | **The tree:** nodes (actor, N, Q for each player, A), children keyed by the observation after the move, UCB1 with availability counts over the children legal in ŵ, backpropagation with Q negated for the other player. Tests on a small hand-built game: visits concentrate on the best move, and availability counts only legal siblings. See [tree](src/agents/is_mcts/tree.md) | ✅ |
+| 8.3 | **Macro-actions at a node:** the actor's moves in ŵ, the searcher's from the full and-tree cached by information set, the opponent's from a cheap and-tree, single actions outside the main phase; cost and quality measured, and the opponent's budget chosen. *`MacroActions` and the [budget lab](src/harness/budget_lab.md) (`pokebot-sim --budget-lab N`) are built. The lab (64 games, 1,234 positions): the 300-node reference 15.0 ms a search; 25 nodes 1.9 ms, the same best plan 79% of the time, 0.031 of e lost on average; 50 nodes 3.4 ms, 85%, 0.021; 100 nodes 5.9 ms, 91%, 0.010. Every budget found 3.84 plans. The opponent's budget is 25, with 50 and 100 measured in 8.6. See [macro-actions](src/agents/is_mcts/macro_actions.md)* | ✅ |
+| 8.4 | **IS-MCTS search:** determinize, select, expand one untried macro-action, evaluate (r turns of Greedy, then e or u), backpropagate; an iteration budget; the most-visited root plan, with the root's visits and means as the analysis. Tests: the same seed gives the same result; the hidden-card leak test. *`IsMcts::search`: 200 iterations, C = 0.7, r = 1 by default; children keyed by the searcher's observation, so chance outcomes need no chance nodes; a root with one move returns it at once. See [IS-MCTS search](src/agents/is_mcts/is_mcts.md)* | ✅ |
+| 8.5 | **IS-MCTS agent:** the or-tree's win, else IS-MCTS for every decision after setup, the plan followed while the observation matches; `--agent ismcts` and its settings; counters for iterations, nodes and time. *`IsMctsAgent` with 64 iterations to start; `--mcts-iterations`, `--mcts-c`, `--mcts-depth`, `--mcts-plans`, `--mcts-opponent-budget`, `--mcts-opponent-plans`, the `--planner-*` budgets shared. See [IS-MCTS agent](src/agents/is_mcts/is_mcts_agent.md). The first arena run stopped with "hidden cards don't add up": the searcher's plans were cached by card identity, so a plan found where it had drawn one copy of a card was reused in a world where it had drawn another, and moved a card that wasn't there. The cache now numbers the searcher's cards and checks any cached plan that names an opponent card. The next run stopped with "not an answer to an effect decision" (game seed 18, now saved as a replay by the arena): a plan's Det actions are classed in the world it was found in, and a few depend on how the player's hidden cards split between deck and Prize cards, which they can't see, so the same plan's next action met a pending choice in another world. Plans applied outside their own world now go through `apply_plan_checked` (IS-MCTS's tree and plan walk, Flat MC's scoring); in game 18, 42 of IS-MCTS's moves were unplayable in the world they were tried in. First full match, `--agents ismcts,flatmc --games 100` (1,600 games, no failures): IS-MCTS 41.6% (95% CI 39.2% to 44.0%) against Flat MC at 2.6 games/s. Its 64 iterations already match Flat MC's time: 0.103 s a search (1.6 ms an iteration: 0.7 ms playouts, 0.4 ms the opponent's and-trees, 0.3 ms the searcher's) against 0.106 s a searched decision for Flat MC. Per game: 31.3 searches, 2,003 iterations, 1,049 single-action nodes, 105 searcher and-trees with 1,676 cache hits, 363 opponent and-trees, 0.17 moves unplayable in a world* | ✅ |
+| 8.6 | **Tuning against Flat MC** at matched time, one change at a time on the same seeded games: C, r, the opponent's macro-action budget, K at the searcher's nodes. *First four runs below: no setting beats Flat MC; r = 2 (46.2%) and twice the iterations (45.2%) help, at 1.5 and 1.9 times the time; fewer root plans and less exploration don't. The cause found: the searcher's moves were keyed by what came after them, so a plan ending in a draw split into one root child per draw and never built up visits. The searcher's moves are now move nodes with outcome nodes under them, and matched worlds and choosing by mean are options. Matched worlds is what closes the gap (50.9%, and 52.0% with r = 2 at 42 iterations); choosing by mean adds nothing on top. The agent's defaults are now matched worlds, r = 2 and 48 iterations. 48 was meant to match Flat MC's time but takes about 1.16 times it: the time per game is the fair comparison (see below), and 42 iterations match it, so the default is now 42* | ✅ |
+| 8.7 | **Sign-off:** IS-MCTS against Flat MC on every deck pairing with invariant checks; win rate against the time budget (4 points); speed; known limits. *16,000 games at 42 iterations, about Flat MC's time: IS-MCTS 51.3% (50.5% to 52.1%); the first run at 48 iterations, with invariant checks, 51.8% and no problems found. Win rate against the time budget: 40.8% at 12 iterations, 46.7% at 24, 51.3% at 42, 57.1% at 96. Details and known limits below* | ✅ |
+
+How each setting moved IS-MCTS against Flat MC in 8.6, on the same 1,600 seeded games (`--agents ismcts,flatmc
+--games 100 --no-check`, release, 16 threads), one change at a time from 64 iterations, C = 0.7, r = 1, 16 plans at the
+searcher's nodes and a 25-node opponent and-tree keeping 4. The last column but one compares the time each agent spends
+searching a game: IS-MCTS's search against Flat MC's and-tree and playouts (its choices included), as both search
+the same 28 to 30 decisions a game. (Earlier notes compared seconds a search with 0.106 s a searched decision for
+Flat MC, which isn't like for like; by time per game, step 8.5's 64 iterations took about 1.2 times Flat MC's time.)
+
+| IS-MCTS | Score (95% CI) | Lowest pairing | Search s a game | s a search | Games/s |
+|---|---|---|---|---|---|
+| Defaults (step 8.5) | 41.6% (39.2% to 44.0%) | 15% ns-zoroark vs mega-greninja | 3.22 | 0.103 | 2.6 |
+| 6 plans at the searcher's nodes | 39.5% (37.1% to 41.9%) | 21% dragapult vs basic-box, ns-zoroark mirror | 3.26 | 0.109 | 2.5 |
+| r = 2 | 46.2% (43.8% to 48.7%) | 23% ns-zoroark vs basic-box | 4.97 | 0.162 | 2.0 |
+| C = 0.3 | 40.9% (38.6% to 43.4%) | 20% ns-zoroark vs mega-greninja | 3.30 | 0.104 | 2.5 |
+| 128 iterations (twice the time) | 45.2% (42.8% to 47.6%) | 15% ns-zoroark vs mega-greninja | 5.98 | 0.191 | 1.9 |
+| Move and outcome nodes (the new tree) | 43.5% (41.1% to 45.9%) | 20% ns-zoroark vs mega-greninja | 3.17 | 0.105 | 2.7 |
+| New tree, matched worlds | 50.9% (48.5% to 53.4%) | 30% ns-zoroark vs mega-greninja | 2.98 | 0.099 | 2.8 |
+| New tree, final by mean (3 visits) | 45.1% (42.7% to 47.6%) | 20% ns-zoroark vs mega-greninja | 3.07 | 0.101 | 2.9 |
+| New tree, r = 2 at 42 iterations (the same time) | 46.4% (43.9% to 48.8%) | 24% ns-zoroark vs mega-greninja | 2.66 | 0.093 | 3.1 |
+| Matched worlds, r = 2 at 42 iterations | 52.0% (49.6% to 54.4%) | 27% ns-zoroark vs basic-box | 2.58 | 0.090 | 3.1 |
+| Matched worlds, final by mean | 50.2% (47.7% to 52.6%) | 27% dragapult vs basic-box | 2.95 | 0.097 | 2.9 |
+| Matched worlds, final by mean, r = 2 at 42 iterations | 50.4% (48.0% to 52.9%) | 30% ns-zoroark vs mega-greninja | 2.56 | 0.090 | 3.1 |
+
+- **Every root plan gets too few visits to tell them apart.** With 16 plans, 64 iterations give each 2 to 4 visits,
+  each from a different world and a different playout seed. Flat MC gives each of its 16 plans 4 playouts on the
+  same 4 worlds with the same seeds, so its comparison between plans is much less noisy. IS-MCTS's most visited plan,
+  on that few visits, is close to chance among the good ones.
+- **Fewer plans is worse, not better** (39.5%): as Flat MC found in 7.6, the and-tree's lower plans are often the best
+  once the opponent's reply is played out, and 6 plans cuts them.
+- **Less exploration changes nothing** (40.9%): with so few visits, UCB1 barely gets to exploit.
+- **Looking further and searching longer both help**, but neither reaches even with twice Flat MC's time.
+- **The new tree helps a little** (43.5%, from 41.6%, inside the noise): a plan ending in a draw now keeps its
+  visits on one move node, with 1,340 outcome nodes a game under the moves.
+- **Matched worlds is the big change** (50.9%, even with Flat MC for the first time, at 1.12 times its time): the
+  n-th visit to every root move sees the same world and playout seed, so the root compares plans as Flat MC does.
+  The worst pairing rises from 20% to 30%. Cache hits fall from 1,646 to 383 a game and single-action nodes from
+  982 to 289, as the root's outcome node is usually new and the descent stops there.
+- **Choosing by mean and r = 2 at 42 iterations each help a little** (45.1%, 46.4%), on the unmatched tree.
+- **On matched worlds, r = 2 adds a little and choosing by mean nothing:** 52.0% with r = 2 at 42 iterations (the best
+  so far, its interval just touching 50%), 50.2% and 50.4% with the mean. Matched visits already make the means
+  comparable, so the most visited move is the best mean.
+- **Time against Flat MC, search seconds a game over Flat MC's:** the new tree 1.22, matched worlds 1.12, final by
+  mean 1.25, r = 2 at 42 iterations 1.07, matched with r = 2 at 42 iterations 1.02, matched with the mean 1.15, all
+  three 1.01. So matched worlds with r = 2 at 42 iterations is the setting that wins at Flat MC's time.
+
+**Sign-off run (2026-11-23):** `pokebot-sim --agents ismcts,flatmc --games 1000 --no-check` on all 16 deck pairings
+(16,000 games, every seed once with IS-MCTS in each seat; IS-MCTS with its defaults, 42 iterations, C = 0.7, r = 2,
+matched worlds, 16 plans at its nodes and a 25-node opponent and-tree keeping 4; Flat MC as signed off in M7). The
+invariant checks ran on the first sign-off, the same 16,000 games at 48 iterations (2026-11-22): **no problems
+found**.
+
+| Measure | Result |
+|---|---|
+| IS-MCTS's score against Flat MC | **51.3%** (95% CI 50.5% to 52.1%): 8,206 won, 7,794 lost, 0 drawn |
+| By who went first | IS-MCTS first 54.5% (53.4% to 55.6%), Flat MC first 48.1% (47.0% to 49.2%) |
+| Every deck matchup, both seatings averaged (2,000 games each) | 49.5% (the basic-box mirror) to 53.6% (dragapult and ns-zoroark); 8 of the 10 above 50%, the other two the basic-box and ns-zoroark mirrors (49.5%, 49.6%) |
+| Every deck pairing | 26.9% (ns-zoroark against mega-greninja) to 75.2% (mega-greninja against ns-zoroark): a pairing mostly measures the decks, so the matchup averages above are the fair comparison |
+| How IS-MCTS won | Prize cards 7,388, no Pokémon left 411, Flat MC's deck ran out 407 |
+| How IS-MCTS lost | Prize cards 6,846, its own deck ran out 518, no Pokémon left 430 |
+| Per game | 28.5 searches of 42.0 iterations, 1,772 tree nodes (899 of them outcome nodes), 0.45 wins found by the or-tree, 80 searcher and-trees with 202 cache hits, 292 opponent and-trees, 161 single-action nodes, 0.04 moves unplayable in a world, no matched iterations skipped |
+| Time per game (on 16 busy threads) | IS-MCTS 2.98 s searching (1.73 s playouts, 0.59 s its own and-trees, 0.55 s the opponent's); Flat MC 2.79 s (0.15 s and-tree, 2.64 s playouts): IS-MCTS 1.07 times Flat MC's time (1.02 in 8.6; this run stalled once, 800 games taking 861 s) |
+| Speed, IS-MCTS against Flat MC | about 2.8 games/s on 16 threads without checks, 2.0 with them |
+| The first sign-off, 48 iterations, with invariant checks | 51.8% (51.0% to 52.5%) at 1.16 times Flat MC's time; no problems found |
+
+**Win rate against the time budget,** IS-MCTS's iterations varied against the default Flat MC (1,600 games each,
+`--games 100 --no-check`, except the 16,000 of the sign-off at 42):
+
+| IS-MCTS iterations | Time against Flat MC's | Score (95% CI) | Games/s |
+|---|---|---|---|
+| 12 | 0.26 | 40.8% (38.4% to 43.2%) | 3.8 |
+| 24 | 0.56 | 46.7% (44.3% to 49.1%) | 4.0 |
+| 42 (the sign-off) | 1.07 | 51.3% (50.5% to 52.1%) | 2.8 |
+| 96 | 2.50 | 57.1% (54.6% to 59.5%) | 1.6 |
+
+The score rises steadily with the budget, about 5 to 6 points a doubling, and crosses 50% near Flat MC's own time.
+At a quarter of Flat MC's time IS-MCTS still wins 40.8%.
+
+**Known limits:**
+
+- **The lead at equal time is small:** 1.3 points, its interval's lower end 0.5 points above even, at 1.02 to 1.07
+  times Flat MC's time. Flat MC beat the Planner by 22.9 points.
+- **It comes from the root, not the tree.** With matched worlds, most iterations stop at the root move's new outcome
+  node, so the search is close to Flat MC with UCB1 choosing which plan gets the next sample, plus an opponent
+  reply in each outcome. Deeper search (r = 2) helped more than the tree did.
+- **The curve varies only IS-MCTS's budget.** Flat MC stays at its default throughout, so the curve shows what
+  IS-MCTS gains from time against a fixed opponent, not how the two compare at every budget.
+- **Going second it is slightly behind** (48.1%), and ns-zoroark is still the weakest deck for both agents.
+- **Times are noisy:** both long runs stalled once, which inflates both agents' seconds.
 
 ## M5 onward
 

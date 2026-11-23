@@ -28,9 +28,12 @@ In its main phase (or when offered an extra attack), after setup:
 3. **Plans:** otherwise the [and-tree](../planner/and_tree.md) keeps its top K plans (one per end
    state). With only one, it's played without playouts.
 4. **Playouts:** with two or more, flat MC deals m = N / K worlds (at least 1), each from its own
-   seed, and draws a playout seed for each. In every world, each plan is applied and
-   [played out](playout.md) with that world's playout seed. A plan's score is the mean of its m
-   values; the best mean is played, and ties go to the and-tree's order.
+   seed, and draws a playout seed for each. In every world, each plan is applied (with
+   [`apply_plan_checked`](../planner/plan.md)) and [played out](playout.md) with that world's
+   playout seed. A plan's score is the mean of its values; the best mean is played, and ties go to
+   the and-tree's order. A plan that can't be played in a world (its "deterministic" action asks for
+   a choice there) gets no playout in it and is counted; one with no playouts at all keeps the
+   and-tree's value.
 5. **Following:** the plan is followed while the observation is the one it expected, and planned
    again when not, as in the Planner.
 
@@ -91,7 +94,7 @@ analysis mode in the client will show (see the roadmap's long-term goals).
 ## Counters
 
 `stats()` and the arena's counters: plans played, wins found, decisions played out, playouts,
-playout actions, plan actions, Greedy decisions, choices played out, or-tree and and-tree nodes, and
+playout actions, plans unplayable in a world, plan actions, Greedy decisions, choices played out, or-tree and and-tree nodes, and
 the seconds spent in the or-tree, the and-tree, playouts, Greedy and choices. `playout s` over
 `playouts` is what one playout costs. Choices played out are counted in the decisions played out,
 playouts and playout seconds too; `choices` and `choices s` are their share.

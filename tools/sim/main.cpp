@@ -16,11 +16,13 @@
 #include "agents/flat_mc/flat_mc_agent.hpp"
 #include "agents/flat_mc/playout.hpp"
 #include "agents/greedy/greedy_agent.hpp"
+#include "agents/is_mcts/is_mcts_agent.hpp"
 #include "agents/planner/planner_agent.hpp"
 #include "agents/random/random_agent.hpp"
 #include "cards/db/card_db.hpp"
 #include "core/decklist.hpp"
 #include "harness/arena.hpp"
+#include "harness/budget_lab.hpp"
 #include "harness/match.hpp"
 #include "harness/planner_lab.hpp"
 #include "harness/replay.hpp"
@@ -54,8 +56,10 @@ namespace {
         int replay_every = 0;            // with --agents: save every Nth game
         PlannerOptions planner;
         FlatMcOptions flat_mc;
+        IsMctsAgentOptions is_mcts;
         const DeckModel* model = nullptr;
         int lab_games = 0;
+        int budget_lab_games = 0;
         int every = 5;
     };
 
@@ -65,9 +69,12 @@ namespace {
                      "                   [--agents A,B [--threads N] [--save-replays K]]\n"
                      "                   [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]\n"
                      "                   [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W] [--mc-greedy-choices]\n"
-                     "                   [--planner-lab N [--every K]]\n"
+                     "                   [--mcts-iterations N] [--mcts-c C] [--mcts-depth R] [--mcts-plans K]\n"
+                     "                   [--mcts-opponent-budget B] [--mcts-opponent-plans K] [--mcts-fresh-worlds]\n"
+                     "                   [--mcts-final-mean [--mcts-min-visits N]]\n"
+                     "                   [--planner-lab N [--every K]] [--budget-lab N [--every K]]\n"
                      "  --games N            games to play (default 1000)\n"
-                     "  --agent A            random, biased, greedy, planner or flatmc (default biased)\n"
+                     "  --agent A            random, biased, greedy, planner, flatmc or ismcts (default biased)\n"
                      "  --seed S             first game's seed; game i uses S + i (default 1)\n"
                      "  --no-check           skip the invariant check after every action (faster)\n"
                      "  --print              play one game with seed S and print every action\n"
@@ -90,9 +97,21 @@ namespace {
                      "  --mc-policy P            greedy or biased: who plays the playouts (default greedy)\n"
                      "  --mc-greedy-worlds W     worlds for a greedy playout's decisions (default 1)\n"
                      "  --mc-greedy-choices      flat MC leaves its decisions outside the main phase to Greedy (default: plays them out)\n"
+                     "  --mcts-iterations N      IS-MCTS's iterations each decision (default 42)\n"
+                     "  --mcts-c C               IS-MCTS's exploration constant (default 0.7)\n"
+                     "  --mcts-depth R           turns of the searching player an IS-MCTS playout runs to (default 2)\n"
+                     "  --mcts-plans K           IS-MCTS's plans at the searcher's nodes (default 16)\n"
+                     "  --mcts-opponent-budget B nodes for the opponent's and-tree at an IS-MCTS node (default 25)\n"
+                     "  --mcts-opponent-plans K  plans at the opponent's IS-MCTS nodes (default 4)\n"
+                     "  --mcts-fresh-worlds      deal every iteration a fresh world, not the k-th world shared by every root move\n"
+                     "  --mcts-final-mean        play the root move with the best mean among those visited often enough\n"
+                     "  --mcts-min-visits N      with --mcts-final-mean: visits a root move needs (default 3)\n"
                      "  --planner-lab N          play N greedy games and measure the planner's searches at every Kth\n"
                      "                           main-phase decision (--every K, default 5)\n"
-                     "If an invariant breaks, the game is saved to replays/invariant-seed-S.json.\n";
+                     "  --budget-lab N           play N greedy games and time the and-tree at cheap budgets against\n"
+                     "                           --planner-and-budget, at every Kth main-phase decision\n"
+                     "If an invariant breaks, the game is saved to replays/invariant-seed-S.json; with --agents, a game\n"
+                     "that fails for any reason (a broken invariant or an agent's error) is saved to replays/failed-seed-S.json.\n";
     }
 
     bool parse(int argc, char** argv, Options& options) {
@@ -134,6 +153,26 @@ namespace {
                 options.flat_mc.playout.greedy_worlds = std::stoi(argv[++i]);
             } else if (arg == "--mc-greedy-choices") {
                 options.flat_mc.search_choices = false;
+            } else if (arg == "--mcts-iterations" && has_value) {
+                options.is_mcts.search.iterations = std::stoi(argv[++i]);
+            } else if (arg == "--mcts-c" && has_value) {
+                options.is_mcts.search.exploration = std::stod(argv[++i]);
+            } else if (arg == "--mcts-depth" && has_value) {
+                options.is_mcts.search.playout.depth = std::stoi(argv[++i]);
+            } else if (arg == "--mcts-plans" && has_value) {
+                options.is_mcts.search.macros.searcher_plans = std::stoi(argv[++i]);
+            } else if (arg == "--mcts-opponent-budget" && has_value) {
+                options.is_mcts.search.macros.opponent_budget = std::stoi(argv[++i]);
+            } else if (arg == "--mcts-opponent-plans" && has_value) {
+                options.is_mcts.search.macros.opponent_plans = std::stoi(argv[++i]);
+            } else if (arg == "--mcts-fresh-worlds") {
+                options.is_mcts.search.matched_worlds = false;
+            } else if (arg == "--mcts-final-mean") {
+                options.is_mcts.search.final_by_mean = true;
+            } else if (arg == "--mcts-min-visits" && has_value) {
+                options.is_mcts.search.final_min_visits = std::stoi(argv[++i]);
+            } else if (arg == "--budget-lab" && has_value) {
+                options.budget_lab_games = std::stoi(argv[++i]);
             } else if (arg == "--planner-lab" && has_value) {
                 options.lab_games = std::stoi(argv[++i]);
             } else if (arg == "--every" && has_value) {
@@ -164,7 +203,7 @@ namespace {
             return false;
         }
         const auto known = [](const std::string& name) {
-            return name == "random" || name == "biased" || name == "greedy" || name == "planner" || name == "flatmc";
+            return name == "random" || name == "biased" || name == "greedy" || name == "planner" || name == "flatmc" || name == "ismcts";
         };
         if (options.planner.samples < 1 || options.planner.or_budget < 1 || options.planner.and_budget < 1 || options.every < 1) {
             return false;
@@ -175,7 +214,19 @@ namespace {
         options.flat_mc.or_budget = options.planner.or_budget;
         options.flat_mc.and_budget = options.planner.and_budget;
         options.flat_mc.samples = options.planner.samples;
+        const IsMctsOptions& mcts = options.is_mcts.search;
+        if (mcts.iterations < 1 || mcts.exploration < 0.0 || mcts.playout.depth < 0 || mcts.macros.searcher_plans < 1 || mcts.macros.opponent_budget < 1 ||
+            mcts.macros.opponent_plans < 1 || mcts.final_min_visits < 1) {
+            return false;
+        }
+        options.is_mcts.or_budget = options.planner.or_budget;
+        options.is_mcts.search.macros.searcher_budget = options.planner.and_budget;
+        options.is_mcts.search.macros.samples = options.planner.samples;
         if (options.lab_games < 0 || (options.lab_games > 0 && (!options.agents.empty() || options.print || options.check_replays))) {
+            return false;
+        }
+        if (options.budget_lab_games < 0 ||
+            (options.budget_lab_games > 0 && (!options.agents.empty() || options.print || options.check_replays || options.lab_games > 0))) {
             return false;
         }
         if (options.agents.empty()) {
@@ -201,6 +252,9 @@ namespace {
         }
         if (name == "flatmc") {
             return std::make_unique<FlatMcAgent>(seed, *options.model, options.flat_mc);
+        }
+        if (name == "ismcts") {
+            return std::make_unique<IsMctsAgent>(seed, *options.model, options.is_mcts);
         }
         return std::make_unique<BiasedRandomAgent>(seed);
     }
@@ -331,6 +385,42 @@ namespace {
         return r.false_wins == 0 ? 0 : 1;
     }
 
+    int run_budget_lab_command(const CardDB& db, const std::vector<std::filesystem::path>& files, const std::vector<Decklist>& decks, const Options& options) {
+        std::vector<ArenaDeck> arena_decks;
+        for (std::size_t i = 0; i < files.size(); ++i) {
+            arena_decks.push_back(ArenaDeck{files[i].filename().string(), decks[i]});
+        }
+        BudgetLabOptions lab;
+        lab.games = options.budget_lab_games;
+        lab.seed = options.seed;
+        lab.every = options.every;
+        lab.reference = options.planner.and_budget;
+        lab.samples = options.planner.samples;
+        const auto started = std::chrono::steady_clock::now();
+        lab.on_progress = [started](long long done, long long total) {
+            const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+            std::cerr << "  " << done << " of " << total << " games, " << std::fixed << std::setprecision(0) << seconds << " s\n";
+        };
+        const BudgetLabResult r = run_budget_lab(db, arena_decks, lab);
+        const auto line = [&](const BudgetRow& row) {
+            const double searches = static_cast<double>(std::max(row.searches, 1LL));
+            const double compared = static_cast<double>(std::max(r.reference.same_best, 1LL));
+            std::cout << "  " << std::setw(6) << row.budget << std::setw(10) << std::setprecision(2) << 1000.0 * row.seconds / searches << " ms"
+                      << std::setw(9) << std::setprecision(1) << 100.0 * static_cast<double>(row.same_best) / compared << "%" << std::setw(12)
+                      << std::setprecision(3) << row.gap / compared << std::setw(9) << std::setprecision(2) << static_cast<double>(row.plans) / searches
+                      << '\n';
+        };
+        std::cout << std::fixed << "Budget lab: " << r.games << " greedy games, one in every " << lab.every << " main-phase decisions: " << r.positions
+                  << " positions, top " << lab.plans << " plans each\n";
+        std::cout << "  budget  time/search  same best  value lost    plans\n";
+        line(r.reference);
+        for (const BudgetRow& row : r.rows) {
+            line(row);
+        }
+        std::cout << std::setprecision(1) << "Took " << r.seconds << " s\n";
+        return 0;
+    }
+
     // --agents A,B: A against B on every deck pairing, with win rates and their confidence intervals.
     int run_match(const CardDB& db, const std::vector<std::filesystem::path>& files, const std::vector<Decklist>& decks,
                   const Options& options) {
@@ -363,9 +453,11 @@ namespace {
         try {
             result = run_arena(db, arena_decks, a, b, arena);
         } catch (const ArenaError& e) {
-            const std::string path = "replays/invariant-seed-" + std::to_string(e.replay.seed) + ".json";
+            const std::string path = "replays/failed-seed-" + std::to_string(e.replay.seed) + ".json";
             save_replay(e.replay, path);
-            std::cerr << "saved the game as a replay: " << path << '\n';
+            std::cerr << "game with seed " << e.replay.seed << " (" << e.replay.players[0].agent << " with " << e.replay.players[0].deck_name << " against "
+                      << e.replay.players[1].agent << " with " << e.replay.players[1].deck_name << ") failed after " << e.replay.actions.size()
+                      << " actions; saved it as a replay: " << path << '\n';
             throw;
         }
 
@@ -374,6 +466,12 @@ namespace {
         std::cout << std::fixed << std::setprecision(1);
         std::cout << a.name << " vs " << b.name << ": " << n << " decks, " << n * n << " pairings, " << per_pairing
                   << " games each (every seed once with " << a.name << " in each seat), " << result.threads << " threads\n";
+        if (options.agents[0] == "ismcts" || options.agents[1] == "ismcts") {
+            const IsMctsOptions& m = options.is_mcts.search;
+            std::cout << "  ismcts: " << m.iterations << " iterations, C " << m.exploration << ", depth " << m.playout.depth << ", " << m.macros.searcher_plans
+                      << " plans, opponent and-tree " << m.macros.opponent_budget << " nodes keeping " << m.macros.opponent_plans
+                      << (m.matched_worlds ? ", matched worlds" : "") << (m.final_by_mean ? ", final by mean" : "") << '\n';
+        }
         if (options.agents[0] == "flatmc" || options.agents[1] == "flatmc") {
             std::cout << "  flatmc: " << options.flat_mc.plans << " plans, " << options.flat_mc.playouts << " playouts, depth "
                       << options.flat_mc.playout.depth << ", " << to_string(options.flat_mc.playout.policy) << " playouts with "
@@ -473,8 +571,10 @@ int main(int argc, char** argv) {
         }
         std::unique_ptr<ArchetypeLibrary> library;
         std::unique_ptr<DeckModel> model;
-        const bool flat_mc = options.agent == "flatmc" || std::find(options.agents.begin(), options.agents.end(), "flatmc") != options.agents.end();
-        if (flat_mc) {
+        const auto playing = [&](const char* name) {
+            return options.agent == name || std::find(options.agents.begin(), options.agents.end(), name) != options.agents.end();
+        };
+        if (playing("flatmc") || playing("ismcts")) {
             library = std::make_unique<ArchetypeLibrary>(ArchetypeLibrary::load("data/archetypes", db));
             model = std::make_unique<DeckModel>(*library);
             options.model = model.get();
@@ -484,6 +584,9 @@ int main(int argc, char** argv) {
         }
         if (options.lab_games > 0) {
             return run_lab(db, files, decks, options);
+        }
+        if (options.budget_lab_games > 0) {
+            return run_budget_lab_command(db, files, decks, options);
         }
 
         if (options.print) {

@@ -7,8 +7,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <nlohmann/json.hpp>
 
-#include "agents/planner/action_class.hpp"
 #include "agents/evaluation/evaluation.hpp"
+#include "agents/planner/action_class.hpp"
 #include "agents/planner/plan.hpp"
 #include "engine/engine.hpp"
 #include "engine/knowledge/knowledge.hpp"
@@ -128,6 +128,27 @@ TEST_CASE("apply_plan plays a plan's actions in order", "[planner]") {
     const Action attack = test::find_action(by_hand, ActionKind::Attack);
     pokebot::apply(by_hand, attack);
     CHECK(pokebot::apply_plan(f.game, Plan{{attach, attack}, ActionClass::Final}) == by_hand);
+}
+
+TEST_CASE("apply_plan_checked plays a plan only while each action is legal", "[planner]") {
+    Fixture f;
+    f.give("TST-2");
+    const Action attach = f.find(ActionKind::AttachEnergy, "TST-2", kActiveSlot);
+    GameState by_hand = f.game;
+    pokebot::apply(by_hand, attach);
+    const Action attack = test::find_action(by_hand, ActionKind::Attack);
+    pokebot::apply(by_hand, attack);
+
+    GameState checked = f.game;
+    CHECK(pokebot::apply_plan_checked(checked, Plan{{attach, attack}, ActionClass::Final}));
+    CHECK(checked == by_hand);
+
+    GameState twice = f.game;
+    CHECK_FALSE(pokebot::apply_plan_checked(twice, Plan{{attach, attach}, ActionClass::Final}));
+
+    GameState early = f.game;
+    CHECK_FALSE(pokebot::apply_plan_checked(early, Plan{{attack}, ActionClass::Final}));
+    CHECK(early == f.game);
 }
 
 TEST_CASE("a final plan's value is e after it, however many samples", "[planner]") {

@@ -72,7 +72,9 @@ interval can see.
 If an invariant breaks (with `check_invariants`), the arena stops the other threads and throws
 `ArenaError`, which carries the game as a replay: its decks, agents, seed and moves up to the
 broken invariant. Any other exception in a game, such as an agent's, stops the arena the same way
-and is passed on as it was.
+and is thrown as an `ArenaError` too, with the same message and the game's moves up to the decision
+that failed (recorded as the game is played), so a search that goes wrong can be found again from its
+seed and replayed. `pokebot-sim` saves it to `replays/failed-seed-S.json`.
 
 ## Tests
 

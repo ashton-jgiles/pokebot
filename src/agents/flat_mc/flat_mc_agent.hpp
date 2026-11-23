@@ -34,6 +34,7 @@ namespace pokebot {
         long long searched = 0;
         long long playouts = 0;
         long long playout_actions = 0;
+        long long unplayable = 0;
         long long followed = 0;
         long long greedy = 0;
         long long or_nodes = 0;
