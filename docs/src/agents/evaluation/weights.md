@@ -19,7 +19,9 @@ blank lines and Windows line endings are fine. `load_weights` throws, naming the
 a feature that's missing, repeated or unknown, or a weight that isn't one finite number.
 `save_weights` writes every digit, so a file loads back exactly.
 [`data/weights/hand.txt`](../../../../data/weights/hand.txt) holds `default_weights()`; a test keeps
-the two equal.
+the two equal. [`data/weights/prizes.txt`](../../../../data/weights/prizes.txt) has only the prizes
+weight (2, the rest 0), a baseline: against it, IS-MCTS with the hand weights scores 69.1% (63.8% to
+73.9%, 320 games).
 
 ## Setting them
 

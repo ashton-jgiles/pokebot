@@ -665,7 +665,7 @@ didn't beat even, and didn't isolate why.
 **Known limits:**
 
 - **The sign-off's seeds include 9.6's** (see M8's limits). Without those 1,600 games, taking them from 9.6's
-  `min_depth` 2 run: 50.5% (49.7% to 51.3%) over 14,400, still a tie.
+  `min_depth` 2 run (whose totals 10.1 repeated exactly): 50.5% (49.7% to 51.3%) over 14,400, still a tie.
 - **Why the solver only ties isn't known.** With every solve at depth 2 and about six times the solver's time, the
   agent still ties IS-MCTS (49.3% in 9.6). The leaf evaluation e is the leading guess, and M10's learned e would test it,
   but no run isolated it from the 4 sampled worlds, the plans kept, or the opponent's model.
@@ -714,7 +714,7 @@ decides.
 
 | Step | Builds | Status |
 |---|---|---|
-| 10.1 | **Weights in one place:** θ files, one function that sets every copy in an agent, weights per side in the sim; default weights play exactly today's games. *[Weights files and `set_weights`](src/agents/evaluation/weights.md) are built: `data/weights/hand.txt` holds the hand-set weights, `set_weights` sets every copy in the Planner's, Flat MC's, IS-MCTS's and the endgame agent's options, and the sim has `--weights`, `--weights-a` and `--weights-b`. All tests pass. `--agents ismcts,ismcts --games 20 --no-check --seed 300001` (320 games) plays identically with `--weights-b data/weights/hand.txt` and without: the score, every pairing and every count. Still to check: that a different file changes the games, and that the new code plays the same games as before 10.1* | 🔄 |
+| 10.1 | **Weights in one place:** θ files, one function that sets every copy in an agent, weights per side in the sim; default weights play exactly today's games. *[Weights files and `set_weights`](src/agents/evaluation/weights.md) are built: `data/weights/hand.txt` holds the hand-set weights, `set_weights` sets every copy in the Planner's, Flat MC's, IS-MCTS's and the endgame agent's options, and the sim has `--weights`, `--weights-a` and `--weights-b`. All tests pass. `--agents ismcts,ismcts --games 20 --no-check --seed 300001` (320 games) plays identically with `--weights-b data/weights/hand.txt` and without: the score, every pairing and every count. With `data/weights/prizes.txt` (only the prizes weight) for B on the same seeds, the hand weights score 69.1% (63.8% to 73.9%), so each side gets its own weights. `--agents endgame,ismcts --games 100 --no-check` repeats 9.6's `min_depth` 2 run from before 10.1 exactly: 802 to 798, every pairing and every count* | ✅ |
 | 10.2 | **Self-play data:** features at each turn's start and end, with game, pairing, seat, prizes left and result | ⬜ |
 | 10.3 | **Evaluation lab:** held-out log loss and calibration of e against the baselines; decides how far to go | ⬜ |
 | 10.4 | **The fit:** logistic regression in C++ (Newton, L2), pairing and first-player terms, optional θ ≥ 0, leave-one-deck-out; recovers known weights on made-up data | ⬜ |
