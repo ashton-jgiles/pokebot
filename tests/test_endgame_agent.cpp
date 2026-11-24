@@ -172,6 +172,22 @@ TEST_CASE("when the solver can't finish depth 1 in its budget, the agent falls b
     CHECK(agent.is_mcts().search_stats().searches == 1);
 }
 
+TEST_CASE("when the solve doesn't reach the minimum depth, the agent falls back on IS-MCTS", "[endgame]") {
+    Fixture f;
+    f.give("TST-2");
+    f.give("TST-4");
+    const DeckModel model(f.library);
+    EndgameAgentOptions options = small(6, 0);
+    options.solver.max_depth = 1;
+    options.min_depth = 2;
+    EndgameAgent agent(1, model, options);
+    f.play_turn(agent);
+    CHECK(agent.analysis().depth == 1);
+    CHECK(agent.stats().fallbacks == 1);
+    CHECK(agent.stats().played == 0);
+    CHECK(agent.is_mcts().search_stats().searches == 1);
+}
+
 TEST_CASE("the endgame agent plays whole games on the sample cards, the same for the same seed", "[endgame]") {
     const CardDB db = sample_db();
     ArchetypeLibrary library;

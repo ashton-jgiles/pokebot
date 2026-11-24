@@ -8,7 +8,7 @@ close to its end, and the [IS-MCTS agent](../is_mcts/is_mcts_agent.md) otherwise
 player's observation only, like every agent.
 
 ```cpp
-EndgameAgent agent(seed, model);   // the solver at 2 or fewer Prize cards left, else IS-MCTS
+EndgameAgent agent(seed, model);   // the solver's depth-2 plans at 2 or fewer Prize cards left, else IS-MCTS
 ```
 
 `pokebot-sim --agent endgame` or `--agents endgame,ismcts` plays it ([sim](../../../tools/sim/main.md)).
@@ -36,6 +36,7 @@ or-tree still looks for a win first.
 | `EndgameAgentOptions` | Default | Meaning |
 |---|---|---|
 | `prizes` | 2 | The endgame: either player at most this many Prize cards left (P_end) |
+| `min_depth` | 2 | The solver's plan is played only if its solve reached this depth (or had one plan); otherwise IS-MCTS decides, counted as a fallback. 2 since 9.6: a depth-1 solve scores a plan by e with no reply from the opponent, and playing those lost to IS-MCTS (45.9%, against 50.1% without them) |
 | `is_mcts` | `IsMctsAgentOptions` | The IS-MCTS agent outside the endgame and on fallbacks |
 | `solver` | `EndgameOptions` | The solver: 4 worlds, depth 2, 10,000 nodes |
 
@@ -53,7 +54,7 @@ IS-MCTS agent tests' sample cards with a one-archetype library and small budgets
 - in the endgame, the solver's depth-2 best plan played to the end, IS-MCTS never searching;
 - outside the endgame, IS-MCTS's search and plan;
 - in the endgame, a win taken (a free retreat, then a Knock Out of the last Pokémon);
-- on a 1-node budget, a fallback on IS-MCTS;
+- on a 1-node budget, a fallback on IS-MCTS, and the same when the solve stops short of `min_depth`;
 - whole sample-card games, the same for the same seed; whole real-deck games against random, with
   endgame decisions solved;
 - its counters first, then IS-MCTS's.

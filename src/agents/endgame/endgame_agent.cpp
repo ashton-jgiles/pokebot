@@ -58,7 +58,8 @@ namespace pokebot {
         if (endgame(observation, actions) && !is_mcts_.following(observation, actions)) {
             ++stats_.endgame;
             analysis_ = solver_.solve(observation);
-            if (!analysis_.plans.empty() && follow(observation, actions, analysis_.plans[analysis_.best].plan)) {
+            const bool deep = analysis_.depth >= options_.min_depth || analysis_.plans.size() == 1;
+            if (!analysis_.plans.empty() && deep && follow(observation, actions, analysis_.plans[analysis_.best].plan)) {
                 ++stats_.played;
                 ++stats_.followed;
                 return plan_[next_++];

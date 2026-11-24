@@ -22,6 +22,7 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
                                         [--mcts-opponent-budget B] [--mcts-opponent-plans K] [--mcts-fresh-worlds] [--mcts-final-mean [--mcts-min-visits N]]
                                         [--planner-lab N [--every K]] [--budget-lab N [--every K]]
                                         [--endgame-prizes P] [--endgame-worlds M] [--endgame-depth D] [--endgame-nodes N]
+                                        [--endgame-min-depth D]
                                         [--endgame-lab N [--every K]]
 ```
 
@@ -64,6 +65,7 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 | `--endgame-prizes P` | 2 | The [endgame agent](../../src/agents/endgame/endgame_agent.md) solves when either player has at most `P` Prize cards left (1 to 6); with `--endgame-lab`, the most Prize cards left for a tree |
 | `--endgame-worlds M` | 4 | The [endgame solver](../../src/agents/endgame/endgame_solver.md)'s worlds, for the agent and the lab |
 | `--endgame-depth D` | 2 | The endgame solver's deepest depth, for the agent and the lab |
+| `--endgame-min-depth D` | 2 | The endgame agent plays the solver's plan only if the solve reached depth `D`; otherwise IS-MCTS decides |
 | `--endgame-nodes N` | 10000 | The endgame agent's node budget a solve, 0 for none (the lab always solves without one) |
 | | | The endgame solver's plans follow `--mcts-plans` at `--planner-and-budget` at the root and `--mcts-opponent-plans` at `--mcts-opponent-budget` below; the agent's IS-MCTS takes every `--mcts-*` setting |
 | `--every K` | 5 | With `--planner-lab`, `--budget-lab` or `--endgame-lab`: which decisions to measure |

@@ -81,6 +81,7 @@ namespace {
                      "                   [--mcts-final-mean [--mcts-min-visits N]]\n"
                      "                   [--planner-lab N [--every K]] [--budget-lab N [--every K]]\n"
                      "                   [--endgame-prizes P] [--endgame-worlds M] [--endgame-depth D] [--endgame-nodes N]\n"
+                     "                   [--endgame-min-depth D]\n"
                      "                   [--endgame-lab N [--every K]]\n"
                      "  --games N            games to play (default 1000)\n"
                      "  --agent A            random, biased, greedy, planner, flatmc, ismcts or endgame (default biased)\n"
@@ -124,6 +125,8 @@ namespace {
                      "  --endgame-worlds M       the endgame solver's worlds (default 4)\n"
                      "  --endgame-depth D        the endgame solver's deepest depth (default 2)\n"
                      "  --endgame-nodes N        the endgame solver's node budget, 0 for none (default 10000)\n"
+                     "  --endgame-min-depth D    the endgame agent plays the solver's plan only if the solve reached\n"
+                     "                           depth D, else IS-MCTS decides (default 2)\n"
                      "  --endgame-lab N          play N greedy games, count the hidden-card worlds at every main-phase\n"
                      "                           decision and, at every Kth one with at most P prizes left\n"
                      "                           (--endgame-prizes P, default 2), time a two-segment search and the\n"
@@ -200,6 +203,8 @@ namespace {
                 options.endgame_worlds = std::stoi(argv[++i]);
             } else if (arg == "--endgame-depth" && has_value) {
                 options.endgame_depth = std::stoi(argv[++i]);
+            } else if (arg == "--endgame-min-depth" && has_value) {
+                options.endgame.min_depth = std::stoi(argv[++i]);
             } else if (arg == "--endgame-nodes" && has_value) {
                 options.endgame.solver.max_nodes = std::stoll(argv[++i]);
             } else if (arg == "--planner-lab" && has_value) {
@@ -251,7 +256,7 @@ namespace {
         options.is_mcts.or_budget = options.planner.or_budget;
         options.is_mcts.search.macros.searcher_budget = options.planner.and_budget;
         options.is_mcts.search.macros.samples = options.planner.samples;
-        if (options.endgame.solver.max_nodes < 0) {
+        if (options.endgame.solver.max_nodes < 0 || options.endgame.min_depth < 0) {
             return false;
         }
         options.endgame.prizes = options.endgame_prizes;
@@ -611,7 +616,7 @@ namespace {
             const EndgameOptions& e = options.endgame.solver;
             std::cout << "  endgame: the solver at " << options.endgame.prizes << " or fewer Prize cards left, " << e.worlds << " worlds, depth up to "
                       << e.max_depth << ", " << e.max_nodes << " nodes, plans " << e.search.root_plans << " at the root and " << e.search.plans
-                      << " below; otherwise ismcts as above\n";
+                      << " below, played if it reached depth " << options.endgame.min_depth << "; otherwise ismcts as above\n";
         }
         if (options.agents[0] == "flatmc" || options.agents[1] == "flatmc") {
             std::cout << "  flatmc: " << options.flat_mc.plans << " plans, " << options.flat_mc.playouts << " playouts, depth "
