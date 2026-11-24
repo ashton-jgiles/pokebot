@@ -19,7 +19,7 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
                                         [--check-games FILE] [--evaluate FILE,FILE,... [--threads N] [--save-weights DIR] [--reference NAME]]
                                         [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]
                                         [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W] [--mc-greedy-choices]
-                                        [--mcts-iterations N] [--mcts-c C] [--mcts-depth R] [--mcts-plans K]
+                                        [--mcts-iterations N] [--mcts-c C] [--mcts-c-a C] [--mcts-c-b C] [--mcts-depth R] [--mcts-plans K]
                                         [--mcts-opponent-budget B] [--mcts-opponent-plans K] [--mcts-fresh-worlds] [--mcts-final-mean [--mcts-min-visits N]]
                                         [--weights FILE] [--weights-a FILE] [--weights-b FILE]
                                         [--planner-lab N [--every K]] [--budget-lab N [--every K]]
@@ -59,6 +59,7 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 | `--mc-greedy-choices` | | Flat MC leaves its decisions outside the main phase to Greedy, as the Planner does. By default it plays them out like its plans |
 | `--mcts-iterations N` | 42 | [IS-MCTS](../../src/agents/is_mcts/is_mcts_agent.md)'s iterations each decision |
 | `--mcts-c C` | 0.7 | Its exploration constant |
+| `--mcts-c-a C`, `--mcts-c-b C` | `--mcts-c`'s | With `--agents A,B`: A's or B's exploration constant, for `ismcts` and `endgame` |
 | `--mcts-depth R` | 2 | How far its playouts run past a leaf, as `--mc-depth` |
 | `--mcts-plans K` | 16 | Plans at the searcher's nodes |
 | `--mcts-opponent-budget B` | 25 | Nodes for the opponent's and-tree at an opponent node (from the [budget lab](../../src/harness/budget_lab.md)) |
@@ -127,6 +128,9 @@ games; the reference machine has 16 hardware threads):
 | `ismcts,flatmc` at the M8 sign-off (the defaults; `--games 1000`, 16,000 games) | about 2.8 games/s, 2.0 with invariant checks | |
 | `endgame,ismcts` in 9.6 (only depth-2 solves played; `--games 100`) | about 2.0 games/s | |
 | `endgame,ismcts` at the M9 sign-off (the defaults; `--games 1000`, 16,000 games) | about 1.4 games/s with invariant checks | |
+| `ismcts,ismcts` in 10.5 (the defaults; `--games 400`, the run without stalls) | about 3.1 games/s | |
+| `flatmc,flatmc` in 10.5 (the defaults; `--games 400`) | about 2.2 games/s | |
+| `greedy,greedy` in 10.5 (`--games 1000`) | about 228 games/s | |
 
 Greedy builds 3 worlds per decision and tries every action in each, so it costs about 9 ms per game
 on one thread against Random. Playing out follow-up choices (step 5.6c) made it about 3.3 times

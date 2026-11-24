@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -76,6 +77,8 @@ namespace {
         std::string weights_file;
         std::string weights_a_file;
         std::string weights_b_file;
+        std::optional<double> mcts_c_a;
+        std::optional<double> mcts_c_b;
         const DeckModel* model = nullptr;
         int lab_games = 0;
         int budget_lab_games = 0;
@@ -93,7 +96,7 @@ namespace {
                      "                   [--check-games FILE] [--evaluate FILE,FILE,... [--threads N] [--save-weights DIR] [--reference NAME]]\n"
                      "                   [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]\n"
                      "                   [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W] [--mc-greedy-choices]\n"
-                     "                   [--mcts-iterations N] [--mcts-c C] [--mcts-depth R] [--mcts-plans K]\n"
+                     "                   [--mcts-iterations N] [--mcts-c C] [--mcts-c-a C] [--mcts-c-b C] [--mcts-depth R] [--mcts-plans K]\n"
                      "                   [--mcts-opponent-budget B] [--mcts-opponent-plans K] [--mcts-fresh-worlds]\n"
                      "                   [--mcts-final-mean [--mcts-min-visits N]]\n"
                      "                   [--weights FILE] [--weights-a FILE] [--weights-b FILE]\n"
@@ -132,6 +135,8 @@ namespace {
                      "  --mc-greedy-choices      flat MC leaves its decisions outside the main phase to Greedy (default: plays them out)\n"
                      "  --mcts-iterations N      IS-MCTS's iterations each decision (default 42)\n"
                      "  --mcts-c C               IS-MCTS's exploration constant (default 0.7)\n"
+                     "  --mcts-c-a C             with --agents A,B: A's exploration constant (default: --mcts-c's)\n"
+                     "  --mcts-c-b C             with --agents A,B: B's exploration constant (default: --mcts-c's)\n"
                      "  --mcts-depth R           turns of the searching player an IS-MCTS playout runs to (default 2)\n"
                      "  --mcts-plans K           IS-MCTS's plans at the searcher's nodes (default 16)\n"
                      "  --mcts-opponent-budget B nodes for the opponent's and-tree at an IS-MCTS node (default 25)\n"
@@ -218,6 +223,10 @@ namespace {
                 options.is_mcts.search.iterations = std::stoi(argv[++i]);
             } else if (arg == "--mcts-c" && has_value) {
                 options.is_mcts.search.exploration = std::stod(argv[++i]);
+            } else if (arg == "--mcts-c-a" && has_value) {
+                options.mcts_c_a = std::stod(argv[++i]);
+            } else if (arg == "--mcts-c-b" && has_value) {
+                options.mcts_c_b = std::stod(argv[++i]);
             } else if (arg == "--mcts-depth" && has_value) {
                 options.is_mcts.search.playout.depth = std::stoi(argv[++i]);
             } else if (arg == "--mcts-plans" && has_value) {
@@ -295,7 +304,7 @@ namespace {
         options.flat_mc.samples = options.planner.samples;
         const IsMctsOptions& mcts = options.is_mcts.search;
         if (mcts.iterations < 1 || mcts.exploration < 0.0 || mcts.playout.depth < 0 || mcts.macros.searcher_plans < 1 || mcts.macros.opponent_budget < 1 ||
-            mcts.macros.opponent_plans < 1 || mcts.final_min_visits < 1) {
+            mcts.macros.opponent_plans < 1 || mcts.final_min_visits < 1 || options.mcts_c_a.value_or(0.0) < 0.0 || options.mcts_c_b.value_or(0.0) < 0.0) {
             return false;
         }
         options.is_mcts.or_budget = options.planner.or_budget;
@@ -339,7 +348,7 @@ namespace {
         }
         if (options.agents.empty()) {
             if ((options.threads != 0 && options.evaluate.empty()) || options.replay_every != 0 || !options.weights_a_file.empty() || !options.weights_b_file.empty() ||
-                !options.save_games.empty()) {
+                !options.save_games.empty() || options.mcts_c_a || options.mcts_c_b) {
                 return false;
             }
         } else if (options.agents.size() != 2 || !known(options.agents[0]) || !known(options.agents[1]) || options.print ||
@@ -639,15 +648,19 @@ namespace {
         }
         // The same agent on both sides is labelled with its side, such as random-A and random-B.
         const bool same = options.agents[0] == options.agents[1];
-        const auto contestant = [&](const std::string& name, const char* side, const std::string& weights_file) {
+        const auto contestant = [&](const std::string& name, const char* side, const std::string& weights_file, const std::optional<double>& c) {
             Options mine = options;
             if (!weights_file.empty()) {
                 use_weights(mine, load_weights(weights_file));
             }
+            if (c) {
+                mine.is_mcts.search.exploration = *c;
+                mine.endgame.is_mcts.search.exploration = *c;
+            }
             return Contestant{same ? name + "-" + side : name, [name, mine](std::uint64_t seed) { return make_agent(name, seed, mine); }};
         };
-        const Contestant a = contestant(options.agents[0], "A", options.weights_a_file);
-        const Contestant b = contestant(options.agents[1], "B", options.weights_b_file);
+        const Contestant a = contestant(options.agents[0], "A", options.weights_a_file, options.mcts_c_a);
+        const Contestant b = contestant(options.agents[1], "B", options.weights_b_file, options.mcts_c_b);
         ArenaOptions arena;
         arena.games = static_cast<int>(options.games);
         arena.seed = options.seed;
@@ -681,7 +694,8 @@ namespace {
                   << " games each (every seed once with " << a.name << " in each seat), " << result.threads << " threads\n";
         if (options.agents[0] == "ismcts" || options.agents[1] == "ismcts" || options.agents[0] == "endgame" || options.agents[1] == "endgame") {
             const IsMctsOptions& m = options.is_mcts.search;
-            std::cout << "  ismcts: " << m.iterations << " iterations, C " << m.exploration << ", depth " << m.playout.depth << ", " << m.macros.searcher_plans
+            std::cout << "  ismcts: " << m.iterations << " iterations, C " << std::setprecision(2) << options.mcts_c_a.value_or(m.exploration) << " for " << a.name
+                      << " and " << options.mcts_c_b.value_or(m.exploration) << " for " << b.name << std::setprecision(1) << ", depth " << m.playout.depth << ", " << m.macros.searcher_plans
                       << " plans, opponent and-tree " << m.macros.opponent_budget << " nodes keeping " << m.macros.opponent_plans
                       << (m.matched_worlds ? ", matched worlds" : "") << (m.final_by_mean ? ", final by mean" : "") << '\n';
         }

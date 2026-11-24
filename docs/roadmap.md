@@ -708,6 +708,13 @@ decides.
   features to recognise the deck, and within a game the pairing never changes. The θ ≥ 0 fit unless the free fit's
   advantage is outside its 95% interval. On to 10.5 if the chosen fit beats the scaled hand θ outside the 95% interval
   and isn't clearly worse on any left-out deck; otherwise on to new features.
+- **10.5's runs (2026-11-24, before any was run):** seeds from 2,000,001, used by no other step. Learned θ is
+  `data/weights/m10/fitted-nonneg.txt`. The main run is IS-MCTS with learned θ against hand θ at C = 0.7, 6,400 games;
+  Greedy and Flat MC the same way, to see where a difference starts; and IS-MCTS with `hand-scaled-terms.txt` against hand
+  θ, to tell a better θ from a better scale. C is re-checked by playing learned θ with another C against learned θ with
+  0.7, and changed only if that wins outside its 95% interval. The search seconds of both sides are reported, since the
+  weights can change how much work 42 iterations are. If the main run isn't above 50% outside its interval, the Greedy and
+  Flat MC runs say where to look before anything is tuned.
 - **Split by seed,** never by position or game: a game's positions share one result, and the arena plays each deal
   twice (pairing (i, j) in one seat and (j, i) in the other), so 16,000 games hold 8,000 deals.
 - **The data:** IS-MCTS against itself with the hand weights, seeds 1,000,001 to 1,000,500 in five parts of 100 seeds
@@ -727,8 +734,8 @@ decides.
 | 10.1 | **Weights in one place:** θ files, one function that sets every copy in an agent, weights per side in the sim; default weights play exactly today's games. *[Weights files and `set_weights`](src/agents/evaluation/weights.md) are built: `data/weights/hand.txt` holds the hand-set weights, `set_weights` sets every copy in the Planner's, Flat MC's, IS-MCTS's and the endgame agent's options, and the sim has `--weights`, `--weights-a` and `--weights-b`. All tests pass. `--agents ismcts,ismcts --games 20 --no-check --seed 300001` (320 games) plays identically with `--weights-b data/weights/hand.txt` and without: the score, every pairing and every count. With `data/weights/prizes.txt` (only the prizes weight) for B on the same seeds, the hand weights score 69.1% (63.8% to 73.9%), so each side gets its own weights. `--agents endgame,ismcts --games 100 --no-check` repeats 9.6's `min_depth` 2 run from before 10.1 exactly: 802 to 798, every pairing and every count* | ✅ |
 | 10.2 | **Self-play data:** whole games saved, and from them the features at each turn's start and one later main phase, with game, player, prizes left and result. *[`self_play`](src/harness/self_play.md) is built: games saved as replays, one a line, and positions worked out by playing them back, so new features need no new games. A turn's end is the next turn's start, so a random later main phase is recorded instead. `--save-games`, `--check-games`. All tests pass. A trial of 320 games (`--seed 310001`, 3.2 games/s) played back to its results: 160 different deals, 6,612 turn starts and 5,896 later main phases. The data run: 16,000 games in five parts, each 3,200 games of 100 seeds and 1,600 different deals, all played back to their saved result, none without positions. 622,664 positions (329,470 turn starts, 293,194 later), 498,549 of them in parts 1 to 4. The player who went first scored 53.3%, 50.9%, 52.9%, 51.6% and 49.8% by part, 51.7% in all* | ✅ |
 | 10.3 | **Evaluation lab:** held-out log loss and calibration of e against the baselines. *[`evaluation_lab`](src/harness/evaluation_lab.md) is built: a coin flip, prizes with a fitted scale, the hand θ as played and with a fitted scale, scored on seeds they weren't fitted on (10 folds by seed), with errors clustered by seed. `--evaluate FILE,...`. How far to go needs the fitted θ, so that decision moves to the end of 10.4. All tests pass. The results on parts 1 to 4 are below* | ✅ |
-| 10.4 | **The fit:** logistic regression in C++ (Newton, L2), pairing and first-player terms, optional θ ≥ 0, leave-one-deck-out; recovers known weights on made-up data. *[`weight_fit`](src/harness/weight_fit.md) is built, with terms for each pairing, going first and the player to move, and the [evaluation lab](src/harness/evaluation_lab.md) scores every model raw and with those terms fitted on the training folds (deck-adjusted), and on decks left out of the fit. `--evaluate` compares the fits and `--save-weights` saves them. All tests pass, and the raw losses repeat 10.3's from a different solver. The results on parts 1 to 4 are below. Which fit goes to 10.5 is still to be decided* | 🔄 |
-| 10.5 | **Arena tuning:** learned against hand θ in Greedy, Flat MC and IS-MCTS; C re-checked | ⬜ |
+| 10.4 | **The fit:** logistic regression in C++ (Newton, L2), pairing and first-player terms, optional θ ≥ 0, leave-one-deck-out; recovers known weights on made-up data. *[`weight_fit`](src/harness/weight_fit.md) is built, with terms for each pairing, going first and the player to move, and the [evaluation lab](src/harness/evaluation_lab.md) scores every model raw and with those terms fitted on the training folds (deck-adjusted), and on decks left out of the fit. `--evaluate` compares the fits and `--save-weights` saves them. All tests pass, and the raw losses repeat 10.3's from a different solver. The results on parts 1 to 4 are below. `data/weights/m10/fitted-nonneg.txt` goes to 10.5* | ✅ |
+| 10.5 | **Arena tuning:** learned against hand θ in Greedy, Flat MC and IS-MCTS; C re-checked. *The main run: IS-MCTS with learned θ scores 52.4% (51.2% to 53.6%) against hand θ over 6,400 games; the hand θ only rescaled scores 49.0% (47.8% to 50.3%), and C stays at 0.7. `--mcts-c-a` and `--mcts-c-b` are built for the C run. Greedy with learned θ loses: 42.9% (42.2% to 43.7%). Flat MC with learned θ scores 52.4% (51.1% to 53.6%). Learned θ takes about 9% more search time a game in IS-MCTS. The runs are below* | ✅ |
 | 10.6 | **New features,** one at a time, with their `upper_bound` terms | ⬜ |
 | 10.7 | **Sign-off:** IS-MCTS with learned against hand θ, 16,000 games with invariant checks on unused seeds; the endgame agent re-tested; known limits | ⬜ |
 
@@ -776,6 +783,9 @@ seed. 24.7 s on 16 threads.
   its interval, so the rule above picks the free fit. But on decks left out it's worse on basic-box (+0.0016 ± 0.0008) and
   dragapult (+0.0011 ± 0.0008) and better on ns-zoroark (−0.0006 ± 0.0005); mega-greninja is level (−0.0003 ± 0.0005). The
   rule said nothing about this comparison on left-out decks.
+- **The choice: θ ≥ 0, against the rule, after seeing the result.** The free fit does no better on left-out decks; its
+  conditions weight swings from −0.07 to −0.39 with the deck left out; its gain is 0.0007 of about 0.011; and a negative
+  weight turns off `f_bound`, which would mix a weaker search into every arena test.
 - **L2 doesn't help** (1,000 is level with none, 10,000 is worse), so none is used.
 - **What changed, against the scaled hand θ:** energy 0.18 to 0.97, deck 0.31 to 0.62, hand 0.12 to 0.28, turns to Knock
   Out 0.49 to 0.29, and ready attackers 0.25 to about 0. Conditions (−0.29 ± 0.11) and prizes at risk (−0.16 ± 0.05) come
@@ -784,6 +794,39 @@ seed. 24.7 s on 16 threads.
   where new features have most to add: 41% of the positions.
 - **The player to move's term isn't the same all game:** with one term, predictions are 1.5 points too high before any
   prize is taken and 1.3 to 1.9 too low at 1 to 3 prizes. A whose-turn feature in 10.6 may need to depend on prizes.
+
+**What 10.5 measured:** IS-MCTS's defaults on both sides, 400 games per pairing, `--seed 2000001`, no invariant checks.
+
+| A against B | A's score |
+|---|---|
+| IS-MCTS, learned θ against hand θ, C = 0.7 (2026-11-24) | **52.4%** (51.2% to 53.6%): 3,355 won, 3,045 lost |
+| IS-MCTS, hand θ scaled (× 0.614) against hand θ, C = 0.7 | 49.0% (47.8% to 50.3%): 3,139 won, 3,261 lost |
+| IS-MCTS, learned θ, C = 0.4 against C = 0.7 | 50.2% (49.0% to 51.5%): 3,215 won, 3,185 lost |
+| Flat MC, learned θ against hand θ | **52.4%** (51.1% to 53.6%): 3,351 won, 3,049 lost |
+| Greedy, learned θ against hand θ, 1,000 games per pairing | **42.9%** (42.2% to 43.7%): 6,869 won, 9,130 lost, 1 drawn |
+
+- **Greedy gets worse with learned θ,** with every deck (by 10 to 17 points), while IS-MCTS gets better. It loses 4,019 games by
+  running out of cards against 2,653 won that way; 41.7% of Greedy's games end in deck-out, against 6.4% of the IS-MCTS
+  run's. The cause isn't known: θ was fitted on IS-MCTS's positions, and Greedy scores every single action with it. Flat
+  MC's and IS-MCTS's playouts are played by Greedy with the same θ, so learned θ at the leaves with hand θ playing the
+  playouts is worth testing.
+- **Flat MC gains as much as IS-MCTS,** so the gain doesn't need the tree search. By the deck it plays: dragapult +12.1 ± 3.7,
+  ns-zoroark +4.4 ± 3.7, basic-box +2.1 ± 3.7, mega-greninja +0.5 ± 3.7. The mega-greninja mirror is 45.8% (40.9% to 50.6%).
+  It takes about 6% more search seconds a game (3.73 against 3.51), and its and-trees expand 19% more nodes.
+- **The gain isn't from the scale:** rescaling the hand θ alone doesn't help at C = 0.7, though it was most of the gain in
+  log loss. What's left is the other change in θ, its direction.
+- **C stays at 0.7:** 0.4 doesn't beat it outside its interval. Only 0.4 was tried.
+- **By the deck it plays,** learned less hand θ over the same 1,600 games each: dragapult +12.1 ± 3.8 points, ns-zoroark +6.3
+  ± 3.7, basic-box +3.0 ± 3.8, mega-greninja −2.0 ± 3.8. In the mega-greninja mirror it scores 43.8% (39.0% to 48.6%).
+- **Time:** 3.87 search seconds a game against 3.90, but the machine stalled for about 800 s during the run, which adds
+  about 2 s a game to one side or the other at random, so this run doesn't settle it. By counts, learned θ makes 3% more
+  iterations a game and 7% more playout actions an iteration, and 6% fewer opponent and-trees. The scaled run had no stall
+  (2.59 s on both sides, 3.1 games/s); the C run had several, so its times mean nothing either.
+- **Time, measured again** on 320 of the main run's games (`--games 20`, 2.4 games/s, no stall; 173 to 147): 3.44 search
+  seconds a game for learned θ against 3.16, 9% more, of which 3% is more searched decisions. At M8's 5 to 6 points a
+  doubling that's worth about 0.6 to 0.7 of the 2.4-point lead: an estimate, not a run at matched time. The lead doesn't
+  come from time alone.
+- **Set aside for later (user's choice, 2026-11-24):** separate weights for the playouts' Greedy agents.
 
 ## M5 onward
 
