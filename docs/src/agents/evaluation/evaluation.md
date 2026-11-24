@@ -46,7 +46,7 @@ most HP left were Active, so the moment between a Knock Out and the promotion is
 no Active at all.
 
 The weights are set by hand, with Prize cards far the heaviest; M10 fits them by logistic regression
-on self-play.
+on self-play. They can be read from a file and given to every agent: see [weights](weights.md).
 
 **Hand against deck (step 5.6b).** At first the hand counted in full (scale 10) and the deck only
 below 10 cards. Drawing then always looked good, so Greedy drew its deck away: in the first full

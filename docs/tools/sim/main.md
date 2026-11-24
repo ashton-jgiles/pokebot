@@ -20,6 +20,7 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
                                         [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W] [--mc-greedy-choices]
                                         [--mcts-iterations N] [--mcts-c C] [--mcts-depth R] [--mcts-plans K]
                                         [--mcts-opponent-budget B] [--mcts-opponent-plans K] [--mcts-fresh-worlds] [--mcts-final-mean [--mcts-min-visits N]]
+                                        [--weights FILE] [--weights-a FILE] [--weights-b FILE]
                                         [--planner-lab N [--every K]] [--budget-lab N [--every K]]
                                         [--endgame-prizes P] [--endgame-worlds M] [--endgame-depth D] [--endgame-nodes N]
                                         [--endgame-min-depth D]
@@ -59,6 +60,8 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 | `--mcts-fresh-worlds` | off | Deal every iteration a fresh world, instead of the [matched worlds](../../src/agents/is_mcts/is_mcts.md#matched-worlds-matched_worlds) the agent uses by default |
 | `--mcts-final-mean` | off | Play the best mean among the root moves visited often enough, not the most visited |
 | `--mcts-min-visits N` | 3 | With `--mcts-final-mean`: the visits a move needs (at least 1) |
+| `--weights FILE` | hand-set | The [evaluation's weights](../../src/agents/evaluation/weights.md) for every agent, from a file such as `data/weights/hand.txt`. Not with the labs, which use the default weights |
+| `--weights-a FILE`, `--weights-b FILE` | `--weights` | With `--agents A,B`: one side's weights, so an agent can play itself on different ones |
 | `--planner-lab N` | | Play `N` Greedy-against-Greedy games and measure the planner's searches at one in every `K` main-phase decisions ([planner lab](../../src/harness/planner_lab.md)). Uses `--seed`, `--planner-samples` and `--planner-or-budget`, and prints its progress after each game to stderr |
 | `--budget-lab N` | | Play `N` Greedy-against-Greedy games and, at one in every `K` main-phase decisions, time the and-tree at budgets 25, 50, 100 and 150 against `--planner-and-budget` and report what each gives up ([budget lab](../../src/harness/budget_lab.md)). Uses `--seed` and `--planner-samples` |
 | `--endgame-lab N` | | Play `N` Greedy-against-Greedy games, count the hidden-card worlds at every main-phase decision and, at one in every `K` with at most `P` Prize cards left, time a two-segment search without pruning ([endgame lab](../../src/harness/endgame_lab.md)). Uses `--seed`, `--planner-and-budget`, `--planner-samples` and the `--mcts-*` plan settings, and loads the archetype library |

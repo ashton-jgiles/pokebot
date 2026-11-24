@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "agents/endgame/endgame_agent.hpp"
+#include "agents/evaluation/weights.hpp"
 #include "agents/flat_mc/deck_model.hpp"
 #include "agents/flat_mc/flat_mc_agent.hpp"
 #include "agents/flat_mc/playout.hpp"
@@ -20,6 +21,7 @@
 #include "agents/is_mcts/is_mcts_agent.hpp"
 #include "agents/planner/planner_agent.hpp"
 #include "agents/random/random_agent.hpp"
+#include "agents/set_weights.hpp"
 #include "cards/db/card_db.hpp"
 #include "core/decklist.hpp"
 #include "harness/arena.hpp"
@@ -60,6 +62,10 @@ namespace {
         FlatMcOptions flat_mc;
         IsMctsAgentOptions is_mcts;
         EndgameAgentOptions endgame;
+        Weights weights = default_weights();
+        std::string weights_file;
+        std::string weights_a_file;
+        std::string weights_b_file;
         const DeckModel* model = nullptr;
         int lab_games = 0;
         int budget_lab_games = 0;
@@ -79,6 +85,7 @@ namespace {
                      "                   [--mcts-iterations N] [--mcts-c C] [--mcts-depth R] [--mcts-plans K]\n"
                      "                   [--mcts-opponent-budget B] [--mcts-opponent-plans K] [--mcts-fresh-worlds]\n"
                      "                   [--mcts-final-mean [--mcts-min-visits N]]\n"
+                     "                   [--weights FILE] [--weights-a FILE] [--weights-b FILE]\n"
                      "                   [--planner-lab N [--every K]] [--budget-lab N [--every K]]\n"
                      "                   [--endgame-prizes P] [--endgame-worlds M] [--endgame-depth D] [--endgame-nodes N]\n"
                      "                   [--endgame-min-depth D]\n"
@@ -116,6 +123,9 @@ namespace {
                      "  --mcts-fresh-worlds      deal every iteration a fresh world, not the k-th world shared by every root move\n"
                      "  --mcts-final-mean        play the root move with the best mean among those visited often enough\n"
                      "  --mcts-min-visits N      with --mcts-final-mean: visits a root move needs (default 3)\n"
+                     "  --weights FILE           the evaluation's weights for every agent (default: the hand-set ones)\n"
+                     "  --weights-a FILE         with --agents A,B: A's weights\n"
+                     "  --weights-b FILE         with --agents A,B: B's weights\n"
                      "  --planner-lab N          play N greedy games and measure the planner's searches at every Kth\n"
                      "                           main-phase decision (--every K, default 5)\n"
                      "  --budget-lab N           play N greedy games and time the and-tree at cheap budgets against\n"
@@ -207,6 +217,12 @@ namespace {
                 options.endgame.min_depth = std::stoi(argv[++i]);
             } else if (arg == "--endgame-nodes" && has_value) {
                 options.endgame.solver.max_nodes = std::stoll(argv[++i]);
+            } else if (arg == "--weights" && has_value) {
+                options.weights_file = argv[++i];
+            } else if (arg == "--weights-a" && has_value) {
+                options.weights_a_file = argv[++i];
+            } else if (arg == "--weights-b" && has_value) {
+                options.weights_b_file = argv[++i];
             } else if (arg == "--planner-lab" && has_value) {
                 options.lab_games = std::stoi(argv[++i]);
             } else if (arg == "--every" && has_value) {
@@ -281,8 +297,12 @@ namespace {
              (!options.agents.empty() || options.print || options.check_replays || options.lab_games > 0 || options.budget_lab_games > 0))) {
             return false;
         }
+        const bool lab = options.lab_games > 0 || options.budget_lab_games > 0 || options.endgame_lab_games > 0;
+        if (lab && !options.weights_file.empty()) {
+            return false;
+        }
         if (options.agents.empty()) {
-            if (options.threads != 0 || options.replay_every != 0) {
+            if (options.threads != 0 || options.replay_every != 0 || !options.weights_a_file.empty() || !options.weights_b_file.empty()) {
                 return false;
             }
         } else if (options.agents.size() != 2 || !known(options.agents[0]) || !known(options.agents[1]) || options.print ||
@@ -292,12 +312,20 @@ namespace {
         return options.games > 0 && known(options.agent);
     }
 
+    void use_weights(Options& options, const Weights& weights) {
+        options.weights = weights;
+        set_weights(options.planner, weights);
+        set_weights(options.flat_mc, weights);
+        set_weights(options.is_mcts, weights);
+        set_weights(options.endgame, weights);
+    }
+
     std::unique_ptr<Agent> make_agent(const std::string& name, std::uint64_t seed, const Options& options) {
         if (name == "random") {
             return std::make_unique<RandomAgent>(seed);
         }
         if (name == "greedy") {
-            return std::make_unique<GreedyAgent>(seed);
+            return std::make_unique<GreedyAgent>(seed, 3, options.weights);
         }
         if (name == "planner") {
             return std::make_unique<PlannerAgent>(seed, options.planner);
@@ -570,11 +598,15 @@ namespace {
         }
         // The same agent on both sides is labelled with its side, such as random-A and random-B.
         const bool same = options.agents[0] == options.agents[1];
-        const auto contestant = [&](const std::string& name, const char* side) {
-            return Contestant{same ? name + "-" + side : name, [name, &options](std::uint64_t seed) { return make_agent(name, seed, options); }};
+        const auto contestant = [&](const std::string& name, const char* side, const std::string& weights_file) {
+            Options mine = options;
+            if (!weights_file.empty()) {
+                use_weights(mine, load_weights(weights_file));
+            }
+            return Contestant{same ? name + "-" + side : name, [name, mine](std::uint64_t seed) { return make_agent(name, seed, mine); }};
         };
-        const Contestant a = contestant(options.agents[0], "A");
-        const Contestant b = contestant(options.agents[1], "B");
+        const Contestant a = contestant(options.agents[0], "A", options.weights_a_file);
+        const Contestant b = contestant(options.agents[1], "B", options.weights_b_file);
         ArenaOptions arena;
         arena.games = static_cast<int>(options.games);
         arena.seed = options.seed;
@@ -627,6 +659,11 @@ namespace {
             std::cout << "  planner: " << options.planner.samples << " sampled worlds, or-tree budget " << options.planner.or_budget
                       << ", and-tree budget " << options.planner.and_budget << '\n';
         }
+        const auto weights_of = [&](const std::string& side_file) {
+            const std::string& file = side_file.empty() ? options.weights_file : side_file;
+            return file.empty() ? std::string("the hand-set ones") : file;
+        };
+        std::cout << "  weights: " << a.name << " " << weights_of(options.weights_a_file) << ", " << b.name << " " << weights_of(options.weights_b_file) << '\n';
         std::cout << "Played " << result.games << " games in " << result.seconds << " s: "
                   << static_cast<double>(result.games) / result.seconds << " games/s, "
                   << static_cast<double>(result.actions) / result.seconds / 1e6 << " million actions/s, "
@@ -700,6 +737,9 @@ int main(int argc, char** argv) {
     }
 
     try {
+        if (!options.weights_file.empty()) {
+            use_weights(options, load_weights(options.weights_file));
+        }
         const CardDB db = CardDB::load("data/cards/generated", "data/cards/effects");
         if (!options.replay.empty()) {
             const Replay replay = load_replay(options.replay);

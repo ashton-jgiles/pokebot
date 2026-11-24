@@ -714,7 +714,7 @@ decides.
 
 | Step | Builds | Status |
 |---|---|---|
-| 10.1 | **Weights in one place:** θ files, one function that sets every copy in an agent, weights per side in the sim; default weights play exactly today's games | ⬜ |
+| 10.1 | **Weights in one place:** θ files, one function that sets every copy in an agent, weights per side in the sim; default weights play exactly today's games. *[Weights files and `set_weights`](src/agents/evaluation/weights.md) are built: `data/weights/hand.txt` holds the hand-set weights, `set_weights` sets every copy in the Planner's, Flat MC's, IS-MCTS's and the endgame agent's options, and the sim has `--weights`, `--weights-a` and `--weights-b`. All tests pass. `--agents ismcts,ismcts --games 20 --no-check --seed 300001` (320 games) plays identically with `--weights-b data/weights/hand.txt` and without: the score, every pairing and every count. Still to check: that a different file changes the games, and that the new code plays the same games as before 10.1* | 🔄 |
 | 10.2 | **Self-play data:** features at each turn's start and end, with game, pairing, seat, prizes left and result | ⬜ |
 | 10.3 | **Evaluation lab:** held-out log loss and calibration of e against the baselines; decides how far to go | ⬜ |
 | 10.4 | **The fit:** logistic regression in C++ (Newton, L2), pairing and first-player terms, optional θ ≥ 0, leave-one-deck-out; recovers known weights on made-up data | ⬜ |
