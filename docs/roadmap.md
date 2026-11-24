@@ -704,6 +704,10 @@ decides.
   cheaper Planner games predicts IS-MCTS games as well is measured.
 - **Deck strength is a confound:** the fit has a term for each deck pairing and for going first, dropped at play time,
   and is repeated with each deck left out.
+- **Choosing weights (2026-11-24, before any fit was run):** by deck-adjusted held-out loss, since raw loss rewards using
+  features to recognise the deck, and within a game the pairing never changes. The θ ≥ 0 fit unless the free fit's
+  advantage is outside its 95% interval. On to 10.5 if the chosen fit beats the scaled hand θ outside the 95% interval
+  and isn't clearly worse on any left-out deck; otherwise on to new features.
 - **Split by seed,** never by position or game: a game's positions share one result, and the arena plays each deal
   twice (pairing (i, j) in one seat and (j, i) in the other), so 16,000 games hold 8,000 deals.
 - **The data:** IS-MCTS against itself with the hand weights, seeds 1,000,001 to 1,000,500 in five parts of 100 seeds
@@ -723,7 +727,7 @@ decides.
 | 10.1 | **Weights in one place:** θ files, one function that sets every copy in an agent, weights per side in the sim; default weights play exactly today's games. *[Weights files and `set_weights`](src/agents/evaluation/weights.md) are built: `data/weights/hand.txt` holds the hand-set weights, `set_weights` sets every copy in the Planner's, Flat MC's, IS-MCTS's and the endgame agent's options, and the sim has `--weights`, `--weights-a` and `--weights-b`. All tests pass. `--agents ismcts,ismcts --games 20 --no-check --seed 300001` (320 games) plays identically with `--weights-b data/weights/hand.txt` and without: the score, every pairing and every count. With `data/weights/prizes.txt` (only the prizes weight) for B on the same seeds, the hand weights score 69.1% (63.8% to 73.9%), so each side gets its own weights. `--agents endgame,ismcts --games 100 --no-check` repeats 9.6's `min_depth` 2 run from before 10.1 exactly: 802 to 798, every pairing and every count* | ✅ |
 | 10.2 | **Self-play data:** whole games saved, and from them the features at each turn's start and one later main phase, with game, player, prizes left and result. *[`self_play`](src/harness/self_play.md) is built: games saved as replays, one a line, and positions worked out by playing them back, so new features need no new games. A turn's end is the next turn's start, so a random later main phase is recorded instead. `--save-games`, `--check-games`. All tests pass. A trial of 320 games (`--seed 310001`, 3.2 games/s) played back to its results: 160 different deals, 6,612 turn starts and 5,896 later main phases. The data run: 16,000 games in five parts, each 3,200 games of 100 seeds and 1,600 different deals, all played back to their saved result, none without positions. 622,664 positions (329,470 turn starts, 293,194 later), 498,549 of them in parts 1 to 4. The player who went first scored 53.3%, 50.9%, 52.9%, 51.6% and 49.8% by part, 51.7% in all* | ✅ |
 | 10.3 | **Evaluation lab:** held-out log loss and calibration of e against the baselines. *[`evaluation_lab`](src/harness/evaluation_lab.md) is built: a coin flip, prizes with a fitted scale, the hand θ as played and with a fitted scale, scored on seeds they weren't fitted on (10 folds by seed), with errors clustered by seed. `--evaluate FILE,...`. How far to go needs the fitted θ, so that decision moves to the end of 10.4. All tests pass. The results on parts 1 to 4 are below* | ✅ |
-| 10.4 | **The fit:** logistic regression in C++ (Newton, L2), pairing and first-player terms, optional θ ≥ 0, leave-one-deck-out; recovers known weights on made-up data | ⬜ |
+| 10.4 | **The fit:** logistic regression in C++ (Newton, L2), pairing and first-player terms, optional θ ≥ 0, leave-one-deck-out; recovers known weights on made-up data. *[`weight_fit`](src/harness/weight_fit.md) is built, with terms for each pairing, going first and the player to move, and the [evaluation lab](src/harness/evaluation_lab.md) scores every model raw and with those terms fitted on the training folds (deck-adjusted), and on decks left out of the fit. `--evaluate` compares the fits and `--save-weights` saves them. All tests pass, and the raw losses repeat 10.3's from a different solver. The results on parts 1 to 4 are below. Which fit goes to 10.5 is still to be decided* | 🔄 |
 | 10.5 | **Arena tuning:** learned against hand θ in Greedy, Flat MC and IS-MCTS; C re-checked | ⬜ |
 | 10.6 | **New features,** one at a time, with their `upper_bound` terms | ⬜ |
 | 10.7 | **Sign-off:** IS-MCTS with learned against hand θ, 16,000 games with invariant checks on unused seeds; the endgame agent re-tested; known limits | ⬜ |
@@ -748,6 +752,38 @@ decides.
   prizes alone it's 2.2 and 1.7.
 - **Decks:** mega-greninja wins 13.3 ± 1.0 points more than predicted and ns-zoroark 7.2 ± 0.9 less. These mix the decks'
   strength with any misreading of their positions; the lab can't tell them apart.
+
+**What 10.4 measured (2026-11-24):** parts 1 to 4 again, with the change from the hand θ scaled with terms; 95% intervals by
+seed. 24.7 s on 16 threads.
+
+| Model | Raw loss | Change | Adjusted loss | Change |
+|---|---|---|---|---|
+| Coin flip | 0.6931 | +0.0947 ± 0.0051 | 0.6565 | +0.0880 ± 0.0048 |
+| Prizes, scaled | 0.6049 | +0.0065 ± 0.0025 | 0.5823 | +0.0138 ± 0.0023 |
+| Hand, as played | 0.6260 | +0.0276 ± 0.0030 | 0.5896 | +0.0211 ± 0.0028 |
+| Hand, scaled with terms (× 0.614) | 0.5984 | 0 | 0.5685 | 0 |
+| Fitted | 0.5941 | −0.0043 ± 0.0029 | 0.5572 | −0.0113 ± 0.0017 |
+| Fitted, θ ≥ 0 | 0.5934 | −0.0050 ± 0.0025 | 0.5580 | −0.0106 ± 0.0016 |
+| Fitted, L2 1,000 | 0.5918 | −0.0066 ± 0.0025 | 0.5574 | −0.0111 ± 0.0016 |
+| Fitted, L2 10,000 | 0.5922 | −0.0062 ± 0.0016 | 0.5641 | −0.0045 ± 0.0014 |
+| Fitted without terms | 0.5816 | −0.0168 ± 0.0021 | 0.5639 | −0.0047 ± 0.0018 |
+
+- **The fits beat the scaled hand θ,** and on every deck left out of the fit: by 0.0072 to 0.0098 (free) and 0.0073 to
+  0.0091 (θ ≥ 0), each outside its interval. By the rules above, M10 goes on to 10.5. This is prediction, not play.
+- **Raw loss does reward recognising decks:** the fit without terms has the best raw loss and a worse adjusted loss than
+  the fits with terms.
+- **The free fit against the θ ≥ 0 fit, paired** (`--reference fitted-nonneg`): better by 0.0007 ± 0.0003 adjusted, outside
+  its interval, so the rule above picks the free fit. But on decks left out it's worse on basic-box (+0.0016 ± 0.0008) and
+  dragapult (+0.0011 ± 0.0008) and better on ns-zoroark (−0.0006 ± 0.0005); mega-greninja is level (−0.0003 ± 0.0005). The
+  rule said nothing about this comparison on left-out decks.
+- **L2 doesn't help** (1,000 is level with none, 10,000 is worse), so none is used.
+- **What changed, against the scaled hand θ:** energy 0.18 to 0.97, deck 0.31 to 0.62, hand 0.12 to 0.28, turns to Knock
+  Out 0.49 to 0.29, and ready attackers 0.25 to about 0. Conditions (−0.29 ± 0.11) and prizes at risk (−0.16 ± 0.05) come
+  out negative, which is the opposite of what they were written for; the cause isn't known.
+- **Before any prize is taken, even the fit is little better than a coin flip** (0.6533 against 0.6595, adjusted), so that's
+  where new features have most to add: 41% of the positions.
+- **The player to move's term isn't the same all game:** with one term, predictions are 1.5 points too high before any
+  prize is taken and 1.3 to 1.9 too low at 1 to 3 prizes. A whose-turn feature in 10.6 may need to depend on prizes.
 
 ## M5 onward
 

@@ -68,6 +68,7 @@ add_executable(pokebot_tests
   test_endgame_agent.cpp
   test_weights.cpp
   test_self_play.cpp
+  test_weight_fit.cpp
   test_evaluation_lab.cpp
 )
 target_link_libraries(pokebot_tests PRIVATE

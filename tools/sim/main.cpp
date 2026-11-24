@@ -71,6 +71,8 @@ namespace {
         std::string save_games;
         std::string check_games;
         std::vector<std::filesystem::path> evaluate;
+        std::string save_weights_to;
+        std::string reference;
         std::string weights_file;
         std::string weights_a_file;
         std::string weights_b_file;
@@ -88,7 +90,7 @@ namespace {
         std::cerr << "usage: pokebot-sim [--games N] [--agent random|biased|greedy|planner|flatmc|ismcts|endgame] [--seed S] [--no-check]\n"
                      "                   [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]\n"
                      "                   [--agents A,B [--threads N] [--save-replays K] [--save-games FILE]]\n"
-                     "                   [--check-games FILE] [--evaluate FILE,FILE,... [--threads N]]\n"
+                     "                   [--check-games FILE] [--evaluate FILE,FILE,... [--threads N] [--save-weights DIR] [--reference NAME]]\n"
                      "                   [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]\n"
                      "                   [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W] [--mc-greedy-choices]\n"
                      "                   [--mcts-iterations N] [--mcts-c C] [--mcts-depth R] [--mcts-plans K]\n"
@@ -112,6 +114,8 @@ namespace {
                      "  --agents A,B         play agent A against agent B on every deck pairing, each seed once with\n"
                      "                       A in each seat; --games is then the number of games per pairing\n"
                      "  --threads N          with --agents or --evaluate: games at once (default: one per hardware thread)\n"
+                     "  --save-weights DIR   with --evaluate: save every fitted model's weights to DIR; no file may exist\n"
+                     "  --reference NAME     with --evaluate: the model the others are compared with (default hand-scaled-terms)\n"
                      "  --save-replays K     with --agents: save every Kth game to replays/arena/\n"
                      "  --save-games FILE    with --agents: save every game to FILE, one a line; FILE must not exist\n"
                      "  --check-games FILE   play back every game in FILE and count its positions\n"
@@ -182,6 +186,10 @@ namespace {
                 for (std::string name; std::getline(names, name, ',');) {
                     options.evaluate.emplace_back(name);
                 }
+            } else if (arg == "--save-weights" && has_value) {
+                options.save_weights_to = argv[++i];
+            } else if (arg == "--reference" && has_value) {
+                options.reference = argv[++i];
             } else if (arg == "--save-replays" && has_value) {
                 options.replay_every = std::stoi(argv[++i]);
             } else if (arg == "--planner-samples" && has_value) {
@@ -320,6 +328,9 @@ namespace {
         }
         if (!options.evaluate.empty() && (!options.agents.empty() || options.print || options.check_replays || !options.check_games.empty() ||
                                           options.lab_games > 0 || options.budget_lab_games > 0 || options.endgame_lab_games > 0 || options.threads < 0)) {
+            return false;
+        }
+        if (options.evaluate.empty() && (!options.save_weights_to.empty() || !options.reference.empty())) {
             return false;
         }
         const bool lab = options.lab_games > 0 || options.budget_lab_games > 0 || options.endgame_lab_games > 0 || !options.evaluate.empty();
@@ -816,6 +827,10 @@ namespace {
                   << std::showpos << std::setw(9) << 100.0 * (group.result - group.predicted) << std::noshowpos << " +/- " << 196.0 * group.gap_error << '\n';
     }
 
+    void print_change(double change, double error) {
+        std::cout << std::setprecision(4) << std::showpos << std::setw(10) << change << std::noshowpos << " +/- " << 1.96 * error;
+    }
+
     int run_evaluate(const CardDB& db, const Options& options) {
         const int threads = options.threads > 0 ? options.threads : static_cast<int>(std::max(std::thread::hardware_concurrency(), 1U));
         const auto start = std::chrono::steady_clock::now();
@@ -830,44 +845,139 @@ namespace {
             seeds.insert(sample.seed);
         }
 
+        const std::size_t decks = set.decks.size();
         Weights prizes{};
         prizes[static_cast<std::size_t>(Feature::Prizes)] = default_weights()[static_cast<std::size_t>(Feature::Prizes)];
-        const std::vector<Model> models{fixed_model("coin flip", Weights{}), scaled_model("prizes, scaled", prizes),
-                                        fixed_model("hand, as played", default_weights()), scaled_model("hand, scaled", default_weights())};
-        const std::size_t reference = models.size() - 1;
-        const std::vector<ModelScore> scores = score_models(set, models, reference);
+        const auto fit_options = [](double l2, bool non_negative, bool game_terms) {
+            FitOptions fit;
+            fit.l2 = l2;
+            fit.non_negative = non_negative;
+            fit.game_terms = game_terms;
+            return fit;
+        };
+        const std::vector<Model> models{fixed_model("coin", Weights{}),
+                                        scaled_model("prizes-scaled", prizes, decks, fit_options(0.0, true, false)),
+                                        fixed_model("hand", default_weights()),
+                                        scaled_model("hand-scaled", default_weights(), decks, fit_options(0.0, true, false)),
+                                        scaled_model("hand-scaled-terms", default_weights(), decks, fit_options(0.0, true, true)),
+                                        fitted_model("fitted", decks, fit_options(0.0, false, true)),
+                                        fitted_model("fitted-nonneg", decks, fit_options(0.0, true, true)),
+                                        fitted_model("fitted-l2-1000", decks, fit_options(1000.0, false, true)),
+                                        fitted_model("fitted-l2-10000", decks, fit_options(10000.0, false, true)),
+                                        fitted_model("fitted-no-terms", decks, fit_options(0.0, false, false))};
+        const std::string reference_name = options.reference.empty() ? "hand-scaled-terms" : options.reference;
+        const auto chosen = std::find_if(models.begin(), models.end(), [&](const Model& model) { return model.name == reference_name; });
+        if (chosen == models.end()) {
+            throw std::runtime_error("no model called " + reference_name);
+        }
+        const std::size_t reference = static_cast<std::size_t>(chosen - models.begin());
+        const std::vector<std::size_t> shown{4, 5, 6, 8, 9};
+        const auto weights_file = [&](const std::string& name) {
+            return std::filesystem::path(options.save_weights_to) / (name + ".txt");
+        };
+        const auto saved = [&](const std::string& name) {
+            return !options.save_weights_to.empty() && (name.starts_with("fitted") || name.starts_with("hand-scaled"));
+        };
+        for (const Model& model : models) {
+            if (saved(model.name) && std::filesystem::exists(weights_file(model.name))) {
+                throw std::runtime_error(weights_file(model.name).string() + " already exists");
+            }
+        }
+        const std::vector<ModelScore> scores = score_models(set, models, reference, threads);
         const double total = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
 
         std::cout << std::fixed << std::setprecision(1) << set.games << " games, " << seeds.size() << " seeds, " << set.samples.size() << " positions; "
                   << kFolds << " folds by seed; " << loaded << " s to play back, " << total << " s in all\n";
-        std::cout << "Held-out log loss, and its change from \"" << models[reference].name << "\" (lower is better; 95% by seed):\n";
+        std::cout << "Held-out log loss, and its change from " << models[reference].name << " (lower is better; 95% by seed):\n"
+                  << "  " << std::left << std::setw(20) << "" << std::setw(32) << "raw" << "adjusted for the decks, first player and player to move\n"
+                  << std::right;
         for (const ModelScore& score : scores) {
-            std::cout << "  " << std::left << std::setw(18) << score.name << std::right << std::setprecision(4) << score.all.loss << " +/- "
-                      << 1.96 * score.loss_error << std::showpos << std::setw(11) << score.change << std::noshowpos << " +/- " << 1.96 * score.change_error
-                      << '\n';
+            std::cout << "  " << std::left << std::setw(18) << score.name << std::right;
+            for (const Breakdown* breakdown : {&score.raw, &score.adjusted}) {
+                std::cout << std::setprecision(4) << std::setw(8) << breakdown->total.loss;
+                print_change(breakdown->total.change, breakdown->total.change_error);
+            }
+            std::cout << '\n';
         }
-        for (const ModelScore& score : scores) {
-            std::cout << '\n' << score.name << ", weights fitted on every seed:";
-            for (std::size_t i = 0; i < kFeatureCount; ++i) {
-                if (score.weights[i] != 0.0) {
-                    std::cout << ' ' << to_string(static_cast<Feature>(i)) << ' ' << std::setprecision(3) << score.weights[i];
+
+        std::cout << "\nWeights fitted on every seed (95%, from the folds):\n  " << std::setw(20) << "";
+        for (const std::size_t m : shown) {
+            std::cout << std::setw(20) << scores[m].name;
+        }
+        std::cout << '\n';
+        for (std::size_t i = 0; i < kFeatureCount; ++i) {
+            std::cout << "  " << std::left << std::setw(20) << to_string(static_cast<Feature>(i)) << std::right << std::setprecision(3);
+            for (const std::size_t m : shown) {
+                std::cout << std::setw(10) << scores[m].weights[i] << " +/- " << scores[m].weight_errors[i] * 1.96;
+            }
+            std::cout << '\n';
+        }
+
+        std::cout << "\nTerms (dropped at play time):";
+        for (const std::size_t m : {std::size_t{4}, std::size_t{5}}) {
+            std::cout << "\n  " << scores[m].name << ": first " << scores[m].terms[kFirstTerm] << ", turn start " << scores[m].terms[kStartTerm] << ", later "
+                      << scores[m].terms[kLaterTerm];
+            for (std::size_t a = 0; a < decks; ++a) {
+                for (std::size_t b = a + 1; b < decks; ++b) {
+                    std::cout << "; " << set.decks[a] << " over " << set.decks[b] << ' ' << scores[m].terms[pairing_term(a, b, decks)];
                 }
             }
-            std::cout << "\n    " << std::left << std::setw(22) << "" << std::right << std::setw(8) << "n" << std::setw(9) << "loss" << std::setw(10)
-                      << "predicted" << std::setw(9) << "result" << std::setw(9) << "gap" << '\n';
-            print_group("all", score.all);
-            print_group("turn start", score.by_kind[0]);
-            print_group("later in the turn", score.by_kind[1]);
-            for (std::size_t p = 0; p < score.by_prizes.size(); ++p) {
-                print_group("smaller prizes " + std::to_string(p), score.by_prizes[p]);
-            }
-            for (std::size_t d = 0; d < score.by_deck.size(); ++d) {
-                print_group(set.decks[d], score.by_deck[d]);
-            }
-            for (std::size_t b = 0; b < score.by_prediction.size(); ++b) {
-                print_group("predicted " + std::to_string(10 * b) + " to " + std::to_string(10 * b + 10) + "%", score.by_prediction[b]);
+        }
+
+        std::cout << "\n\nFitted without a deck, scored on its games (adjusted, change from " << models[reference].name << "):\n";
+        for (const std::size_t m : {std::size_t{5}, std::size_t{6}, std::size_t{9}}) {
+            std::cout << "  " << scores[m].name << '\n';
+            for (std::size_t d = 0; d < scores[m].left_out.size(); ++d) {
+                std::cout << "    " << std::left << std::setw(20) << set.decks[d] << std::right << std::setprecision(4) << std::setw(8)
+                          << scores[m].left_out[d].loss;
+                print_change(scores[m].left_out[d].change, scores[m].left_out[d].change_error);
+                std::cout << "   weights" << std::setprecision(2);
+                for (const double weight : scores[m].left_out_weights[d]) {
+                    std::cout << ' ' << weight;
+                }
+                std::cout << '\n';
             }
         }
+
+        std::cout << "\nAdjusted loss by the smaller prize count:\n  " << std::setw(18) << "";
+        for (std::size_t p = 1; p < 7; ++p) {
+            std::cout << std::setw(9) << p;
+        }
+        std::cout << '\n' << std::setprecision(4);
+        for (const ModelScore& score : scores) {
+            std::cout << "  " << std::left << std::setw(18) << score.name << std::right;
+            for (std::size_t p = 1; p < score.adjusted.by_prizes.size(); ++p) {
+                std::cout << std::setw(9) << score.adjusted.by_prizes[p].loss;
+            }
+            std::cout << '\n';
+        }
+
+        for (const std::size_t m : {std::size_t{4}, std::size_t{5}, std::size_t{6}}) {
+            const Breakdown& breakdown = scores[m].adjusted;
+            std::cout << "\n" << scores[m].name << ", adjusted:\n    " << std::left << std::setw(22) << "" << std::right << std::setw(8) << "n" << std::setw(9)
+                      << "loss" << std::setw(10) << "predicted" << std::setw(9) << "result" << std::setw(9) << "gap" << '\n';
+            print_group("all", breakdown.all);
+            print_group("turn start", breakdown.by_kind[0]);
+            print_group("later in the turn", breakdown.by_kind[1]);
+            for (std::size_t p = 0; p < breakdown.by_prizes.size(); ++p) {
+                print_group("smaller prizes " + std::to_string(p), breakdown.by_prizes[p]);
+            }
+            for (std::size_t d = 0; d < breakdown.by_deck.size(); ++d) {
+                print_group(set.decks[d], breakdown.by_deck[d]);
+            }
+            for (std::size_t b = 0; b < breakdown.by_prediction.size(); ++b) {
+                print_group("predicted " + std::to_string(10 * b) + " to " + std::to_string(10 * b + 10) + "%", breakdown.by_prediction[b]);
+            }
+        }
+
+        for (const ModelScore& score : scores) {
+            if (saved(score.name)) {
+                std::filesystem::create_directories(options.save_weights_to);
+                save_weights(weights_file(score.name), score.weights);
+                std::cout << "\nSaved " << weights_file(score.name).string();
+            }
+        }
+        std::cout << '\n';
         return 0;
     }
 

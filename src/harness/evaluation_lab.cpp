@@ -13,8 +13,7 @@ namespace pokebot {
 
     namespace {
 
-        constexpr double kMaxScale = 10.0;
-        constexpr int kScaleSteps = 40;
+        constexpr std::size_t kNoDeck = static_cast<std::size_t>(-1);
 
         class Clustered {
         public:
@@ -95,41 +94,118 @@ namespace pokebot {
             return decks.size() - 1;
         }
 
-        std::vector<std::vector<Position>> all_positions(const CardDB& db, const std::vector<Replay>& games, int threads) {
-            std::vector<std::vector<Position>> out(games.size());
+        template <class Work>
+        void in_parallel(std::size_t jobs, int threads, const Work& work) {
             std::atomic<std::size_t> next{0};
-            const auto work = [&] {
-                for (std::size_t g = next++; g < games.size(); g = next++) {
-                    out[g] = positions(db, games[g], g);
+            const auto take = [&] {
+                for (std::size_t job = next++; job < jobs; job = next++) {
+                    work(job);
                 }
             };
             std::vector<std::future<void>> workers;
             for (int t = 0; t < std::max(threads, 1); ++t) {
-                workers.push_back(std::async(std::launch::async, work));
+                workers.push_back(std::async(std::launch::async, take));
             }
             for (std::future<void>& worker : workers) {
                 worker.get();
             }
-            return out;
         }
 
-        std::vector<double> held_out_scores(const SampleSet& set, const Model& model) {
-            std::vector<double> z(set.samples.size());
-            for (std::uint64_t fold = 0; fold < kFolds; ++fold) {
-                SampleRefs train;
-                for (const Sample& sample : set.samples) {
-                    if (sample.seed % kFolds != fold) {
-                        train.push_back(&sample);
-                    }
-                }
-                const Weights weights = model.fit(train);
-                for (std::size_t i = 0; i < z.size(); ++i) {
-                    if (set.samples[i].seed % kFolds == fold) {
-                        z[i] = weighted_sum(weights, set.samples[i].position.features);
+        bool has_deck(const Sample& sample, std::size_t deck) {
+            return deck != kNoDeck && (sample.deck == deck || sample.opponent_deck == deck);
+        }
+
+        struct HeldOut {
+            std::vector<double> raw;
+            std::vector<double> adjusted;
+            std::array<Weights, kFolds> weights{};
+        };
+
+        void score_fold(const SampleSet& set, const Model& model, std::uint64_t fold, std::size_t left_out, HeldOut& out) {
+            SampleRefs train;
+            SampleRefs without_deck;
+            for (const Sample& sample : set.samples) {
+                if (sample.seed % kFolds != fold) {
+                    train.push_back(&sample);
+                    if (!has_deck(sample, left_out)) {
+                        without_deck.push_back(&sample);
                     }
                 }
             }
-            return z;
+            if (without_deck.empty()) {
+                throw std::runtime_error("no samples to fit on");
+            }
+            const Weights weights = model.fit(without_deck);
+            const GameTerms terms = fit_terms(train, set.decks.size(), weights).terms;
+            out.weights[fold] = weights;
+            for (std::size_t i = 0; i < set.samples.size(); ++i) {
+                const Sample& sample = set.samples[i];
+                if (sample.seed % kFolds == fold && (left_out == kNoDeck || has_deck(sample, left_out))) {
+                    out.raw[i] = weighted_sum(weights, sample.position.features);
+                    out.adjusted[i] = out.raw[i] + term_sum(terms, sample, set.decks.size());
+                }
+            }
+        }
+
+        Weights jackknife_errors(const std::array<Weights, kFolds>& fits) {
+            const double n = static_cast<double>(kFolds);
+            Weights out{};
+            for (std::size_t i = 0; i < kFeatureCount; ++i) {
+                double mean = 0.0;
+                for (const Weights& fit : fits) {
+                    mean += fit[i] / n;
+                }
+                for (const Weights& fit : fits) {
+                    out[i] += (fit[i] - mean) * (fit[i] - mean);
+                }
+                out[i] = std::sqrt(out[i] * (n - 1.0) / n);
+            }
+            return out;
+        }
+
+        Change change_of(const SampleSet& set, const std::vector<double>& z, const std::vector<double>& reference, std::size_t deck) {
+            Clustered loss;
+            Clustered change;
+            for (std::size_t i = 0; i < set.samples.size(); ++i) {
+                const Sample& sample = set.samples[i];
+                if (deck == kNoDeck || has_deck(sample, deck)) {
+                    const double own = log_loss(z[i], sample.position.result);
+                    loss.add(sample.seed, own);
+                    change.add(sample.seed, own - log_loss(reference[i], sample.position.result));
+                }
+            }
+            return Change{loss.mean(), loss.error(), change.mean(), change.error()};
+        }
+
+        Breakdown break_down(const SampleSet& set, const std::vector<double>& z, const std::vector<double>& reference) {
+            GroupBuilder all;
+            std::array<GroupBuilder, 2> by_kind;
+            std::array<GroupBuilder, 7> by_prizes;
+            std::array<GroupBuilder, 10> by_prediction;
+            std::vector<GroupBuilder> by_deck(set.decks.size());
+            for (std::size_t i = 0; i < set.samples.size(); ++i) {
+                const Sample& sample = set.samples[i];
+                const Position& position = sample.position;
+                all.add(sample, z[i]);
+                by_kind[position.start ? 0 : 1].add(sample, z[i]);
+                by_prizes[static_cast<std::size_t>(std::min(position.prizes, position.opponent_prizes))].add(sample, z[i]);
+                by_prediction[bin_of(win_chance(z[i]), by_prediction.size())].add(sample, z[i]);
+                by_deck[sample.deck].add(sample, z[i]);
+            }
+            Breakdown out;
+            out.total = change_of(set, z, reference, kNoDeck);
+            out.all = all.group();
+            const auto groups = [](const auto& from, auto& to) {
+                for (std::size_t g = 0; g < from.size(); ++g) {
+                    to[g] = from[g].group();
+                }
+            };
+            groups(by_kind, out.by_kind);
+            groups(by_prizes, out.by_prizes);
+            groups(by_prediction, out.by_prediction);
+            out.by_deck.resize(by_deck.size());
+            groups(by_deck, out.by_deck);
+            return out;
         }
 
     } // namespace
@@ -147,7 +223,8 @@ namespace pokebot {
                 seeds.insert(game.seed);
             }
             earlier.merge(seeds);
-            const std::vector<std::vector<Position>> found = all_positions(db, games, threads);
+            std::vector<std::vector<Position>> found(games.size());
+            in_parallel(games.size(), threads, [&](std::size_t g) { found[g] = positions(db, games[g], g); });
             for (std::size_t g = 0; g < games.size(); ++g) {
                 const std::array<std::size_t, 2> decks{deck_index(set.decks, games[g].players[0].deck_name), deck_index(set.decks, games[g].players[1].deck_name)};
                 for (Position position : found[g]) {
@@ -161,115 +238,67 @@ namespace pokebot {
         return set;
     }
 
-    double weighted_sum(const Weights& weights, const Features& features) {
-        double sum = 0.0;
-        for (std::size_t i = 0; i < kFeatureCount; ++i) {
-            sum += weights[i] * features[i];
-        }
-        return sum;
-    }
-
-    double win_chance(double z) {
-        return 1.0 / (1.0 + std::exp(-2.0 * z));
-    }
-
-    double log_loss(double z, double result) {
-        const double t = 2.0 * z;
-        return std::max(t, 0.0) + std::log1p(std::exp(-std::abs(t))) - result * t;
-    }
-
-    double best_scale(const SampleRefs& train, const Weights& weights) {
-        std::vector<std::pair<double, double>> rows;
-        rows.reserve(train.size());
-        for (const Sample* sample : train) {
-            rows.emplace_back(weighted_sum(weights, sample->position.features), sample->position.result);
-        }
-        const auto slope = [&](double scale) {
-            double sum = 0.0;
-            for (const auto& [z, result] : rows) {
-                sum += (win_chance(scale * z) - result) * z;
-            }
-            return sum;
-        };
-        double low = 0.0;
-        double high = kMaxScale;
-        for (int step = 0; step < kScaleSteps; ++step) {
-            const double middle = 0.5 * (low + high);
-            if (slope(middle) < 0.0) {
-                low = middle;
-            } else {
-                high = middle;
-            }
-        }
-        return 0.5 * (low + high);
-    }
-
     Model fixed_model(std::string name, const Weights& weights) {
         return Model{std::move(name), [weights](const SampleRefs&) { return weights; }};
     }
 
-    Model scaled_model(std::string name, const Weights& weights) {
-        return Model{std::move(name), [weights](const SampleRefs& train) {
-                         const double scale = best_scale(train, weights);
-                         Weights scaled = weights;
-                         for (double& weight : scaled) {
-                             weight *= scale;
-                         }
-                         return scaled;
-                     }};
+    Model scaled_model(std::string name, const Weights& weights, std::size_t decks, const FitOptions& options) {
+        FitOptions scale = options;
+        scale.non_negative = true;
+        return Model{std::move(name), [weights, decks, scale](const SampleRefs& train) { return fit_scale(train, decks, weights, scale).weights; }};
     }
 
-    std::vector<ModelScore> score_models(const SampleSet& set, const std::vector<Model>& models, std::size_t reference) {
+    Model fitted_model(std::string name, std::size_t decks, const FitOptions& options) {
+        return Model{std::move(name), [decks, options](const SampleRefs& train) { return fit_weights(train, decks, options).weights; }};
+    }
+
+    std::vector<ModelScore> score_models(const SampleSet& set, const std::vector<Model>& models, std::size_t reference, int threads) {
         if (reference >= models.size()) {
             throw std::invalid_argument("score_models: no such reference model");
         }
-        std::vector<std::vector<double>> z;
-        for (const Model& model : models) {
-            z.push_back(held_out_scores(set, model));
-        }
-        SampleRefs everything;
-        for (const Sample& sample : set.samples) {
-            everything.push_back(&sample);
-        }
-
-        std::vector<ModelScore> out;
-        for (std::size_t m = 0; m < models.size(); ++m) {
-            GroupBuilder all;
-            Clustered change;
-            std::array<GroupBuilder, 2> by_kind;
-            std::array<GroupBuilder, 7> by_prizes;
-            std::array<GroupBuilder, 10> by_prediction;
-            std::vector<GroupBuilder> by_deck(set.decks.size());
-            for (std::size_t i = 0; i < set.samples.size(); ++i) {
-                const Sample& sample = set.samples[i];
-                const Position& position = sample.position;
-                const double own = z[m][i];
-                all.add(sample, own);
-                change.add(sample.seed, log_loss(own, position.result) - log_loss(z[reference][i], position.result));
-                by_kind[position.start ? 0 : 1].add(sample, own);
-                by_prizes[static_cast<std::size_t>(std::min(position.prizes, position.opponent_prizes))].add(sample, own);
-                by_prediction[bin_of(win_chance(own), by_prediction.size())].add(sample, own);
-                by_deck[sample.deck].add(sample, own);
+        const std::size_t decks = set.decks.size();
+        const std::size_t cuts = decks > 2 ? decks + 1 : 1;
+        const auto cut_deck = [](std::size_t cut) {
+            return cut == 0 ? kNoDeck : cut - 1;
+        };
+        std::vector<std::vector<HeldOut>> held(models.size(), std::vector<HeldOut>(cuts));
+        for (std::vector<HeldOut>& model : held) {
+            for (HeldOut& cut : model) {
+                cut.raw.resize(set.samples.size());
+                cut.adjusted.resize(set.samples.size());
             }
-            ModelScore result;
-            result.name = models[m].name;
-            result.weights = models[m].fit(everything);
-            result.all = all.group();
-            result.loss_error = all.loss.error();
-            result.change = change.mean();
-            result.change_error = change.error();
-            const auto groups = [](const auto& from, auto& to) {
-                for (std::size_t i = 0; i < from.size(); ++i) {
-                    to[i] = from[i].group();
-                }
-            };
-            groups(by_kind, result.by_kind);
-            groups(by_prizes, result.by_prizes);
-            groups(by_prediction, result.by_prediction);
-            result.by_deck.resize(by_deck.size());
-            groups(by_deck, result.by_deck);
-            out.push_back(std::move(result));
         }
+        const std::size_t folds = static_cast<std::size_t>(kFolds);
+        in_parallel(models.size() * cuts * folds, threads, [&](std::size_t job) {
+            const std::size_t m = job / (cuts * folds);
+            const std::size_t cut = job / folds % cuts;
+            score_fold(set, models[m], job % folds, cut_deck(cut), held[m][cut]);
+        });
+
+        std::vector<ModelScore> out(models.size());
+        in_parallel(models.size(), threads, [&](std::size_t m) {
+            ModelScore& score = out[m];
+            score.name = models[m].name;
+            score.raw = break_down(set, held[m][0].raw, held[reference][0].raw);
+            score.adjusted = break_down(set, held[m][0].adjusted, held[reference][0].adjusted);
+            score.weight_errors = jackknife_errors(held[m][0].weights);
+            for (std::size_t cut = 0; cut < cuts; ++cut) {
+                SampleRefs train;
+                for (const Sample& sample : set.samples) {
+                    if (!has_deck(sample, cut_deck(cut))) {
+                        train.push_back(&sample);
+                    }
+                }
+                const Weights weights = models[m].fit(train);
+                if (cut == 0) {
+                    score.weights = weights;
+                    score.terms = fit_terms(train, decks, weights).terms;
+                } else {
+                    score.left_out.push_back(change_of(set, held[m][cut].adjusted, held[reference][cut].adjusted, cut_deck(cut)));
+                    score.left_out_weights.push_back(weights);
+                }
+            }
+        });
         return out;
     }
 

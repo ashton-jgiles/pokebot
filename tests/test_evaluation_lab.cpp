@@ -18,9 +18,11 @@
 #include "harness/match.hpp"
 #include "support/test_cards.hpp"
 
+using pokebot::Breakdown;
 using pokebot::CardDB;
 using pokebot::CardDef;
 using pokebot::CardTable;
+using pokebot::FitOptions;
 using pokebot::Group;
 using pokebot::Model;
 using pokebot::ModelScore;
@@ -34,16 +36,18 @@ namespace {
 
     const Weights kTruth{1.5, 0.4, 0.6, 0.3, 0.2, 0.1, 0.3, 0.2, 0.1, 0.5};
 
-    SampleSet made_up(std::uint64_t seeds, int per_seed, double scale) {
+    SampleSet made_up(std::uint64_t seeds, int per_seed, double scale, std::uint32_t decks = 2) {
         pokebot::Rng rng(17);
         SampleSet set;
-        set.decks = {"one", "two"};
+        for (std::uint32_t deck = 0; deck < decks; ++deck) {
+            set.decks.push_back("deck " + std::to_string(deck));
+        }
         for (std::uint64_t seed = 1; seed <= seeds; ++seed) {
             for (int i = 0; i < per_seed; ++i) {
                 Sample sample;
                 sample.seed = seed;
-                sample.deck = rng.below(2);
-                sample.opponent_deck = 1 - sample.deck;
+                sample.deck = rng.below(decks);
+                sample.opponent_deck = (sample.deck + 1 + rng.below(decks - 1)) % decks;
                 sample.position.start = rng.below(2) == 0;
                 sample.position.prizes = static_cast<int>(1 + rng.below(6));
                 sample.position.opponent_prizes = static_cast<int>(1 + rng.below(6));
@@ -140,20 +144,25 @@ TEST_CASE("log loss and win chance, at known and extreme values", "[evaluation_l
 }
 
 TEST_CASE("the best scale of weights that are only too small or too large is found", "[evaluation_lab]") {
-    for (const double scale : {0.25, 1.0, 3.0}) {
-        INFO("scale " << scale);
-        const SampleSet set = made_up(20, 30, scale);
-        CHECK(std::abs(pokebot::best_scale(refs(set), kTruth) - scale) < 1e-6);
-        const Weights fitted = pokebot::scaled_model("scaled", kTruth).fit(refs(set));
-        for (std::size_t i = 0; i < fitted.size(); ++i) {
-            CHECK(std::abs(fitted[i] - scale * kTruth[i]) < 1e-5);
+    for (const bool game_terms : {false, true}) {
+        FitOptions options;
+        options.game_terms = game_terms;
+        for (const double scale : {0.25, 1.0, 3.0}) {
+            INFO("scale " << scale << ", terms " << game_terms);
+            const SampleSet set = made_up(20, 30, scale);
+            const Weights fitted = pokebot::scaled_model("scaled", kTruth, 2, options).fit(refs(set));
+            for (std::size_t i = 0; i < fitted.size(); ++i) {
+                CHECK(std::abs(fitted[i] - scale * kTruth[i]) < 1e-4);
+            }
         }
     }
 }
 
 TEST_CASE("weights that predict backwards get a scale of 0", "[evaluation_lab]") {
     const SampleSet set = made_up(20, 30, -1.0);
-    CHECK(pokebot::best_scale(refs(set), kTruth) < 1e-6);
+    for (const double weight : pokebot::scaled_model("scaled", kTruth, 2).fit(refs(set))) {
+        CHECK(weight == 0.0);
+    }
 }
 
 TEST_CASE("doubling every sample within its seed changes neither the loss nor its error", "[evaluation_lab]") {
@@ -165,16 +174,16 @@ TEST_CASE("doubling every sample within its seed changes neither the loss nor it
     const auto b = pokebot::score_models(twice, models, 0);
     REQUIRE(a.size() == 2);
     REQUIRE(b.size() == 2);
-    CHECK(a[1].loss_error > 0.0);
-    CHECK(a[1].change < 0.0);
-    CHECK(a[1].change_error > 0.0);
+    CHECK(a[1].raw.total.loss_error > 0.0);
+    CHECK(a[1].raw.total.change < 0.0);
+    CHECK(a[1].raw.total.change_error > 0.0);
     for (std::size_t m = 0; m < 2; ++m) {
-        CHECK(b[m].all.positions == 2 * a[m].all.positions);
-        CHECK(std::abs(a[m].all.loss - b[m].all.loss) < 1e-9);
-        CHECK(std::abs(a[m].all.gap_error - b[m].all.gap_error) < 1e-9);
-        CHECK(std::abs(a[m].loss_error - b[m].loss_error) < 1e-9);
-        CHECK(std::abs(a[m].change - b[m].change) < 1e-9);
-        CHECK(std::abs(a[m].change_error - b[m].change_error) < 1e-9);
+        CHECK(b[m].raw.all.positions == 2 * a[m].raw.all.positions);
+        CHECK(std::abs(a[m].raw.all.loss - b[m].raw.all.loss) < 1e-9);
+        CHECK(std::abs(a[m].raw.all.gap_error - b[m].raw.all.gap_error) < 1e-9);
+        CHECK(std::abs(a[m].raw.total.loss_error - b[m].raw.total.loss_error) < 1e-9);
+        CHECK(std::abs(a[m].raw.total.change - b[m].raw.total.change) < 1e-9);
+        CHECK(std::abs(a[m].raw.total.change_error - b[m].raw.total.change_error) < 1e-9);
     }
 }
 
@@ -204,7 +213,7 @@ TEST_CASE("no seed is scored by a model fitted on it", "[evaluation_lab]") {
         CHECK(fits->back().contains(seed));
     }
     REQUIRE(scores.size() == 1);
-    CHECK(std::abs(scores[0].all.loss - std::log(2.0)) < 1e-9);
+    CHECK(std::abs(scores[0].raw.all.loss - std::log(2.0)) < 1e-9);
     for (const double weight : scores[0].weights) {
         CHECK(weight == 5.0);
     }
@@ -216,22 +225,94 @@ TEST_CASE("every breakdown covers all positions, and the reference doesn't chang
     const auto scores = pokebot::score_models(set, models, 1);
     for (const ModelScore& score : scores) {
         INFO(score.name);
-        CHECK(score.all.positions == 400);
-        CHECK(total(score.by_kind) == 400);
-        CHECK(total(score.by_prizes) == 400);
-        CHECK(total(score.by_prediction) == 400);
-        CHECK(total(score.by_deck) == 400);
-        CHECK(score.by_prizes[0].positions == 0);
+        for (const Breakdown* breakdown : {&score.raw, &score.adjusted}) {
+            CHECK(breakdown->all.positions == 400);
+            CHECK(total(breakdown->by_kind) == 400);
+            CHECK(total(breakdown->by_prizes) == 400);
+            CHECK(total(breakdown->by_prediction) == 400);
+            CHECK(total(breakdown->by_deck) == 400);
+            CHECK(breakdown->by_prizes[0].positions == 0);
+        }
+        for (const double error : score.weight_errors) {
+            CHECK(std::abs(error) < 1e-9);
+        }
     }
-    CHECK(std::abs(scores[0].all.loss - std::log(2.0)) < 1e-9);
-    CHECK(scores[0].by_prediction[5].positions == 400);
-    CHECK(scores[1].change == 0.0);
-    CHECK(scores[1].change_error == 0.0);
-    CHECK(scores[0].change > 0.0);
-    for (const Group& group : scores[1].by_prediction) {
+    CHECK(std::abs(scores[0].raw.all.loss - std::log(2.0)) < 1e-9);
+    CHECK(scores[0].raw.by_prediction[5].positions == 400);
+    CHECK(scores[0].raw.total.change > 0.0);
+    for (const Breakdown* breakdown : {&scores[1].raw, &scores[1].adjusted}) {
+        CHECK(breakdown->total.change == 0.0);
+        CHECK(breakdown->total.change_error == 0.0);
+    }
+    for (const Group& group : scores[1].raw.by_prediction) {
         CHECK(std::abs(group.predicted - group.result) < 1e-9);
     }
     CHECK_THROWS_AS(pokebot::score_models(set, models, 2), std::invalid_argument);
+}
+
+TEST_CASE("a left-out deck never reaches the fit", "[evaluation_lab]") {
+    const SampleSet set = made_up(40, 10, 1.0, 3);
+    const auto fits = std::make_shared<std::vector<std::set<std::size_t>>>();
+    const Model model{"seen", [fits](const SampleRefs& train) {
+                          std::set<std::size_t> decks;
+                          for (const Sample* sample : train) {
+                              decks.insert(sample->deck);
+                              decks.insert(sample->opponent_deck);
+                          }
+                          fits->push_back(decks);
+                          return kTruth;
+                      }};
+    const auto scores = pokebot::score_models(set, {model}, 0);
+    const std::size_t each = static_cast<std::size_t>(pokebot::kFolds) + 1;
+    CHECK(fits->size() == 4 * each);
+    for (std::size_t deck = 0; deck < 3; ++deck) {
+        const auto without = std::count_if(fits->begin(), fits->end(), [&](const auto& decks) { return !decks.contains(deck); });
+        CHECK(static_cast<std::size_t>(without) == each);
+    }
+    REQUIRE(scores.size() == 1);
+    CHECK(scores[0].left_out.size() == 3);
+    CHECK(scores[0].left_out_weights.size() == 3);
+    for (const pokebot::Change& change : scores[0].left_out) {
+        CHECK(change.loss > 0.0);
+        CHECK(change.change == 0.0);
+    }
+}
+
+TEST_CASE("scores are the same on any number of threads", "[evaluation_lab]") {
+    const SampleSet set = made_up(20, 20, 1.0, 3);
+    FitOptions options;
+    options.non_negative = true;
+    const std::vector<Model> models{pokebot::fixed_model("coin", Weights{}), pokebot::fitted_model("fitted", 3, options)};
+    const auto one = pokebot::score_models(set, models, 0, 1);
+    const auto four = pokebot::score_models(set, models, 0, 4);
+    REQUIRE(one.size() == four.size());
+    for (std::size_t m = 0; m < one.size(); ++m) {
+        CHECK(one[m].weights == four[m].weights);
+        CHECK(one[m].weight_errors == four[m].weight_errors);
+        CHECK(one[m].terms == four[m].terms);
+        CHECK(one[m].raw.total.loss == four[m].raw.total.loss);
+        CHECK(one[m].adjusted.total.loss == four[m].adjusted.total.loss);
+        CHECK(one[m].left_out_weights == four[m].left_out_weights);
+        REQUIRE(one[m].left_out.size() == four[m].left_out.size());
+        for (std::size_t d = 0; d < one[m].left_out.size(); ++d) {
+            CHECK(one[m].left_out[d].loss == four[m].left_out[d].loss);
+        }
+    }
+    CHECK(one[1].adjusted.total.change < 0.0);
+}
+
+TEST_CASE("where only the pairing matters, the adjusted loss is below the raw one", "[evaluation_lab]") {
+    SampleSet set = made_up(40, 10, 1.0, 3);
+    for (Sample& sample : set.samples) {
+        sample.position.result = pokebot::win_chance(sample.deck < sample.opponent_deck ? 0.5 : -0.5);
+    }
+    const auto scores = pokebot::score_models(set, {pokebot::fixed_model("coin", Weights{})}, 0);
+    REQUIRE(scores.size() == 1);
+    CHECK(std::abs(scores[0].raw.all.loss - std::log(2.0)) < 1e-9);
+    CHECK(scores[0].adjusted.all.loss < scores[0].raw.all.loss - 0.05);
+    for (std::size_t pairing = pokebot::kPairingTerms; pairing < scores[0].terms.size(); ++pairing) {
+        CHECK(std::abs(scores[0].terms[pairing] - 0.5) < 1e-3);
+    }
 }
 
 TEST_CASE("samples load the same on any number of threads, and a repeated seed is rejected", "[evaluation_lab]") {

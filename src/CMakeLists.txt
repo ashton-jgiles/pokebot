@@ -52,6 +52,7 @@ add_library(pokebot_lib
   harness/match.cpp
   harness/replay.cpp
   harness/self_play.cpp
+  harness/weight_fit.cpp
   harness/evaluation_lab.cpp
   harness/arena.cpp
   harness/planner_lab.cpp
