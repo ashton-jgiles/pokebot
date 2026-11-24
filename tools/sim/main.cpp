@@ -11,6 +11,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <tuple>
 #include <vector>
 
@@ -29,6 +30,7 @@
 #include "harness/arena.hpp"
 #include "harness/budget_lab.hpp"
 #include "harness/endgame_lab.hpp"
+#include "harness/evaluation_lab.hpp"
 #include "harness/match.hpp"
 #include "harness/planner_lab.hpp"
 #include "harness/replay.hpp"
@@ -68,6 +70,7 @@ namespace {
         Weights weights = default_weights();
         std::string save_games;
         std::string check_games;
+        std::vector<std::filesystem::path> evaluate;
         std::string weights_file;
         std::string weights_a_file;
         std::string weights_b_file;
@@ -85,7 +88,7 @@ namespace {
         std::cerr << "usage: pokebot-sim [--games N] [--agent random|biased|greedy|planner|flatmc|ismcts|endgame] [--seed S] [--no-check]\n"
                      "                   [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]\n"
                      "                   [--agents A,B [--threads N] [--save-replays K] [--save-games FILE]]\n"
-                     "                   [--check-games FILE]\n"
+                     "                   [--check-games FILE] [--evaluate FILE,FILE,... [--threads N]]\n"
                      "                   [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]\n"
                      "                   [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W] [--mc-greedy-choices]\n"
                      "                   [--mcts-iterations N] [--mcts-c C] [--mcts-depth R] [--mcts-plans K]\n"
@@ -108,10 +111,11 @@ namespace {
                      "                       ends in exactly the same state (slower)\n"
                      "  --agents A,B         play agent A against agent B on every deck pairing, each seed once with\n"
                      "                       A in each seat; --games is then the number of games per pairing\n"
-                     "  --threads N          with --agents: games played at once (default: one per hardware thread)\n"
+                     "  --threads N          with --agents or --evaluate: games at once (default: one per hardware thread)\n"
                      "  --save-replays K     with --agents: save every Kth game to replays/arena/\n"
                      "  --save-games FILE    with --agents: save every game to FILE, one a line; FILE must not exist\n"
                      "  --check-games FILE   play back every game in FILE and count its positions\n"
+                     "  --evaluate FILE,...  measure how well the evaluation predicts the results of the saved games in the files\n"
                      "  --planner-samples M      the planner's sampled worlds for a plan that ends in chance (default 1)\n"
                      "  --planner-or-budget N    the planner's nodes for its win search (default 200)\n"
                      "  --planner-and-budget N   the planner's nodes for its best-plan search (default 300)\n"
@@ -173,6 +177,11 @@ namespace {
                 options.save_games = argv[++i];
             } else if (arg == "--check-games" && has_value) {
                 options.check_games = argv[++i];
+            } else if (arg == "--evaluate" && has_value) {
+                std::stringstream names(argv[++i]);
+                for (std::string name; std::getline(names, name, ',');) {
+                    options.evaluate.emplace_back(name);
+                }
             } else if (arg == "--save-replays" && has_value) {
                 options.replay_every = std::stoi(argv[++i]);
             } else if (arg == "--planner-samples" && has_value) {
@@ -309,12 +318,16 @@ namespace {
              (!options.agents.empty() || options.print || options.check_replays || options.lab_games > 0 || options.budget_lab_games > 0))) {
             return false;
         }
-        const bool lab = options.lab_games > 0 || options.budget_lab_games > 0 || options.endgame_lab_games > 0;
+        if (!options.evaluate.empty() && (!options.agents.empty() || options.print || options.check_replays || !options.check_games.empty() ||
+                                          options.lab_games > 0 || options.budget_lab_games > 0 || options.endgame_lab_games > 0 || options.threads < 0)) {
+            return false;
+        }
+        const bool lab = options.lab_games > 0 || options.budget_lab_games > 0 || options.endgame_lab_games > 0 || !options.evaluate.empty();
         if (lab && !options.weights_file.empty()) {
             return false;
         }
         if (options.agents.empty()) {
-            if (options.threads != 0 || options.replay_every != 0 || !options.weights_a_file.empty() || !options.weights_b_file.empty() ||
+            if ((options.threads != 0 && options.evaluate.empty()) || options.replay_every != 0 || !options.weights_a_file.empty() || !options.weights_b_file.empty() ||
                 !options.save_games.empty()) {
                 return false;
             }
@@ -794,6 +807,70 @@ namespace {
         return 0;
     }
 
+    void print_group(const std::string& name, const Group& group) {
+        if (group.positions == 0) {
+            return;
+        }
+        std::cout << "    " << std::left << std::setw(22) << name << std::right << std::setw(8) << group.positions << std::setprecision(4) << std::setw(9)
+                  << group.loss << std::setprecision(1) << std::setw(9) << 100.0 * group.predicted << "%" << std::setw(8) << 100.0 * group.result << "%"
+                  << std::showpos << std::setw(9) << 100.0 * (group.result - group.predicted) << std::noshowpos << " +/- " << 196.0 * group.gap_error << '\n';
+    }
+
+    int run_evaluate(const CardDB& db, const Options& options) {
+        const int threads = options.threads > 0 ? options.threads : static_cast<int>(std::max(std::thread::hardware_concurrency(), 1U));
+        const auto start = std::chrono::steady_clock::now();
+        const SampleSet set = load_samples(db, options.evaluate, threads);
+        if (set.samples.empty()) {
+            std::cout << "No positions in the files\n";
+            return 1;
+        }
+        const double loaded = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+        std::set<std::uint64_t> seeds;
+        for (const Sample& sample : set.samples) {
+            seeds.insert(sample.seed);
+        }
+
+        Weights prizes{};
+        prizes[static_cast<std::size_t>(Feature::Prizes)] = default_weights()[static_cast<std::size_t>(Feature::Prizes)];
+        const std::vector<Model> models{fixed_model("coin flip", Weights{}), scaled_model("prizes, scaled", prizes),
+                                        fixed_model("hand, as played", default_weights()), scaled_model("hand, scaled", default_weights())};
+        const std::size_t reference = models.size() - 1;
+        const std::vector<ModelScore> scores = score_models(set, models, reference);
+        const double total = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+
+        std::cout << std::fixed << std::setprecision(1) << set.games << " games, " << seeds.size() << " seeds, " << set.samples.size() << " positions; "
+                  << kFolds << " folds by seed; " << loaded << " s to play back, " << total << " s in all\n";
+        std::cout << "Held-out log loss, and its change from \"" << models[reference].name << "\" (lower is better; 95% by seed):\n";
+        for (const ModelScore& score : scores) {
+            std::cout << "  " << std::left << std::setw(18) << score.name << std::right << std::setprecision(4) << score.all.loss << " +/- "
+                      << 1.96 * score.loss_error << std::showpos << std::setw(11) << score.change << std::noshowpos << " +/- " << 1.96 * score.change_error
+                      << '\n';
+        }
+        for (const ModelScore& score : scores) {
+            std::cout << '\n' << score.name << ", weights fitted on every seed:";
+            for (std::size_t i = 0; i < kFeatureCount; ++i) {
+                if (score.weights[i] != 0.0) {
+                    std::cout << ' ' << to_string(static_cast<Feature>(i)) << ' ' << std::setprecision(3) << score.weights[i];
+                }
+            }
+            std::cout << "\n    " << std::left << std::setw(22) << "" << std::right << std::setw(8) << "n" << std::setw(9) << "loss" << std::setw(10)
+                      << "predicted" << std::setw(9) << "result" << std::setw(9) << "gap" << '\n';
+            print_group("all", score.all);
+            print_group("turn start", score.by_kind[0]);
+            print_group("later in the turn", score.by_kind[1]);
+            for (std::size_t p = 0; p < score.by_prizes.size(); ++p) {
+                print_group("smaller prizes " + std::to_string(p), score.by_prizes[p]);
+            }
+            for (std::size_t d = 0; d < score.by_deck.size(); ++d) {
+                print_group(set.decks[d], score.by_deck[d]);
+            }
+            for (std::size_t b = 0; b < score.by_prediction.size(); ++b) {
+                print_group("predicted " + std::to_string(10 * b) + " to " + std::to_string(10 * b + 10) + "%", score.by_prediction[b]);
+            }
+        }
+        return 0;
+    }
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -819,6 +896,9 @@ int main(int argc, char** argv) {
         }
         if (!options.check_games.empty()) {
             return run_check_games(db, options.check_games);
+        }
+        if (!options.evaluate.empty()) {
+            return run_evaluate(db, options);
         }
         const auto files = deck_files();
         if (files.size() < 2) {

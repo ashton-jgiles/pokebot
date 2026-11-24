@@ -68,6 +68,7 @@ add_executable(pokebot_tests
   test_endgame_agent.cpp
   test_weights.cpp
   test_self_play.cpp
+  test_evaluation_lab.cpp
 )
 target_link_libraries(pokebot_tests PRIVATE
   pokebot_lib pokebot_import_lib pokebot_warnings Catch2::Catch2WithMain)

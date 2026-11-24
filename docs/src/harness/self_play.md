@@ -37,7 +37,7 @@ without a result gives none.
 
 **Split by seed, never by game or position.** A game's positions share one result. And the arena plays
 each deal twice: pairing (i, j) in one seat and (j, i) in the other have the same seed and the same
-deck in each seat, so N games hold N/2 different deals.
+deck in each seat, so N games hold N/2 different deals. The [evaluation lab](evaluation_lab.md) does this.
 
 ## In the sim
 
