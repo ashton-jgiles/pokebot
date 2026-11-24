@@ -16,7 +16,7 @@ The milestone plan from the project proposal, with the current status of each.
 | M7 | Determinization and flat Monte Carlo | ✅ Done |
 | M8 | Model 2: IS-MCTS | ✅ Done |
 | M9 | Model 3: endgame solver (expectiminimax) | ✅ Closed: the solver ties IS-MCTS (see the sign-off) |
-| M10 | Learned evaluation function | ⬜ Not started |
+| M10 | Learned evaluation function | 🔄 In progress |
 | M11+ | Stretch: policy prior, deck-building GA, more decks, opponent inference | ⬜ Not started |
 
 Each milestone from M5 on produces a new agent that must beat the previous one:
@@ -556,6 +556,9 @@ At a quarter of Flat MC's time IS-MCTS still wins 40.8%.
 
 - **The lead at equal time is small:** 1.3 points, its interval's lower end 0.5 points above even, at 1.02 to 1.07
   times Flat MC's time. Flat MC beat the Planner by 22.9 points.
+- **The sign-off's seeds include 8.6's.** A 1,600-game run plays the first 50 of a sign-off's 500 seeds a pairing, with
+  the same agent seeds, so the runs that chose the defaults are 10% of it (`slot_of` in `arena.cpp`). Without those
+  1,600 games, taking them from 8.6's run at the same settings: 51.2% (50.4% to 52.0%) over 14,400.
 - **Where the lead comes from isn't measured.** Matched worlds made the largest difference in 8.6, which is a change
   at the root, but how much the tree below adds was never isolated. (An earlier version said most iterations stop at
   the root, from the fall in cache hits; that fall comes from how the root's moves are looked up, see 8.6.)
@@ -661,6 +664,8 @@ didn't beat even, and didn't isolate why.
 
 **Known limits:**
 
+- **The sign-off's seeds include 9.6's** (see M8's limits). Without those 1,600 games, taking them from 9.6's
+  `min_depth` 2 run: 50.5% (49.7% to 51.3%) over 14,400, still a tie.
 - **Why the solver only ties isn't known.** With every solve at depth 2 and about six times the solver's time, the
   agent still ties IS-MCTS (49.3% in 9.6). The leaf evaluation e is the leading guess, and M10's learned e would test it,
   but no run isolated it from the 4 sampled worlds, the plans kept, or the opponent's model.
@@ -674,6 +679,48 @@ didn't beat even, and didn't isolate why.
   hand, so its replies are the best against that world.
 - **It loses more games by deck-out** (784 against 522 won that way).
 - **Not built:** the endgame suite of saved positions (9.6), choices outside the main phase, and a transposition table.
+
+## M10 — Learned evaluation function 🔄
+
+**Done when:** learned θ beats hand-set θ: IS-MCTS with the learned weights against IS-MCTS with the hand-set ones, over
+at least 1,000 seeded games per deck pairing in both seat orders, on seeds no earlier run used.
+
+M10 fits e's weights to the results of self-play games. tanh(z) = 2σ(2z) − 1, so logistic regression of the winner on
+the features makes e an estimate of the expected result. Better prediction doesn't guarantee better play, so the arena
+decides.
+
+**What the code showed (2026-11-24):**
+- **A negative weight turns off `f_bound`:** `upper_bound` returns 1 if any θ is negative, so the and-tree searches
+  differently on the same budget.
+- **The weights are copied into many option structs.** `IsMctsAgentOptions::weights` only reaches its Greedy setup rule;
+  the playouts, macro-actions and endgame solver hold their own. No sim flag sets any of them.
+- **Tuning seeds have been inside sign-off seeds** (M8's and M9's limits).
+
+**Decisions (2026-11-24):**
+- **Measure e before fitting it:** log loss and calibration on held-out games, by prizes left and by deck, against a
+  prizes-only baseline and the hand θ with its best single scale. If the hand θ is close to the fitted one, new weights
+  can't gain much: go to new features, or stop and report that.
+- **Training games:** IS-MCTS self-play, where e is used (16,000 games, an estimated 1.5 to 2.5 hours); whether a fit on
+  cheaper Planner games predicts IS-MCTS games as well is measured.
+- **Deck strength is a confound:** the fit has a term for each deck pairing and for going first, dropped at play time,
+  and is repeated with each deck left out.
+- **Split by game,** never by position: a game's positions share one result.
+- **Negative weights:** fitted free and with θ ≥ 0; the non-negative one unless the free one is clearly better, and then
+  `upper_bound` is extended first.
+- **Features:** the 10 refitted first; then whose turn it is, turns until deck-out, and prizes with turns to Knock Out,
+  one at a time, kept if held-out loss improves.
+- **Judging:** separate seeds for training, tuning (at least 6,400 games, about ±1.2 points) and one sign-off. Rescaling θ
+  changes e's spread, so UCB's C is re-checked.
+
+| Step | Builds | Status |
+|---|---|---|
+| 10.1 | **Weights in one place:** θ files, one function that sets every copy in an agent, weights per side in the sim; default weights play exactly today's games | ⬜ |
+| 10.2 | **Self-play data:** features at each turn's start and end, with game, pairing, seat, prizes left and result | ⬜ |
+| 10.3 | **Evaluation lab:** held-out log loss and calibration of e against the baselines; decides how far to go | ⬜ |
+| 10.4 | **The fit:** logistic regression in C++ (Newton, L2), pairing and first-player terms, optional θ ≥ 0, leave-one-deck-out; recovers known weights on made-up data | ⬜ |
+| 10.5 | **Arena tuning:** learned against hand θ in Greedy, Flat MC and IS-MCTS; C re-checked | ⬜ |
+| 10.6 | **New features,** one at a time, with their `upper_bound` terms | ⬜ |
+| 10.7 | **Sign-off:** IS-MCTS with learned against hand θ, 16,000 games with invariant checks on unused seeds; the endgame agent re-tested; known limits | ⬜ |
 
 ## M5 onward
 
