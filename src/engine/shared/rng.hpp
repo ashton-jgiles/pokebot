@@ -49,7 +49,32 @@ namespace pokebot {
         }
 
         // true = heads
-        bool coin_flip() { return (next() >> 63) != 0; }
+        bool coin_flip() {
+            if (scripted_) {
+                const bool heads = flips_ < length_ && ((script_ >> flips_) & 1U) != 0;
+                if (flips_ < 255) {
+                    ++flips_;
+                }
+                return heads;
+            }
+            return (next() >> 63) != 0;
+        }
+
+        void script_flips(std::uint32_t heads, int length) {
+            scripted_ = true;
+            script_ = heads;
+            length_ = static_cast<std::uint8_t>(length);
+            flips_ = 0;
+        }
+
+        void end_script() {
+            scripted_ = false;
+            script_ = 0;
+            length_ = 0;
+            flips_ = 0;
+        }
+
+        int scripted_flips() const { return flips_; }
 
         template <class T, std::size_t N>
         void shuffle(FixedVector<T, N>& items) {
@@ -67,6 +92,10 @@ namespace pokebot {
         }
 
         std::array<std::uint64_t, 4> state_{};
+        std::uint32_t script_ = 0;
+        std::uint8_t length_ = 0;
+        std::uint8_t flips_ = 0;
+        bool scripted_ = false;
     };
 
 } // namespace pokebot

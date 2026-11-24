@@ -19,7 +19,14 @@ several times bigger.
 | `std::uint32_t below(std::uint32_t n)` | Uniform in `[0, n)`, using rejection sampling to avoid the bias of `% n`. Throws for `n == 0` |
 | `bool coin_flip()` | `true` means heads |
 | `shuffle(FixedVector&)` | Fisher–Yates shuffle: every order equally likely |
-| `==` | Two generators with equal state produce equal sequences |
+| `script_flips(heads, length)` | From now on, coin flips read `heads` bit by bit (bit 0 first, 1 = heads) instead of the generator; past `length` flips they are tails. Shuffles still use the generator |
+| `scripted_flips()` | How many flips were asked for since `script_flips`, including those past the script (up to 255) |
+| `end_script()` | Back to random flips |
+| `==` | Two generators with equal state (and script) produce equal sequences |
+
+The script lets the endgame solver's [chance outcomes](../../agents/endgame/chance.md) enumerate
+every sequence of flips an action can ask for. The generator is 40 bytes with the script, still
+trivially copyable.
 
 The agents use their own `Rng`, seeded separately, so an agent's choices never disturb the
 game's own random events.

@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#include "agents/endgame/endgame_agent.hpp"
 #include "agents/flat_mc/deck_model.hpp"
 #include "agents/flat_mc/flat_mc_agent.hpp"
 #include "agents/flat_mc/playout.hpp"
@@ -23,6 +24,7 @@
 #include "core/decklist.hpp"
 #include "harness/arena.hpp"
 #include "harness/budget_lab.hpp"
+#include "harness/endgame_lab.hpp"
 #include "harness/match.hpp"
 #include "harness/planner_lab.hpp"
 #include "harness/replay.hpp"
@@ -57,14 +59,19 @@ namespace {
         PlannerOptions planner;
         FlatMcOptions flat_mc;
         IsMctsAgentOptions is_mcts;
+        EndgameAgentOptions endgame;
         const DeckModel* model = nullptr;
         int lab_games = 0;
         int budget_lab_games = 0;
+        int endgame_lab_games = 0;
+        int endgame_prizes = 2;
+        int endgame_worlds = 4;
+        int endgame_depth = 2;
         int every = 5;
     };
 
     void print_usage() {
-        std::cerr << "usage: pokebot-sim [--games N] [--agent random|biased|greedy|planner|flatmc] [--seed S] [--no-check]\n"
+        std::cerr << "usage: pokebot-sim [--games N] [--agent random|biased|greedy|planner|flatmc|ismcts|endgame] [--seed S] [--no-check]\n"
                      "                   [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]\n"
                      "                   [--agents A,B [--threads N] [--save-replays K]]\n"
                      "                   [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]\n"
@@ -73,8 +80,11 @@ namespace {
                      "                   [--mcts-opponent-budget B] [--mcts-opponent-plans K] [--mcts-fresh-worlds]\n"
                      "                   [--mcts-final-mean [--mcts-min-visits N]]\n"
                      "                   [--planner-lab N [--every K]] [--budget-lab N [--every K]]\n"
+                     "                   [--endgame-prizes P] [--endgame-worlds M] [--endgame-depth D] [--endgame-nodes N]\n"
+                     "                   [--endgame-min-depth D]\n"
+                     "                   [--endgame-lab N [--every K]]\n"
                      "  --games N            games to play (default 1000)\n"
-                     "  --agent A            random, biased, greedy, planner, flatmc or ismcts (default biased)\n"
+                     "  --agent A            random, biased, greedy, planner, flatmc, ismcts or endgame (default biased)\n"
                      "  --seed S             first game's seed; game i uses S + i (default 1)\n"
                      "  --no-check           skip the invariant check after every action (faster)\n"
                      "  --print              play one game with seed S and print every action\n"
@@ -110,6 +120,18 @@ namespace {
                      "                           main-phase decision (--every K, default 5)\n"
                      "  --budget-lab N           play N greedy games and time the and-tree at cheap budgets against\n"
                      "                           --planner-and-budget, at every Kth main-phase decision\n"
+                     "  --endgame-prizes P       the endgame agent solves when either player has at most P Prize cards\n"
+                     "                           left (default 2)\n"
+                     "  --endgame-worlds M       the endgame solver's worlds (default 4)\n"
+                     "  --endgame-depth D        the endgame solver's deepest depth (default 2)\n"
+                     "  --endgame-nodes N        the endgame solver's node budget, 0 for none (default 10000)\n"
+                     "  --endgame-min-depth D    the endgame agent plays the solver's plan only if the solve reached\n"
+                     "                           depth D, else IS-MCTS decides (default 2)\n"
+                     "  --endgame-lab N          play N greedy games, count the hidden-card worlds at every main-phase\n"
+                     "                           decision and, at every Kth one with at most P prizes left\n"
+                     "                           (--endgame-prizes P, default 2), time a two-segment search and the\n"
+                     "                           endgame solver over M worlds to depth D (--endgame-worlds M, default 4;\n"
+                     "                           --endgame-depth D, default 2)\n"
                      "If an invariant breaks, the game is saved to replays/invariant-seed-S.json; with --agents, a game\n"
                      "that fails for any reason (a broken invariant or an agent's error) is saved to replays/failed-seed-S.json.\n";
     }
@@ -173,6 +195,18 @@ namespace {
                 options.is_mcts.search.final_min_visits = std::stoi(argv[++i]);
             } else if (arg == "--budget-lab" && has_value) {
                 options.budget_lab_games = std::stoi(argv[++i]);
+            } else if (arg == "--endgame-lab" && has_value) {
+                options.endgame_lab_games = std::stoi(argv[++i]);
+            } else if (arg == "--endgame-prizes" && has_value) {
+                options.endgame_prizes = std::stoi(argv[++i]);
+            } else if (arg == "--endgame-worlds" && has_value) {
+                options.endgame_worlds = std::stoi(argv[++i]);
+            } else if (arg == "--endgame-depth" && has_value) {
+                options.endgame_depth = std::stoi(argv[++i]);
+            } else if (arg == "--endgame-min-depth" && has_value) {
+                options.endgame.min_depth = std::stoi(argv[++i]);
+            } else if (arg == "--endgame-nodes" && has_value) {
+                options.endgame.solver.max_nodes = std::stoll(argv[++i]);
             } else if (arg == "--planner-lab" && has_value) {
                 options.lab_games = std::stoi(argv[++i]);
             } else if (arg == "--every" && has_value) {
@@ -203,7 +237,7 @@ namespace {
             return false;
         }
         const auto known = [](const std::string& name) {
-            return name == "random" || name == "biased" || name == "greedy" || name == "planner" || name == "flatmc" || name == "ismcts";
+            return name == "random" || name == "biased" || name == "greedy" || name == "planner" || name == "flatmc" || name == "ismcts" || name == "endgame";
         };
         if (options.planner.samples < 1 || options.planner.or_budget < 1 || options.planner.and_budget < 1 || options.every < 1) {
             return false;
@@ -222,11 +256,29 @@ namespace {
         options.is_mcts.or_budget = options.planner.or_budget;
         options.is_mcts.search.macros.searcher_budget = options.planner.and_budget;
         options.is_mcts.search.macros.samples = options.planner.samples;
+        if (options.endgame.solver.max_nodes < 0 || options.endgame.min_depth < 0) {
+            return false;
+        }
+        options.endgame.prizes = options.endgame_prizes;
+        options.endgame.is_mcts = options.is_mcts;
+        options.endgame.solver.worlds = options.endgame_worlds;
+        options.endgame.solver.max_depth = options.endgame_depth;
+        options.endgame.solver.search.root_budget = options.planner.and_budget;
+        options.endgame.solver.search.root_plans = options.is_mcts.search.macros.searcher_plans;
+        options.endgame.solver.search.budget = options.is_mcts.search.macros.opponent_budget;
+        options.endgame.solver.search.plans = options.is_mcts.search.macros.opponent_plans;
+        options.endgame.solver.search.samples = options.planner.samples;
         if (options.lab_games < 0 || (options.lab_games > 0 && (!options.agents.empty() || options.print || options.check_replays))) {
             return false;
         }
         if (options.budget_lab_games < 0 ||
             (options.budget_lab_games > 0 && (!options.agents.empty() || options.print || options.check_replays || options.lab_games > 0))) {
+            return false;
+        }
+        if (options.endgame_lab_games < 0 || options.endgame_prizes < 1 || options.endgame_prizes > 6 || options.endgame_worlds < 1 ||
+            options.endgame_depth < 1 ||
+            (options.endgame_lab_games > 0 &&
+             (!options.agents.empty() || options.print || options.check_replays || options.lab_games > 0 || options.budget_lab_games > 0))) {
             return false;
         }
         if (options.agents.empty()) {
@@ -255,6 +307,9 @@ namespace {
         }
         if (name == "ismcts") {
             return std::make_unique<IsMctsAgent>(seed, *options.model, options.is_mcts);
+        }
+        if (name == "endgame") {
+            return std::make_unique<EndgameAgent>(seed, *options.model, options.endgame);
         }
         return std::make_unique<BiasedRandomAgent>(seed);
     }
@@ -421,6 +476,91 @@ namespace {
         return 0;
     }
 
+    int run_endgame_lab_command(const CardDB& db, const std::vector<std::filesystem::path>& files, const std::vector<Decklist>& decks, const Options& options) {
+        std::vector<ArenaDeck> arena_decks;
+        for (std::size_t i = 0; i < files.size(); ++i) {
+            arena_decks.push_back(ArenaDeck{files[i].filename().string(), decks[i]});
+        }
+        EndgameLabOptions lab;
+        lab.games = options.endgame_lab_games;
+        lab.seed = options.seed;
+        lab.every = options.every;
+        lab.tree_prizes = options.endgame_prizes;
+        lab.solver_worlds = options.endgame_worlds;
+        lab.solver_depth = options.endgame_depth;
+        lab.and_budget = options.planner.and_budget;
+        lab.samples = options.planner.samples;
+        lab.plans = options.is_mcts.search.macros.searcher_plans;
+        lab.opponent_budget = options.is_mcts.search.macros.opponent_budget;
+        lab.opponent_plans = options.is_mcts.search.macros.opponent_plans;
+        lab.model = options.model;
+        const auto started = std::chrono::steady_clock::now();
+        lab.on_progress = [started](long long done, long long total) {
+            const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+            std::cerr << "  " << done << " of " << total << " games, " << std::fixed << std::setprecision(0) << seconds << " s\n";
+        };
+        const EndgameLabResult r = run_endgame_lab(db, arena_decks, lab);
+        const double games = static_cast<double>(std::max(r.games, 1LL));
+        std::cout << std::fixed << std::setprecision(1) << "Endgame lab: " << r.games << " greedy games, " << r.positions.size() << " main-phase decisions\n";
+        std::cout << "  games whose smaller prize count got down to 1, 2, 3, 4, 5, 6:";
+        for (std::size_t k = 1; k < r.lowest_prizes.size(); ++k) {
+            std::cout << ' ' << r.lowest_prizes[k];
+        }
+        std::cout << "\nWorlds at each decision by the smaller prize count (median log10, counted by card, with the opponent's true list):\n";
+        std::cout << "  prizes  decisions/game   own  opponent  total   <=1e2   <=1e4   <=1e6   <=1e8  hidden hand    <=2  deck cards  lists\n";
+        for (int p = 1; p <= 6; ++p) {
+            const EndgameSummary s = summarize(r, p);
+            if (s.positions == 0) {
+                continue;
+            }
+            std::cout << std::setw(8) << p << std::setw(16) << static_cast<double>(s.positions) / games << std::setw(6) << s.median_own << std::setw(10)
+                      << s.median_opponent << std::setw(7) << s.median_total;
+            for (const double share : s.total_at_most) {
+                std::cout << std::setw(7) << share << '%';
+            }
+            std::cout << std::setw(13) << s.median_hidden_hand << std::setw(6) << s.hidden_hand_at_most_2 << '%' << std::setw(7) << s.median_own_deck_cards
+                      << " / " << s.median_opponent_deck_cards << std::setw(7) << s.median_lists << '\n';
+        }
+        std::cout << "Two-segment search in the true world (the searcher's " << lab.plans << " plans, a branch for each card the opponent could draw, its "
+                  << lab.opponent_plans << " replies), no pruning, one in every " << lab.every << " decisions, averages a tree:\n";
+        std::cout << "  prizes  trees  plans  mid-turn  (1 / 2-3 / 4+ drawn)  random  draws  replies  leaves  mean s  median s  p90 s\n";
+        for (int p = 1; p <= lab.tree_prizes; ++p) {
+            const EndgameSummary s = summarize(r, p);
+            if (s.trees == 0) {
+                continue;
+            }
+            const EndgameTree& t = s.total;
+            const auto per = [&](long long value) {
+                return static_cast<double>(value) / static_cast<double>(s.trees);
+            };
+            std::cout << std::setprecision(1) << std::setw(8) << p << std::setw(7) << s.trees << std::setw(7) << per(t.plans) << std::setw(10) << per(t.mid_turn)
+                      << "   (" << per(t.mid_turn_draws[0]) << " / " << per(t.mid_turn_draws[1]) << " / " << per(t.mid_turn_draws[2]) << ")" << std::setw(11)
+                      << per(t.random) << std::setw(7) << per(t.chance) << std::setw(9) << per(t.opponent_plans) << std::setw(8) << per(t.leaves)
+                      << std::setprecision(3) << std::setw(8) << t.seconds / static_cast<double>(s.trees) << std::setw(10) << s.median_seconds << std::setw(7)
+                      << s.p90_seconds << '\n';
+        }
+        std::cout << "Endgame solver at the same decisions (" << lab.solver_worlds << " worlds from the deck model, alpha-beta and Star1, iterative deepening to depth "
+                  << lab.solver_depth << ", no node budget), averages a solve:\n";
+        std::cout << "  prizes  solves  depth 0/1/2+  nodes  chance nodes  alpha-beta cuts  Star1 cuts  and-trees  plans dropped  mean s  median s  p90 s\n";
+        for (int p = 1; p <= lab.tree_prizes; ++p) {
+            const EndgameSummary s = summarize(r, p);
+            if (s.trees == 0) {
+                continue;
+            }
+            const EndgameSolve& v = s.solved;
+            const auto per = [&](long long value) {
+                return static_cast<double>(value) / static_cast<double>(s.trees);
+            };
+            std::cout << std::setprecision(1) << std::setw(8) << p << std::setw(8) << s.trees << "   " << s.solve_depths[0] << " / " << s.solve_depths[1] << " / "
+                      << s.solve_depths[2] + s.solve_depths[3] << std::setw(9) << per(v.visited) << std::setw(14) << per(v.chance_nodes) << std::setw(17)
+                      << per(v.alpha_beta_cuts) << std::setw(12) << per(v.star1_cuts) << std::setw(11) << per(v.and_trees) << std::setw(15) << per(v.dropped)
+                      << std::setprecision(3) << std::setw(8) << v.seconds / static_cast<double>(s.trees) << std::setw(10) << s.solve_median_seconds << std::setw(7)
+                      << s.solve_p90_seconds << '\n';
+        }
+        std::cout << std::setprecision(1) << "Took " << r.seconds << " s\n";
+        return 0;
+    }
+
     // --agents A,B: A against B on every deck pairing, with win rates and their confidence intervals.
     int run_match(const CardDB& db, const std::vector<std::filesystem::path>& files, const std::vector<Decklist>& decks,
                   const Options& options) {
@@ -466,11 +606,17 @@ namespace {
         std::cout << std::fixed << std::setprecision(1);
         std::cout << a.name << " vs " << b.name << ": " << n << " decks, " << n * n << " pairings, " << per_pairing
                   << " games each (every seed once with " << a.name << " in each seat), " << result.threads << " threads\n";
-        if (options.agents[0] == "ismcts" || options.agents[1] == "ismcts") {
+        if (options.agents[0] == "ismcts" || options.agents[1] == "ismcts" || options.agents[0] == "endgame" || options.agents[1] == "endgame") {
             const IsMctsOptions& m = options.is_mcts.search;
             std::cout << "  ismcts: " << m.iterations << " iterations, C " << m.exploration << ", depth " << m.playout.depth << ", " << m.macros.searcher_plans
                       << " plans, opponent and-tree " << m.macros.opponent_budget << " nodes keeping " << m.macros.opponent_plans
                       << (m.matched_worlds ? ", matched worlds" : "") << (m.final_by_mean ? ", final by mean" : "") << '\n';
+        }
+        if (options.agents[0] == "endgame" || options.agents[1] == "endgame") {
+            const EndgameOptions& e = options.endgame.solver;
+            std::cout << "  endgame: the solver at " << options.endgame.prizes << " or fewer Prize cards left, " << e.worlds << " worlds, depth up to "
+                      << e.max_depth << ", " << e.max_nodes << " nodes, plans " << e.search.root_plans << " at the root and " << e.search.plans
+                      << " below, played if it reached depth " << options.endgame.min_depth << "; otherwise ismcts as above\n";
         }
         if (options.agents[0] == "flatmc" || options.agents[1] == "flatmc") {
             std::cout << "  flatmc: " << options.flat_mc.plans << " plans, " << options.flat_mc.playouts << " playouts, depth "
@@ -574,7 +720,7 @@ int main(int argc, char** argv) {
         const auto playing = [&](const char* name) {
             return options.agent == name || std::find(options.agents.begin(), options.agents.end(), name) != options.agents.end();
         };
-        if (playing("flatmc") || playing("ismcts")) {
+        if (playing("flatmc") || playing("ismcts") || playing("endgame") || options.endgame_lab_games > 0) {
             library = std::make_unique<ArchetypeLibrary>(ArchetypeLibrary::load("data/archetypes", db));
             model = std::make_unique<DeckModel>(*library);
             options.model = model.get();
@@ -587,6 +733,9 @@ int main(int argc, char** argv) {
         }
         if (options.budget_lab_games > 0) {
             return run_budget_lab_command(db, files, decks, options);
+        }
+        if (options.endgame_lab_games > 0) {
+            return run_endgame_lab_command(db, files, decks, options);
         }
 
         if (options.print) {

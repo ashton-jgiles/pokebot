@@ -51,6 +51,9 @@ Step 8.5 started at 64 iterations, to match Flat MC's 64 playouts. Step 8.6 tune
 match Flat MC's time (1.02 times it), so they are the default; the first sign-off ran 48, about 1.16 times it. The search's own `IsMctsOptions` defaults stay as they were
 (200 iterations, r = 1, fresh worlds).
 
+`following(observation, actions)` is public: whether the agent is partway through its plan, which
+the [endgame agent](../endgame/endgame_agent.md) checks before solving.
+
 ## Counters
 
 The agent's (plans followed, wins found, plan actions, Greedy decisions, or-tree nodes and seconds) and
