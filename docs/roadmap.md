@@ -704,7 +704,11 @@ decides.
   cheaper Planner games predicts IS-MCTS games as well is measured.
 - **Deck strength is a confound:** the fit has a term for each deck pairing and for going first, dropped at play time,
   and is repeated with each deck left out.
-- **Split by game,** never by position: a game's positions share one result.
+- **Split by seed,** never by position or game: a game's positions share one result, and the arena plays each deal
+  twice (pairing (i, j) in one seat and (j, i) in the other), so 16,000 games hold 8,000 deals.
+- **The data:** IS-MCTS against itself with the hand weights, seeds 1,000,001 to 1,000,500 in five parts of 100 seeds
+  (3,200 games each). Parts 1 to 4 are for fitting and choosing, by cross-validation over seeds; part 5 is kept aside
+  and looked at once, for the final weights.
 - **Negative weights:** fitted free and with θ ≥ 0; the non-negative one unless the free one is clearly better, and then
   `upper_bound` is extended first.
 - **Features:** the 10 refitted first; then whose turn it is, turns until deck-out, and prizes with turns to Knock Out,
@@ -715,7 +719,7 @@ decides.
 | Step | Builds | Status |
 |---|---|---|
 | 10.1 | **Weights in one place:** θ files, one function that sets every copy in an agent, weights per side in the sim; default weights play exactly today's games. *[Weights files and `set_weights`](src/agents/evaluation/weights.md) are built: `data/weights/hand.txt` holds the hand-set weights, `set_weights` sets every copy in the Planner's, Flat MC's, IS-MCTS's and the endgame agent's options, and the sim has `--weights`, `--weights-a` and `--weights-b`. All tests pass. `--agents ismcts,ismcts --games 20 --no-check --seed 300001` (320 games) plays identically with `--weights-b data/weights/hand.txt` and without: the score, every pairing and every count. With `data/weights/prizes.txt` (only the prizes weight) for B on the same seeds, the hand weights score 69.1% (63.8% to 73.9%), so each side gets its own weights. `--agents endgame,ismcts --games 100 --no-check` repeats 9.6's `min_depth` 2 run from before 10.1 exactly: 802 to 798, every pairing and every count* | ✅ |
-| 10.2 | **Self-play data:** features at each turn's start and end, with game, pairing, seat, prizes left and result | ⬜ |
+| 10.2 | **Self-play data:** whole games saved, and from them the features at each turn's start and one later main phase, with game, player, prizes left and result. *[`self_play`](src/harness/self_play.md) is built: games saved as replays, one a line, and positions worked out by playing them back, so new features need no new games. A turn's end is the next turn's start, so a random later main phase is recorded instead. `--save-games`, `--check-games`. All tests pass. A trial of 320 games (`--seed 310001`, 3.2 games/s) played back to its results: 160 different deals, 6,612 turn starts and 5,896 later main phases. The data run is next* | 🔄 |
 | 10.3 | **Evaluation lab:** held-out log loss and calibration of e against the baselines; decides how far to go | ⬜ |
 | 10.4 | **The fit:** logistic regression in C++ (Newton, L2), pairing and first-player terms, optional θ ≥ 0, leave-one-deck-out; recovers known weights on made-up data | ⬜ |
 | 10.5 | **Arena tuning:** learned against hand θ in Greedy, Flat MC and IS-MCTS; C re-checked | ⬜ |
