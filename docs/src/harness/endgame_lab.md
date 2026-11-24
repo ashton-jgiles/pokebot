@@ -118,9 +118,9 @@ alpha-beta and Star1, depth 1 then 2, no node budget): 1,150 s, nearly all of it
 
 - **A full depth-2 solve costs about 1.2 s at the median and 3 s on average**, against IS-MCTS's
   0.1 s a search, with a long tail (p90 about 6 s). Nodes cost about 0.1 ms each.
-- **The and-trees are most of it:** about 1,200 to 1,350 a solve, at about 2 ms each for 25 nodes
-  ([budget lab](budget_lab.md)), one at every decision below the root: each of the opponent's turns
-  after each draw, and the searcher's turn after a mid-turn draw.
+- **And-trees are probably most of it, but that isn't profiled:** about 1,200 to 1,350 a solve, which at the
+  [budget lab](budget_lab.md)'s 2 ms for 25 nodes would be about 2.5 s. The chance outcomes (replaying an action,
+  observing and hashing each result for both players) aren't timed.
 - **Star1 does most of the pruning** (4,600 to 8,500 outcomes cut a solve); alpha-beta cuts few
   moves, as each decision has only 4.
 - **No root plan was dropped:** the searcher's plans played in every world. The 3 depth-0 solves had a

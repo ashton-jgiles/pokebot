@@ -15,7 +15,7 @@ The milestone plan from the project proposal, with the current status of each.
 | M6 | Model 1: turn planner (or-tree and and-tree modes) | ✅ Done |
 | M7 | Determinization and flat Monte Carlo | ✅ Done |
 | M8 | Model 2: IS-MCTS | ✅ Done |
-| M9 | Model 3: endgame solver (expectiminimax) | 🔄 In progress |
+| M9 | Model 3: endgame solver (expectiminimax) | ✅ Closed: the solver ties IS-MCTS (see the sign-off) |
 | M10 | Learned evaluation function | ⬜ Not started |
 | M11+ | Stretch: policy prior, deck-building GA, more decks, opponent inference | ⬜ Not started |
 
@@ -508,8 +508,10 @@ Flat MC, which isn't like for like; by time per game, step 8.5's 64 iterations t
   visits on one move node, with 1,340 outcome nodes a game under the moves.
 - **Matched worlds is the big change** (50.9%, even with Flat MC for the first time, at 1.12 times its time): the
   n-th visit to every root move sees the same world and playout seed, so the root compares plans as Flat MC does.
-  The worst pairing rises from 20% to 30%. Cache hits fall from 1,646 to 383 a game and single-action nodes from
-  982 to 289, as the root's outcome node is usually new and the descent stops there.
+  The worst pairing rises from 20% to 30%. Cache hits (1,646 to 383 a game) and single-action nodes (982 to 289) fall
+  because matched mode takes the root's moves from a list instead of asking for them every iteration, so they don't
+  show a shallower search; opponent and-trees, which are only run below the root, barely change (591 to 557). (An
+  earlier version of this note read the drop as the descent stopping at the root.)
 - **Choosing by mean and r = 2 at 42 iterations each help a little** (45.1%, 46.4%), on the unmatched tree.
 - **On matched worlds, r = 2 adds a little and choosing by mean nothing:** 52.0% with r = 2 at 42 iterations (the best
   so far, its interval just touching 50%), 50.2% and 50.4% with the mean. Matched visits already make the means
@@ -554,15 +556,15 @@ At a quarter of Flat MC's time IS-MCTS still wins 40.8%.
 
 - **The lead at equal time is small:** 1.3 points, its interval's lower end 0.5 points above even, at 1.02 to 1.07
   times Flat MC's time. Flat MC beat the Planner by 22.9 points.
-- **It comes from the root, not the tree.** With matched worlds, most iterations stop at the root move's new outcome
-  node, so the search is close to Flat MC with UCB1 choosing which plan gets the next sample, plus an opponent
-  reply in each outcome. Deeper search (r = 2) helped more than the tree did.
+- **Where the lead comes from isn't measured.** Matched worlds made the largest difference in 8.6, which is a change
+  at the root, but how much the tree below adds was never isolated. (An earlier version said most iterations stop at
+  the root, from the fall in cache hits; that fall comes from how the root's moves are looked up, see 8.6.)
 - **The curve varies only IS-MCTS's budget.** Flat MC stays at its default throughout, so the curve shows what
   IS-MCTS gains from time against a fixed opponent, not how the two compare at every budget.
 - **Going second it is slightly behind** (48.1%), and ns-zoroark is still the weakest deck for both agents.
 - **Times are noisy:** both long runs stalled once, which inflates both agents' seconds.
 
-## M9 — Model 3: endgame solver 🔄
+## M9 — Model 3: endgame solver ✅
 
 **Done when:** the solver's values match a brute-force search without pruning on small positions, and IS-MCTS with the
 solver beats IS-MCTS alone over at least 1,000 seeded games per deck pairing in both seat orders.
@@ -611,10 +613,10 @@ never applies.
 | 9.1 | **Endgame lab:** world counts, chance branching and the solver's cost on positions from real games (`pokebot-sim --endgame-lab N`); P_end, M and the depth chosen. *The scratch measurement above is its first table. The [endgame lab](src/harness/endgame_lab.md) is built (`pokebot-sim --endgame-lab N [--every K] [--endgame-prizes P]`): world counts at every main-phase decision, and at qualifying ones a two-segment search in the true world without pruning, with its value, size and time. `--endgame-lab 160` (15,754 decisions, 95 s): 63% of games reach 2 or fewer Prize cards, 10.4 decisions a game (11%); median worlds 10¹¹, at most 10⁴ in under 1%; an unpruned two-segment tree a world has 15 plans (6.6 of them stopping mid-turn after a draw), 107 draw branches, 425 replies, and takes 0.15 s at the median, 0.27 on average, 0.7 at p90. Chosen: P_end = 2; worlds enumerated at most 16, else M = 4 sampled from the deck model (2, 4 and 8 tuned in 9.6); iterative deepening 1 to 2 segments; one-card draws for either player enumerated by card, 2 or 3 cards enumerated up to 32 outcomes and sampled at 8 beyond, 4 or more sampled; a plan stopping on a draw is a chance node and then the searcher's next segment from a 25-node and-tree keeping 4, counting one level of depth; coin flips scripted; a node budget set from 9.3's pruning* | ✅ |
 | 9.2 | **Chance outcomes:** a boundary action's outcomes in a world, with probabilities: one-card draws by card, coin flips through a scripted `Rng`, big draws sampled; tests that the probabilities add up to 1 and match brute force over deck orders. *[`chance_outcomes`](src/agents/endgame/chance.md) and `Rng::script_flips` are built: flips enumerated by script up to 8; the deck's touched top cards found by a probe run and every combination placed there (up to 32, else 8 sampled), for both players, so ending the turn branches on the opponent's draw; a shuffle before a draw sampled; outcomes that look the same to both players merged, so a search is one outcome. `count_placements` moved here from the lab. `GameState` grows by the script's 8 bytes: a clean rebuild. All tests pass* | ✅ |
 | 9.3 | **Expectiminimax with alpha-beta and Star1:** OR, AND-min and AND-chance nodes over and-tree plans, values in [−1, 1], depth in turn segments, children ordered by e; the same values as a brute-force search on small positions; nodes pruned counted. *[`expectiminimax`](src/agents/endgame/expectiminimax.md) is built: and-tree plans at main-phase decisions (16 at 300 nodes at the root, 4 at 25 deeper), every legal action at other decisions without using depth, chance through `chance_outcomes`, fail-soft alpha-beta and Star1; move lists and chance seeded from each node's state hash, so the search with and without pruning sees the same tree. Tests compare it with the search without pruning on sample cards and real-deck endgames. All tests pass* | ✅ |
-| 9.4 | **Root and iterative deepening:** worlds enumerated (at most N_end) or sampled from the deck model, only plans playable in every world, deepening under a node budget, the deepest finished iteration's best plan. *The [endgame solver](src/agents/endgame/endgame_solver.md) is built: M worlds always sampled (enumeration dropped: under 1% of endgame decisions have at most 10⁴ worlds); the root a chance node over the worlds under the OR node over the plans, with Star1; plans dropped unless playable in every world; depth 1, 2, … under a shared `max_nodes`, each depth in the last one's order. The endgame lab now runs the solver too (`--endgame-worlds M`, `--endgame-depth D`), to set the budget. `--endgame-lab 160` (332 solves, no budget): every solve with more than one plan reached depth 2, in about 39,000 nodes and 1.2 s at the median (3 s mean, 6 s p90), mostly in about 1,300 and-trees a solve; Star1 cut 4,600 to 8,500 outcomes a solve, alpha-beta under 100 moves; no root plan dropped. The default budget is 10,000 nodes (about 1 s); 2,500, 10,000 and 40,000, M = 2 or 4 and 8 or 16 root plans are tuned in 9.6, with IS-MCTS also given the solver's time at the same decisions* | ✅ |
+| 9.4 | **Root and iterative deepening:** worlds enumerated (at most N_end) or sampled from the deck model, only plans playable in every world, deepening under a node budget, the deepest finished iteration's best plan. *The [endgame solver](src/agents/endgame/endgame_solver.md) is built: M worlds always sampled (enumeration dropped: under 1% of endgame decisions have at most 10⁴ worlds); the root a chance node over the worlds under the OR node over the plans, with Star1; plans dropped unless playable in every world; depth 1, 2, … under a shared `max_nodes`, each depth in the last one's order. The endgame lab now runs the solver too (`--endgame-worlds M`, `--endgame-depth D`), to set the budget. `--endgame-lab 160` (332 solves, no budget): every solve with more than one plan reached depth 2, in about 39,000 nodes and 1.2 s at the median (3 s mean, 6 s p90), with about 1,300 and-trees a solve (the time isn't profiled); Star1 cut 4,600 to 8,500 outcomes a solve, alpha-beta under 100 moves; no root plan dropped. The default budget is 10,000 nodes (about 1 s); 2,500, 10,000 and 40,000, M = 2 or 4 and 8 or 16 root plans are tuned in 9.6, with IS-MCTS also given the solver's time at the same decisions* | ✅ |
 | 9.5 | **Endgame agent:** the solver, else the or-tree's win, else IS-MCTS; `--agent endgame`, its settings and counters. *[`EndgameAgent`](src/agents/endgame/endgame_agent.md) is built: at a main-phase decision with either player at 2 or fewer Prize cards, unless IS-MCTS is partway through a plan, the solver's best plan, followed like IS-MCTS's; on no plan, a fallback on IS-MCTS, which decides everything else (its or-tree's win first). `--agent endgame`, `--endgame-prizes`, `--endgame-worlds`, `--endgame-depth`, `--endgame-nodes`; the solver's moves follow the `--mcts-*` plan settings. First match, `--agents endgame,ismcts --games 100 --no-check` (1,600 games): **45.9% (43.5% to 48.4%)**, so the solver as it stands makes IS-MCTS worse, at 1.8 games/s. Per game: 2.9 endgame decisions, all solved (no fallbacks), 1.7 of them only to depth 1 within 10,000 nodes and 1.2 to depth 2; 2.5 s in the solver, so the agent takes about 1.6 times IS-MCTS's time. Going first 50.5%, second 41.4%. 9.6 looks for why* | ✅ |
-| 9.6 | **Endgame suite and tuning:** positions at 2 or fewer prizes saved from IS-MCTS games; the solver's win rate from them against IS-MCTS alone; P_end, M, the depth and the budget tuned at matched time *The first runs, in the table below: playing only depth-2 solves gets back to even (50.1%); every solve at depth 2, at five times the time, is no better (49.3%); so the leaves' e, not the depth, is the limit. The default plays only depth-2 solves (`min_depth` 2); the endgame suite and further tuning are left until M10's learned e, the limit these runs found* | ✅ |
-| 9.7 | **Sign-off:** `endgame` against `ismcts` on every deck pairing, at least 1,000 games each, with invariant checks; brute-force agreement; nodes pruned by alpha-beta and Star1; speed; known limits | ⬜ |
+| 9.6 | **Endgame suite and tuning:** positions at 2 or fewer prizes saved from IS-MCTS games; the solver's win rate from them against IS-MCTS alone; P_end, M, the depth and the budget tuned at matched time *The first runs, in the table below: playing only depth-2 solves gets back to even (50.1%); every solve at depth 2, at five times the time, is no better (49.3%); so more depth-2 solves and more time didn't help. The cause isn't isolated (see below). The default plays only depth-2 solves (`min_depth` 2); the endgame suite and further tuning are left until after M10* | ✅ |
+| 9.7 | **Sign-off:** `endgame` against `ismcts` on every deck pairing, at least 1,000 games each, with invariant checks; brute-force agreement; nodes pruned by alpha-beta and Star1; speed; known limits *16,000 games with checks, below: 50.5% (49.7% to 51.3%), no problems found. The brute-force test is met; beating IS-MCTS isn't* | ✅ |
 
 How the endgame agent did against IS-MCTS in 9.6, on the same 1,600 seeded games (`--agents endgame,ismcts --games 100
 --no-check`, release, 16 threads), one change at a time from the defaults (the solver at 2 or fewer Prize cards, 4
@@ -630,10 +632,48 @@ game searching throughout.
 
 - **Depth-1 solves are what lost** (45.9% to 50.1% without them): scoring a plan by e after the searcher's own turn,
   with no reply, is worse than IS-MCTS's search with its two-turn playouts.
-- **A full depth-2 solve is only as good as IS-MCTS** (49.3%), at five times the solver's time: with e at the
-  leaves, an exact search over the next two segments matches IS-MCTS's playouts but doesn't beat them. The leaf
-  evaluation, not the depth, is the limit.
+- **A full depth-2 solve is only as good as IS-MCTS** (49.3%), at about six times the default's solver time. Why isn't
+  isolated: no run changed the leaf evaluation, the number of worlds, the plans kept (16 and 4) or the opponent's model.
+  e at the leaves is the leading guess; 4 sampled worlds, the opponent's 4 cheap plans, and an opponent who sees its
+  hand in each world are others.
 - **Solving only at the last Prize card changes little** (48.9%), with depth-1 solves still played.
+
+**Sign-off run (2026-11-24):** `pokebot-sim --agents endgame,ismcts --games 1000` on all 16 deck pairings (16,000
+games, every seed once with the endgame agent in each seat; the solver at 2 or fewer Prize cards left, 4 worlds from the
+deck model, depth up to 2 within 10,000 nodes, its plan played only if the solve reached depth 2, IS-MCTS as signed off in
+M8 otherwise and on the other side), with the invariant checker after every action: **no problems found**.
+
+| Measure | Result |
+|---|---|
+| The endgame agent's score against IS-MCTS | **50.5%** (95% CI 49.7% to 51.3%): 8,077 won, 7,923 lost, 0 drawn |
+| By who went first | the endgame agent first 53.5% (52.4% to 54.6%), IS-MCTS first 47.5% (46.4% to 48.6%) |
+| Every deck matchup, both seatings averaged (2,000 games each) | 48.6% (dragapult and ns-zoroark) to 51.5% (basic-box and ns-zoroark); 8 of the 10 at 50% or above |
+| How it won | Prize cards 7,097, IS-MCTS's deck ran out 522, no Pokémon left 458 |
+| How it lost | Prize cards 6,703, its own deck ran out 784, no Pokémon left 436 |
+| Per game | 3.35 endgame decisions: 1.34 solves reached depth 2 and were played (3.9 plan actions), 2.01 stopped at depth 1 and went to IS-MCTS; about 24,900 solver nodes, 950 and-trees, 4,350 outcomes cut by Star1 and 68 moves by alpha-beta; no root plan dropped |
+| Time per game (on 16 busy threads) | the solver 3.66 s and the agent's IS-MCTS 3.84 s, against IS-MCTS's 4.22 s: about 1.8 times its time |
+| Speed, the endgame agent against IS-MCTS | about 1.4 games/s on 16 threads with invariant checks (the run stalled once: 800 games took 3,935 s) |
+
+**Against the done-when:** the solver's values match a brute-force search without pruning on small positions and on
+real-deck endgames (the 9.3 and 9.4 tests); **IS-MCTS with the solver does not beat IS-MCTS alone**: 50.5%, its interval
+including even, at about 1.8 times the time. M9 is closed with that result rather than tuned further: 9.6's four runs
+didn't beat even, and didn't isolate why.
+
+**Known limits:**
+
+- **Why the solver only ties isn't known.** With every solve at depth 2 and about six times the solver's time, the
+  agent still ties IS-MCTS (49.3% in 9.6). The leaf evaluation e is the leading guess, and M10's learned e would test it,
+  but no run isolated it from the 4 sampled worlds, the plans kept, or the opponent's model.
+- **Depth-1 solves lose** (45.9% when they were played): a plan scored by e after the searcher's own turn, with no reply.
+  Within 10,000 nodes, 60% of solves stop at depth 1, so the solver plays in only 1.3 decisions a game.
+- **It is slow:** a full depth-2 solve averages about 3 s and 39,000 nodes, with about 1,300 and-trees. Where the time
+  goes isn't profiled: about 2 ms an and-tree (the budget lab's mid-game figure) would account for most of it, but the
+  chance outcomes' replays and hashing aren't timed.
+- **The root is sampled, not enumerated** (worlds with at most 10⁴ placements are under 1% of endgame decisions), so with
+  the opponent's hand unknown the solver is a sampled search over it, not exact; and the opponent in each world sees its
+  hand, so its replies are the best against that world.
+- **It loses more games by deck-out** (784 against 522 won that way).
+- **Not built:** the endgame suite of saved positions (9.6), choices outside the main phase, and a transposition table.
 
 ## M5 onward
 

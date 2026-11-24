@@ -116,6 +116,8 @@ games; the reference machine has 16 hardware threads):
 | `ismcts,flatmc` at step 8.5 (64 iterations, C = 0.7, r = 1; `--games 100`) | about 2.6 games/s | |
 | `ismcts,flatmc` in 8.6 (matched worlds, r = 2, 42 iterations; `--games 100`) | about 3.1 games/s | |
 | `ismcts,flatmc` at the M8 sign-off (the defaults; `--games 1000`, 16,000 games) | about 2.8 games/s, 2.0 with invariant checks | |
+| `endgame,ismcts` in 9.6 (only depth-2 solves played; `--games 100`) | about 2.0 games/s | |
+| `endgame,ismcts` at the M9 sign-off (the defaults; `--games 1000`, 16,000 games) | about 1.4 games/s with invariant checks | |
 
 Greedy builds 3 worlds per decision and tries every action in each, so it costs about 9 ms per game
 on one thread against Random. Playing out follow-up choices (step 5.6c) made it about 3.3 times
