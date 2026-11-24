@@ -722,11 +722,32 @@ decides.
 |---|---|---|
 | 10.1 | **Weights in one place:** θ files, one function that sets every copy in an agent, weights per side in the sim; default weights play exactly today's games. *[Weights files and `set_weights`](src/agents/evaluation/weights.md) are built: `data/weights/hand.txt` holds the hand-set weights, `set_weights` sets every copy in the Planner's, Flat MC's, IS-MCTS's and the endgame agent's options, and the sim has `--weights`, `--weights-a` and `--weights-b`. All tests pass. `--agents ismcts,ismcts --games 20 --no-check --seed 300001` (320 games) plays identically with `--weights-b data/weights/hand.txt` and without: the score, every pairing and every count. With `data/weights/prizes.txt` (only the prizes weight) for B on the same seeds, the hand weights score 69.1% (63.8% to 73.9%), so each side gets its own weights. `--agents endgame,ismcts --games 100 --no-check` repeats 9.6's `min_depth` 2 run from before 10.1 exactly: 802 to 798, every pairing and every count* | ✅ |
 | 10.2 | **Self-play data:** whole games saved, and from them the features at each turn's start and one later main phase, with game, player, prizes left and result. *[`self_play`](src/harness/self_play.md) is built: games saved as replays, one a line, and positions worked out by playing them back, so new features need no new games. A turn's end is the next turn's start, so a random later main phase is recorded instead. `--save-games`, `--check-games`. All tests pass. A trial of 320 games (`--seed 310001`, 3.2 games/s) played back to its results: 160 different deals, 6,612 turn starts and 5,896 later main phases. The data run: 16,000 games in five parts, each 3,200 games of 100 seeds and 1,600 different deals, all played back to their saved result, none without positions. 622,664 positions (329,470 turn starts, 293,194 later), 498,549 of them in parts 1 to 4. The player who went first scored 53.3%, 50.9%, 52.9%, 51.6% and 49.8% by part, 51.7% in all* | ✅ |
-| 10.3 | **Evaluation lab:** held-out log loss and calibration of e against the baselines. *[`evaluation_lab`](src/harness/evaluation_lab.md) is built: a coin flip, prizes with a fitted scale, the hand θ as played and with a fitted scale, scored on seeds they weren't fitted on (10 folds by seed), with errors clustered by seed. `--evaluate FILE,...`. How far to go needs the fitted θ, so that decision moves to the end of 10.4. The run on parts 1 to 4 is next* | 🔄 |
+| 10.3 | **Evaluation lab:** held-out log loss and calibration of e against the baselines. *[`evaluation_lab`](src/harness/evaluation_lab.md) is built: a coin flip, prizes with a fitted scale, the hand θ as played and with a fitted scale, scored on seeds they weren't fitted on (10 folds by seed), with errors clustered by seed. `--evaluate FILE,...`. How far to go needs the fitted θ, so that decision moves to the end of 10.4. All tests pass. The results on parts 1 to 4 are below* | ✅ |
 | 10.4 | **The fit:** logistic regression in C++ (Newton, L2), pairing and first-player terms, optional θ ≥ 0, leave-one-deck-out; recovers known weights on made-up data | ⬜ |
 | 10.5 | **Arena tuning:** learned against hand θ in Greedy, Flat MC and IS-MCTS; C re-checked | ⬜ |
 | 10.6 | **New features,** one at a time, with their `upper_bound` terms | ⬜ |
 | 10.7 | **Sign-off:** IS-MCTS with learned against hand θ, 16,000 games with invariant checks on unused seeds; the endgame agent re-tested; known limits | ⬜ |
+
+**What 10.3 measured (2026-11-24):** parts 1 to 4, 12,800 games, 498,549 positions, 400 seeds; 95% intervals by seed.
+
+| Model | Held-out log loss | Change from hand, scaled |
+|---|---|---|
+| Coin flip | 0.6931 | +0.0949 ± 0.0049 |
+| Prizes, scaled (θ = 1.718) | 0.6049 | +0.0066 ± 0.0024 |
+| Hand, as played | 0.6260 | +0.0277 ± 0.0032 |
+| Hand, scaled (× 0.588) | 0.5983 | 0 |
+
+- **The hand θ is overconfident:** predictions of 10% to 40% win 12 to 16 points more often than predicted, and those of
+  70% to 90% about 10 points less. A scale of 0.588 fits best. As played it predicts worse than prizes alone.
+- **The other nine features add little as weighted:** prizes alone give 93% of the scaled hand θ's gain over a coin flip.
+- **Before any prize is taken (41% of positions) the hand θ predicts worse than a coin flip:** 0.7056 scaled and 0.7469 as
+  played, against 0.6931. With prizes taken, the scaled hand θ beats prizes alone at every count. One scale can't fix
+  this: scaled, it's still overconfident in the middle (30% to 40% wins 42%) and underconfident at the top (80% to 90%
+  wins 91%), while prizes alone fit a larger prizes weight (1.718 against 1.175).
+- **The player to move at a turn's start does better than predicted,** by 4.6 ± 0.1 points (0.6 later in the turn). With
+  prizes alone it's 2.2 and 1.7.
+- **Decks:** mega-greninja wins 13.3 ± 1.0 points more than predicted and ns-zoroark 7.2 ± 0.9 less. These mix the decks'
+  strength with any misreading of their positions; the lab can't tell them apart.
 
 ## M5 onward
 

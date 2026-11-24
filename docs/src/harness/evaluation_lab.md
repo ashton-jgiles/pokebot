@@ -54,7 +54,8 @@ games would be counted twice. The order of the samples doesn't depend on the num
 ## In the sim
 
 `--evaluate FILE,FILE,...` scores a coin flip, the prizes weight with a fitted scale, the hand θ as
-played, and the hand θ with a fitted scale (the reference). M10's part 5 is kept aside for the final
+played, and the hand θ with a fitted scale (the reference). 12,800 games take 6.6 s on 16 threads, 2.8 s
+of it to play them back. The results are in the [roadmap](../../roadmap.md) under M10. M10's part 5 is kept aside for the final
 weights, so it isn't passed here until then.
 
 ## Tests
