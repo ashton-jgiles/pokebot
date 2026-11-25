@@ -1001,8 +1001,13 @@ pairing, `--seed 2100001`, no invariant checks. **A scores 55.1% (53.9% to 56.4%
 
 **The default (2026-11-25):** the final θ, `learned_weights()`, is now IS-MCTS's and the endgame agent's default. Greedy, the
 Planner and Flat MC keep the hand-set weights, since they haven't been played with the final θ. The earlier IS-MCTS and endgame
-runs above that name no weights files were played with the hand-set ones: `--weights data/weights/hand.txt` repeats them. Not yet
-tested or run.
+runs above that name no weights files were played with the hand-set ones: `--weights data/weights/hand.txt` repeats them.
+
+- **All 456 tests pass,** and three checks of 320 games repeat earlier or matching runs in everything but the times: IS-MCTS on the
+  default against `fitted-nonneg` (`--seed 2000001`) plays 10.6's games; the endgame agent on the default plays the same games as with
+  the weights file (`--seed 3100001`); and `fitted-nonneg` against `hand.txt` (`--seed 2000001`) plays 10.5's.
+- **The score alone wouldn't have shown it:** 173 to 147 is both `fitted-nonneg` against hand θ and the final θ against
+  `fitted-nonneg` on these seeds, by chance. The games differ (19.9 and 18.5 turns).
 
 ## M5 onward
 
