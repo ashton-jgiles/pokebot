@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -19,10 +20,15 @@ namespace pokebot {
     using SampleRefs = std::vector<const Sample*>;
     using GameTerms = std::vector<double>;
 
+    using FeatureMask = std::array<bool, kFeatureCount>;
+
+    FeatureMask first_features(std::size_t count);
+
     struct FitOptions {
         double l2 = 0.0;
         bool non_negative = false;
         bool game_terms = true;
+        FeatureMask use = first_features(kFeatureCount);
     };
 
     struct Fit {

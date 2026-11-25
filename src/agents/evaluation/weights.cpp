@@ -53,7 +53,7 @@ namespace pokebot {
             }
             given[feature] = true;
         }
-        for (std::size_t i = 0; i < kFeatureCount; ++i) {
+        for (std::size_t i = 0; i < kFirstCandidate; ++i) {
             if (!given[i]) {
                 throw std::runtime_error(path.string() + ": no weight for " + to_string(static_cast<Feature>(i)));
             }
@@ -65,7 +65,9 @@ namespace pokebot {
         std::ofstream out(path);
         out << std::setprecision(std::numeric_limits<double>::max_digits10);
         for (std::size_t i = 0; i < kFeatureCount; ++i) {
-            out << to_string(static_cast<Feature>(i)) << ' ' << weights[i] << '\n';
+            if (i < kFirstCandidate || weights[i] != 0.0) {
+                out << to_string(static_cast<Feature>(i)) << ' ' << weights[i] << '\n';
+            }
         }
         out.flush();
         if (!out) {

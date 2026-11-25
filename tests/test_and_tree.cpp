@@ -191,6 +191,14 @@ TEST_CASE("the upper bound is at least e, and 1 when a Knock Out could win the g
     CHECK(pokebot::upper_bound(f.game, f.me, weights) == 1.0);
 }
 
+TEST_CASE("a weight on a candidate feature turns the upper bound off", "[planner]") {
+    Fixture f;
+    auto weights = pokebot::default_weights();
+    CHECK(pokebot::upper_bound(f.game, f.me, weights) < 1.0);
+    weights[pokebot::kFirstCandidate] = 0.1;
+    CHECK(pokebot::upper_bound(f.game, f.me, weights) == 1.0);
+}
+
 TEST_CASE("on the real decks, the upper bound is at least e, and the best plan is legal and worth what it says", "[planner]") {
     const auto real = test::load_real_decks();
     if (!real) {

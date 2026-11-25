@@ -143,6 +143,91 @@ TEST_CASE("taking a Prize card, damaging the opponent and attaching Energy each 
     CHECK(evaluate(poisoned, f.me) < before);
 }
 
+TEST_CASE("the candidate features at known positions", "[evaluation]") {
+    Fixture f;
+    const auto before = features(f.game, f.me);
+    CHECK(at(before, Feature::LatePrizes) == 0.0);
+    CHECK(at(before, Feature::KnockoutThreat) == 0.0);
+    CHECK(at(before, Feature::PayableDamage) == 0.0);
+    CHECK(at(before, Feature::Evolved) == 0.0);
+    CHECK(at(before, Feature::BoardHp) == 0.0);
+
+    GameState prizes = f.game;
+    for (int i = 0; i < 3; ++i) {
+        prizes.player(f.me).hand.push_back(prizes.player(f.me).prizes.pop_back());
+    }
+    CHECK(at(features(prizes, f.me), Feature::LatePrizes) == Approx(0.25));
+
+    GameState powered = f.game;
+    test::attach_from_deck(powered, f.me, kActiveSlot, "TST-2");
+    CHECK(at(features(powered, f.me), Feature::PayableDamage) == Approx(30.0 / 300.0));
+    CHECK(at(features(powered, f.me), Feature::KnockoutThreat) == 0.0);
+
+    GameState threatened = powered;
+    threatened.player(f.them).active->damage_counters = 3;
+    CHECK(at(features(threatened, f.me), Feature::KnockoutThreat) == Approx(1.0 / 6.0));
+    CHECK(at(features(threatened, f.me), Feature::BoardHp) == Approx(30.0 / 1000.0));
+    CHECK(at(features(threatened, f.them), Feature::KnockoutThreat) == Approx(-1.0 / 6.0));
+    while (threatened.player(f.me).prizes.size() > 1) {
+        threatened.player(f.me).discard.push_back(threatened.player(f.me).prizes.pop_back());
+    }
+    CHECK(at(features(threatened, f.me), Feature::KnockoutThreat) == Approx(1.0));
+
+    GameState low = f.game;
+    while (low.player(f.me).deck.size() > 2) {
+        low.player(f.me).discard.push_back(low.player(f.me).deck.pop_back());
+    }
+    CHECK(at(features(low, f.me), Feature::DeckOut) == Approx(-6.0 / 8.0));
+}
+
+TEST_CASE("evolutions count by their stage", "[evaluation]") {
+    CardDB db = sample_db();
+    CardDef grown = tackler("TST-6", "Grown Tackler");
+    grown.stage = pokebot::Stage::Stage1;
+    grown.evolves_from = "Tackler";
+    db.add(grown);
+    const CardTable table(db, test::deck({{4, 1}, {4, 3}, {4, 4}, {4, 5}, {4, 6}, {40, 2}}), kDeck);
+    GameState game = pokebot::new_game(table, 2);
+    test::play_setup(game);
+    test::end_turns(game, 3);
+    for (const int p : {0, 1}) {
+        test::clear_bench(game, p);
+        test::set_active(game, p, "TST-1");
+    }
+    CHECK(at(features(game, 0), Feature::Evolved) == 0.0);
+    test::set_active(game, 0, "TST-6");
+    CHECK(at(features(game, 0), Feature::Evolved) == Approx(1.0 / 6.0));
+    CHECK(at(features(game, 1), Feature::Evolved) == Approx(-1.0 / 6.0));
+}
+
+TEST_CASE("only the wanted features are worked out, and evaluate is the same as with all of them", "[evaluation]") {
+    const CardDB db = sample_db();
+    const CardTable table(db, kDeck, kDeck);
+    Rng chooser(8);
+    GameState game = pokebot::new_game(table, 5);
+    int compared = 0;
+    for (int step = 0; step < 600 && !game.is_over(); ++step) {
+        if (game.turn > 0) {
+            const auto all = features(game, 0);
+            pokebot::Weights weights{};
+            double sum = 0.0;
+            for (std::size_t i = 0; i < pokebot::kFeatureCount; ++i) {
+                weights[i] = chooser.below(2) == 0 ? 0.0 : 0.1 * static_cast<double>(i + 1);
+                sum += weights[i] * all[i];
+            }
+            const auto some = features(game, 0, weights);
+            for (std::size_t i = 0; i < pokebot::kFeatureCount; ++i) {
+                REQUIRE(some[i] == (weights[i] == 0.0 ? 0.0 : all[i]));
+            }
+            REQUIRE(evaluate(game, 0, weights) == std::tanh(sum));
+            ++compared;
+        }
+        const auto actions = pokebot::legal_actions(game);
+        pokebot::apply(game, actions[chooser.below(static_cast<std::uint32_t>(actions.size()))]);
+    }
+    CHECK(compared > 20);
+}
+
 TEST_CASE("a player choosing a new Active is scored by their Benched Pokemon with the most HP left", "[evaluation]") {
     Fixture f;
     GameState game = f.game;

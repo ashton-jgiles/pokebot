@@ -214,8 +214,8 @@ TEST_CASE("no seed is scored by a model fitted on it", "[evaluation_lab]") {
     }
     REQUIRE(scores.size() == 1);
     CHECK(std::abs(scores[0].raw.all.loss - std::log(2.0)) < 1e-9);
-    for (const double weight : scores[0].weights) {
-        CHECK(weight == 5.0);
+    for (std::size_t i = 0; i < scores[0].weights.size(); ++i) {
+        CHECK(scores[0].weights[i] == (i < pokebot::kFolds ? 5.0 : 0.0));
     }
 }
 

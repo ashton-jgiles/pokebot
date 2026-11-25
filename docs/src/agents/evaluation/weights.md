@@ -16,7 +16,8 @@ set_weights(options, theta);   // setup, playouts and macro-actions
 
 One `feature weight` per line, the features named as `to_string(Feature)` names them, in any order;
 blank lines and Windows line endings are fine. `load_weights` throws, naming the file and line, for
-a feature that's missing, repeated or unknown, or a weight that isn't one finite number.
+a feature that's missing, repeated or unknown, or a weight that isn't one finite number. A
+[candidate](evaluation.md#candidates) that's missing weighs 0, and one that weighs 0 isn't saved.
 `save_weights` writes every digit, so a file loads back exactly.
 [`data/weights/hand.txt`](../../../../data/weights/hand.txt) holds `default_weights()`; a test keeps
 the two equal. [`data/weights/prizes.txt`](../../../../data/weights/prizes.txt) has only the prizes
@@ -39,7 +40,7 @@ leaves it alone. Unset, playouts are played with the weights they're scored with
 Greedy takes weights in its constructor. An agent's search models its opponent with its own weights
 (in playouts and macro-actions), since it can't know the opponent's.
 
-A negative weight makes the and-tree's [`upper_bound`](../planner/and_tree.md) 1 everywhere, so it
+A negative weight, or any weight on a candidate, makes the and-tree's [`upper_bound`](../planner/and_tree.md) 1 everywhere, so it
 prunes nothing with it and searches differently on the same budget.
 
 In the [sim](../../../tools/sim/main.md): `--weights FILE` for every agent, and with `--agents A,B`,
@@ -52,6 +53,7 @@ In the [sim](../../../tools/sim/main.md): `--weights FILE` for every agent, and 
 
 - weights survive saving and loading exactly; `hand.txt` holds the default weights; line endings,
   blank lines and order don't matter; wrong files and a missing one are rejected;
+- a missing candidate weighs 0, and one that weighs 0 isn't saved;
 - `set_weights` sets every copy in the table above (each is named in the test, so a field added to
   another options struct later isn't caught);
 - `set_playout_weights` sets every agent's playout policy, and `set_weights` leaves it;

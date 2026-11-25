@@ -13,6 +13,7 @@ after each action with it; Models 1–3 use it at their leaves; M10 learns θ.
 ```cpp
 double evaluate(const GameState& game, int player, const Weights& weights = default_weights());
 Features features(const GameState& game, int player); // phi(w, i), for M10's training data
+Features features(const GameState& game, int player, const Weights& wanted); // 0 where wanted is 0
 double utility(const GameState& game, int player);    // u_i(w); throws if the game isn't over
 ```
 
@@ -34,6 +35,28 @@ e_opponent(w) = −e_i(w): the evaluation is zero-sum, as Model 3's minimax need
 | `Deck` | φ6 | Cards in the deck, counting at most 30, so every card drawn has a price long before the deck runs out | 30 | 0.5 |
 | `Conditions` | φ7 | Special Conditions on the opponent's Active minus on i's | 3 | 0.2 |
 | `PrizesAtRisk` | φ8 | Prize cards the opponent's Active is worth minus i's | 3 | 0.2 |
+
+**Only features with a weight are worked out:** `evaluate` skips those whose θ is 0, which gives exactly
+the same value.
+
+### Candidates
+
+The features from `kFirstCandidate` (10) on are M10.6's candidates. They weigh 0 in `default_weights()`
+and in every weights file so far, and are measured by the [evaluation lab](../../harness/evaluation_lab.md);
+those that aren't kept are removed.
+
+| Candidate | Measures (i's minus the opponent's) | Scale |
+|---|---|---|
+| `LatePrizes` | The share of the 6 Prize cards taken, squared | 1 |
+| `KnockoutThreat` | If an attack that's paid for, by any Pokémon in play, would Knock Out the other side's Active: the Prize cards that takes as a share of those left, at most 1. Otherwise 0 | 1 |
+| `PayableDamage` | The most printed damage of an attack that's paid for, by any Pokémon in play | 300 |
+| `Evolved` | Pokémon in play, a Stage 1 counting 1 and a Stage 2 counting 2 | 6 |
+| `BoardHp` | HP left on all Pokémon in play | 1,000 |
+| `DeckOut` | Cards in the deck, counting at most 8 | 8 |
+
+Whose turn it is isn't a candidate: a playout that reaches its full depth always ends at the searcher's
+own main phase, so there it would be almost a constant, and in Greedy and the and-tree mostly a flat price on
+ending the turn.
 
 **Turns to Knock Out** (φ3) is relaxed, as in the proposal: the attacking side's strongest attack
 among all its Pokémon in play, with Weakness, Resistance and other effects through
@@ -77,6 +100,8 @@ own cost matching.
   values), attaching Energy (one ready attacker) each score higher, and Poison scores lower;
 - a player choosing a new Active scored by their healthiest Benched Pokémon;
 - cards in hand counting up to 7 and cards in the deck up to 30;
+- the candidates at known positions, and evolutions counted by their stage;
+- only the wanted features worked out, with `evaluate` exactly the same as with all of them;
 - in random games, the two players' features are exact opposites, every feature is in [−1, 1], and e
   is in (−1, 1) with e_1 = −e_0;
 - on the real decks, a world built for either player gives exactly the same features and evaluation,

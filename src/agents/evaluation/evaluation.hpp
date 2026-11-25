@@ -19,9 +19,16 @@ namespace pokebot {
         Deck,
         Conditions,
         PrizesAtRisk,
+        LatePrizes,
+        KnockoutThreat,
+        PayableDamage,
+        Evolved,
+        BoardHp,
+        DeckOut,
     };
 
-    constexpr std::size_t kFeatureCount = 10;
+    constexpr std::size_t kFeatureCount = 16;
+    constexpr std::size_t kFirstCandidate = 10;
 
     using Features = std::array<double, kFeatureCount>;
     using Weights = std::array<double, kFeatureCount>;
@@ -30,6 +37,7 @@ namespace pokebot {
 
     Weights default_weights();
     Features features(const GameState& game, int player);
+    Features features(const GameState& game, int player, const Weights& wanted);
     double utility(const GameState& game, int player);
     double evaluate(const GameState& game, int player, const Weights& weights = default_weights());
     

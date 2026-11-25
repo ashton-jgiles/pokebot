@@ -63,7 +63,8 @@ the result.
 
 **It isn't proven to be a true upper bound** for every card. An effect could raise a feature further
 than this allows. It needs non-negative weights (with a negative weight it returns 1, so nothing is
-pruned). The tests check, on positions built for it and on real-deck positions, that f_bound never
+pruned), and returns 1 for a weight on a [candidate feature](../evaluation/evaluation.md#candidates), which
+it has no term for. The tests check, on positions built for it and on real-deck positions, that f_bound never
 changes the best plan found. If it's too loose to prune well, the proposal's fallback is beam search.
 
 ## What it reports
@@ -84,5 +85,6 @@ children `generated`, nodes skipped as `closed`, children `pruned` by f_bound, a
 - the closed set and f_bound each expand fewer nodes, and all four combinations find the same best
   value;
 - the upper bound is at least e, and 1 when a Knock Out would take the last Prize card;
+- a weight on a candidate feature makes it 1;
 - on the real decks, the bound is at least e at every decision, the best plan is legal and worth what
   the search says, and f_bound doesn't change the best value when neither search ran out of budget.

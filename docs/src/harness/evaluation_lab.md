@@ -82,6 +82,18 @@ adjusted loss by prizes, and calibration for the reference and the two main fits
 [roadmap](../../roadmap.md) under M10. M10's part 5 is kept aside for the final weights, so it isn't
 passed here until then. 12,800 games take 24.7 s on 16 threads, 2.8 s of it to play them back.
 
+### Candidate features
+
+`--evaluate FILE,... --candidates` fits other models, all with terms and θ ≥ 0: the played features
+(`without`, the reference), those with each [candidate](../agents/evaluation/evaluation.md#candidates)
+added, and with all of them. `--with NAME,...` gives every model those candidates, so the next one can be
+measured on top of them. It prints the adjusted loss and its change, the added weight, the change on each
+left-out deck, the loss by prizes, and the weights. `--save-weights DIR` saves only the `without` model, as
+`fitted-NAME-NAME.txt` from `--with`, which it needs.
+
+Parts 1 to 4 take 30.9 s on 16 threads with all six candidates. The models of plain `--evaluate` use the
+played features only.
+
 ## Tests
 
 [`tests/test_evaluation_lab.cpp`](../../../tests/test_evaluation_lab.cpp), tag `[evaluation_lab]`:

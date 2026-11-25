@@ -191,7 +191,10 @@ namespace pokebot {
         if (std::any_of(weights.begin(), weights.end(), [](double w) { return w < 0.0; })) {
             return 1.0;
         }
-        Features phi = features(game, player);
+        if (std::any_of(weights.begin() + kFirstCandidate, weights.end(), [](double w) { return w != 0.0; })) {
+            return 1.0;
+        }
+        Features phi = features(game, player, weights);
         const auto raise = [&](Feature feature, double value) {
             double& at = phi[static_cast<std::size_t>(feature)];
             at = std::max(at, std::min(value, 1.0));

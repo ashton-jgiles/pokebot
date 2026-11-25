@@ -128,6 +128,25 @@ TEST_CASE("a non-negative fit has no negative weight, and no small change improv
     }
 }
 
+TEST_CASE("a feature the fit doesn't use weighs 0", "[weight_fit]") {
+    Weights truth = kTruth;
+    truth[0] = 0.0;
+    const auto samples = made_up(2000, kDecks, truth, kTerms);
+    FitOptions options;
+    options.use = pokebot::first_features(pokebot::kFirstCandidate);
+    options.use[0] = false;
+    check_close(pokebot::fit_weights(refs(samples), kDecks, options), truth, kTerms, 1e-4);
+
+    const auto others = made_up(2000, kDecks, kTruth, kTerms);
+    const Fit fit = pokebot::fit_weights(refs(others), kDecks, options);
+    CHECK(fit.converged);
+    CHECK(fit.weights[0] == 0.0);
+    CHECK(fit.weights[1] > 0.1);
+    for (std::size_t i = pokebot::kFirstCandidate; i < kFeatureCount; ++i) {
+        CHECK(fit.weights[i] == 0.0);
+    }
+}
+
 TEST_CASE("more L2 gives smaller weights", "[weight_fit]") {
     const auto samples = made_up(2000, kDecks, kTruth, kTerms);
     double last = 2.0 * size_of(kTruth);

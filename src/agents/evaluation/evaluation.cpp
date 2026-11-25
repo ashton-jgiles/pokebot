@@ -14,6 +14,10 @@ namespace pokebot {
         constexpr int kMaxTurns = 5;
         constexpr std::size_t kHandCounted = 7;
         constexpr std::size_t kDeckCounted = 30;
+        constexpr std::size_t kLastCards = 8;
+        constexpr double kMostDamage = 300.0;
+        constexpr double kMostStages = 6.0;
+        constexpr double kMostHp = 1000.0;
 
         constexpr std::size_t slot(Feature feature) {
             return static_cast<std::size_t>(feature);
@@ -111,6 +115,66 @@ namespace pokebot {
             return pokemon == nullptr ? 0 : static_cast<std::size_t>(rules::prize_value(game, *pokemon));
         }
 
+        template <class Visit>
+        void each_payable_attack(const GameState& game, const PlayerState& player, Visit visit) {
+            each_in_play(player, [&](const PokemonInPlay& pokemon) {
+                const std::size_t count = game.def(pokemon.top()).attacks.size();
+                for (std::size_t i = 0; i < count; ++i) {
+                    if (rules::can_use_attack(game, pokemon, i) && can_pay_attack(game, pokemon, i)) {
+                        visit(pokemon, rules::attack_text(game, AttackRef{pokemon.top(), static_cast<std::uint8_t>(i)}).damage);
+                    }
+                }
+            });
+        }
+
+        double knockout_threat(const GameState& game, const PlayerState& attacker, const PokemonInPlay* defender) {
+            if (defender == nullptr) {
+                return 0.0;
+            }
+            int best = 0;
+            each_payable_attack(game, attacker, [&](const PokemonInPlay& pokemon, int damage) {
+                best = std::max(best, rules::attack_damage(game, pokemon, *defender, damage));
+            });
+            if (best < std::max(rules::remaining_hp(game, *defender), 1)) {
+                return 0.0;
+            }
+            const double left = static_cast<double>(std::max<std::size_t>(attacker.prizes.size(), 1));
+            return std::min(static_cast<double>(prize_value(game, defender)) / left, 1.0);
+        }
+
+        double payable_damage(const GameState& game, const PlayerState& player) {
+            int best = 0;
+            each_payable_attack(game, player, [&](const PokemonInPlay&, int damage) { best = std::max(best, damage); });
+            return std::min(static_cast<double>(best) / kMostDamage, 1.0);
+        }
+
+        std::size_t stages(const GameState& game, const PlayerState& player) {
+            std::size_t count = 0;
+            each_in_play(player, [&](const PokemonInPlay& pokemon) {
+                const Stage stage = game.def(pokemon.top()).stage;
+                if (stage == Stage::Stage1) {
+                    count += 1;
+                } else if (stage == Stage::Stage2) {
+                    count += 2;
+                }
+            });
+            return count;
+        }
+
+        std::size_t board_hp(const GameState& game, const PlayerState& player) {
+            std::size_t hp = 0;
+            each_in_play(player, [&](const PokemonInPlay& pokemon) {
+                hp += static_cast<std::size_t>(std::max(rules::remaining_hp(game, pokemon), 0));
+            });
+            return hp;
+        }
+
+        double late_prizes(const PlayerState& player) {
+            const double taken = static_cast<double>(kPrizeCount) - static_cast<double>(player.prizes.size());
+            const double share = taken / static_cast<double>(kPrizeCount);
+            return share * share;
+        }
+
     } // namespace
 
     const char* to_string(Feature feature) {
@@ -135,6 +199,18 @@ namespace pokebot {
                 return "conditions";
             case Feature::PrizesAtRisk:
                 return "prizes_at_risk";
+            case Feature::LatePrizes:
+                return "late_prizes";
+            case Feature::KnockoutThreat:
+                return "knockout_threat";
+            case Feature::PayableDamage:
+                return "payable_damage";
+            case Feature::Evolved:
+                return "evolved";
+            case Feature::BoardHp:
+                return "board_hp";
+            case Feature::DeckOut:
+                return "deck_out";
         }
         return "?";
     }
@@ -155,6 +231,12 @@ namespace pokebot {
     }
 
     Features features(const GameState& game, int player) {
+        Weights all{};
+        all.fill(1.0);
+        return features(game, player, all);
+    }
+
+    Features features(const GameState& game, int player, const Weights& wanted) {
         const PlayerState& mine = game.player(player);
         const PlayerState& theirs = game.player(opponent_of(player));
         const PokemonInPlay* my_front = front(game, mine);
@@ -168,21 +250,32 @@ namespace pokebot {
         const auto hand = [&](const PlayerState& p) {
             return counted(p.hand.size(), kHandCounted);
         };
-        const auto deck = [&](const PlayerState& p) {
-            return counted(p.deck.size(), kDeckCounted);
+        const auto deck = [&](const PlayerState& p, std::size_t most) {
+            return counted(p.deck.size(), most);
         };
 
         Features phi{};
-        phi[slot(Feature::Prizes)] = scaled(minus(theirs.prizes.size(), mine.prizes.size()), static_cast<double>(kPrizeCount));
-        phi[slot(Feature::ActiveHp)] = hp_fraction(game, my_front) - hp_fraction(game, their_front);
-        phi[slot(Feature::TurnsToKnockout)] = scaled(minus(turns(theirs, my_front), turns(mine, their_front)), static_cast<double>(kMaxTurns));
-        phi[slot(Feature::ReadyAttackers)] = scaled(minus(ready_attackers(game, mine), ready_attackers(game, theirs)), 3.0);
-        phi[slot(Feature::Energy)] = scaled(minus(energy_in_play(game, mine), energy_in_play(game, theirs)), 10.0);
-        phi[slot(Feature::Bench)] = scaled(minus(mine.bench.size(), theirs.bench.size()), static_cast<double>(kBenchSize));
-        phi[slot(Feature::Hand)] = scaled(minus(hand(mine), hand(theirs)), static_cast<double>(kHandCounted));
-        phi[slot(Feature::Deck)] = scaled(minus(deck(mine), deck(theirs)), static_cast<double>(kDeckCounted));
-        phi[slot(Feature::Conditions)] = scaled(minus(conditions(their_front), conditions(my_front)), 3.0);
-        phi[slot(Feature::PrizesAtRisk)] = scaled(minus(prize_value(game, their_front), prize_value(game, my_front)), 3.0);
+        const auto set = [&](Feature feature, const auto& value) {
+            if (wanted[slot(feature)] != 0.0) {
+                phi[slot(feature)] = value();
+            }
+        };
+        set(Feature::Prizes, [&] { return scaled(minus(theirs.prizes.size(), mine.prizes.size()), static_cast<double>(kPrizeCount)); });
+        set(Feature::ActiveHp, [&] { return hp_fraction(game, my_front) - hp_fraction(game, their_front); });
+        set(Feature::TurnsToKnockout, [&] { return scaled(minus(turns(theirs, my_front), turns(mine, their_front)), static_cast<double>(kMaxTurns)); });
+        set(Feature::ReadyAttackers, [&] { return scaled(minus(ready_attackers(game, mine), ready_attackers(game, theirs)), 3.0); });
+        set(Feature::Energy, [&] { return scaled(minus(energy_in_play(game, mine), energy_in_play(game, theirs)), 10.0); });
+        set(Feature::Bench, [&] { return scaled(minus(mine.bench.size(), theirs.bench.size()), static_cast<double>(kBenchSize)); });
+        set(Feature::Hand, [&] { return scaled(minus(hand(mine), hand(theirs)), static_cast<double>(kHandCounted)); });
+        set(Feature::Deck, [&] { return scaled(minus(deck(mine, kDeckCounted), deck(theirs, kDeckCounted)), static_cast<double>(kDeckCounted)); });
+        set(Feature::Conditions, [&] { return scaled(minus(conditions(their_front), conditions(my_front)), 3.0); });
+        set(Feature::PrizesAtRisk, [&] { return scaled(minus(prize_value(game, their_front), prize_value(game, my_front)), 3.0); });
+        set(Feature::LatePrizes, [&] { return late_prizes(mine) - late_prizes(theirs); });
+        set(Feature::KnockoutThreat, [&] { return knockout_threat(game, mine, their_front) - knockout_threat(game, theirs, my_front); });
+        set(Feature::PayableDamage, [&] { return payable_damage(game, mine) - payable_damage(game, theirs); });
+        set(Feature::Evolved, [&] { return scaled(minus(stages(game, mine), stages(game, theirs)), kMostStages); });
+        set(Feature::BoardHp, [&] { return scaled(minus(board_hp(game, mine), board_hp(game, theirs)), kMostHp); });
+        set(Feature::DeckOut, [&] { return scaled(minus(deck(mine, kLastCards), deck(theirs, kLastCards)), static_cast<double>(kLastCards)); });
         return phi;
     }
 
@@ -204,7 +297,7 @@ namespace pokebot {
         if (game.is_over()) {
             return utility(game, player);
         }
-        const Features phi = features(game, player);
+        const Features phi = features(game, player, weights);
         double sum = 0.0;
         for (std::size_t i = 0; i < kFeatureCount; ++i) {
             sum += weights[i] * phi[i];

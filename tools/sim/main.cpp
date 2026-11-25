@@ -74,6 +74,8 @@ namespace {
         std::vector<std::filesystem::path> evaluate;
         std::string save_weights_to;
         std::string reference;
+        bool candidates = false;
+        std::vector<std::string> with_features;
         std::string weights_file;
         std::string weights_a_file;
         std::string weights_b_file;
@@ -95,7 +97,8 @@ namespace {
         std::cerr << "usage: pokebot-sim [--games N] [--agent random|biased|greedy|planner|flatmc|ismcts|endgame] [--seed S] [--no-check]\n"
                      "                   [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]\n"
                      "                   [--agents A,B [--threads N] [--save-replays K] [--save-games FILE]]\n"
-                     "                   [--check-games FILE] [--evaluate FILE,FILE,... [--threads N] [--save-weights DIR] [--reference NAME]]\n"
+                     "                   [--check-games FILE] [--evaluate FILE,FILE,... [--threads N] [--save-weights DIR] [--reference NAME]\n"
+                     "                    [--candidates [--with NAME,NAME,...]]]\n"
                      "                   [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]\n"
                      "                   [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W] [--mc-greedy-choices]\n"
                      "                   [--mcts-iterations N] [--mcts-c C] [--mcts-c-a C] [--mcts-c-b C] [--mcts-depth R] [--mcts-plans K]\n"
@@ -122,6 +125,9 @@ namespace {
                      "  --threads N          with --agents or --evaluate: games at once (default: one per hardware thread)\n"
                      "  --save-weights DIR   with --evaluate: save every fitted model's weights to DIR; no file may exist\n"
                      "  --reference NAME     with --evaluate: the model the others are compared with (default hand-scaled-terms)\n"
+                     "  --candidates         with --evaluate: fit each candidate feature added to the played ones, instead of the usual models;\n"
+                     "                       --save-weights then saves only the fit without them\n"
+                     "  --with NAME,...      with --candidates: candidates that every fit has\n"
                      "  --save-replays K     with --agents: save every Kth game to replays/arena/\n"
                      "  --save-games FILE    with --agents: save every game to FILE, one a line; FILE must not exist\n"
                      "  --check-games FILE   play back every game in FILE and count its positions\n"
@@ -200,6 +206,13 @@ namespace {
                 options.save_weights_to = argv[++i];
             } else if (arg == "--reference" && has_value) {
                 options.reference = argv[++i];
+            } else if (arg == "--candidates") {
+                options.candidates = true;
+            } else if (arg == "--with" && has_value) {
+                std::stringstream names(argv[++i]);
+                for (std::string name; std::getline(names, name, ',');) {
+                    options.with_features.push_back(name);
+                }
             } else if (arg == "--save-replays" && has_value) {
                 options.replay_every = std::stoi(argv[++i]);
             } else if (arg == "--planner-samples" && has_value) {
@@ -348,7 +361,10 @@ namespace {
                                           options.lab_games > 0 || options.budget_lab_games > 0 || options.endgame_lab_games > 0 || options.threads < 0)) {
             return false;
         }
-        if (options.evaluate.empty() && (!options.save_weights_to.empty() || !options.reference.empty())) {
+        if (options.evaluate.empty() && (!options.save_weights_to.empty() || !options.reference.empty() || options.candidates)) {
+            return false;
+        }
+        if ((options.candidates && !options.reference.empty()) || (!options.candidates && !options.with_features.empty())) {
             return false;
         }
         const bool lab = options.lab_games > 0 || options.budget_lab_games > 0 || options.endgame_lab_games > 0 || !options.evaluate.empty();
@@ -862,6 +878,102 @@ namespace {
         std::cout << std::setprecision(4) << std::showpos << std::setw(10) << change << std::noshowpos << " +/- " << 1.96 * error;
     }
 
+    int run_candidates(const CardDB& db, const Options& options) {
+        const int threads = options.threads > 0 ? options.threads : static_cast<int>(std::max(std::thread::hardware_concurrency(), 1U));
+        const auto start = std::chrono::steady_clock::now();
+        FeatureMask played = first_features(kFirstCandidate);
+        std::string base_name = "fitted";
+        for (const std::string& name : options.with_features) {
+            std::size_t i = kFirstCandidate;
+            while (i < kFeatureCount && name != to_string(static_cast<Feature>(i))) {
+                ++i;
+            }
+            if (i == kFeatureCount || played[i]) {
+                throw std::runtime_error("no candidate called " + name + ", or it's given twice");
+            }
+            played[i] = true;
+            base_name += "-" + name;
+        }
+        const std::filesystem::path file = std::filesystem::path(options.save_weights_to) / (base_name + ".txt");
+        if (!options.save_weights_to.empty() && (options.with_features.empty() || std::filesystem::exists(file))) {
+            throw std::runtime_error(options.with_features.empty() ? "--save-weights needs --with" : file.string() + " already exists");
+        }
+        const SampleSet set = load_samples(db, options.evaluate, threads);
+        if (set.samples.empty()) {
+            std::cout << "No positions in the files\n";
+            return 1;
+        }
+        const auto model = [&](std::string name, const FeatureMask& use) {
+            FitOptions fit;
+            fit.non_negative = true;
+            fit.use = use;
+            return fitted_model(std::move(name), set.decks.size(), fit);
+        };
+        std::vector<Model> models{model("without", played)};
+        std::vector<std::size_t> added{kFeatureCount};
+        for (std::size_t i = kFirstCandidate; i < kFeatureCount; ++i) {
+            if (!played[i]) {
+                FeatureMask use = played;
+                use[i] = true;
+                models.push_back(model(std::string("+ ") + to_string(static_cast<Feature>(i)), use));
+                added.push_back(i);
+            }
+        }
+        if (added.size() > 2) {
+            models.push_back(model("+ all", first_features(kFeatureCount)));
+            added.push_back(kFeatureCount);
+        }
+        const std::vector<ModelScore> scores = score_models(set, models, 0, threads);
+        const double total = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+
+        std::cout << std::fixed << std::setprecision(1) << set.games << " games, " << set.samples.size() << " positions; " << kFolds << " folds by seed; "
+                  << total << " s. Every fit has no weight below 0 and the played features";
+        for (const std::string& name : options.with_features) {
+            std::cout << " + " << name;
+        }
+        std::cout << "\nHeld-out adjusted log loss, its change, and the added feature's weight (95%):\n";
+        for (std::size_t m = 0; m < scores.size(); ++m) {
+            std::cout << "  " << std::left << std::setw(20) << scores[m].name << std::right << std::setprecision(4) << std::setw(8)
+                      << scores[m].adjusted.total.loss;
+            print_change(scores[m].adjusted.total.change, scores[m].adjusted.total.change_error);
+            if (added[m] < kFeatureCount) {
+                std::cout << "   weight " << scores[m].weights[added[m]] << " +/- " << 1.96 * scores[m].weight_errors[added[m]];
+            }
+            std::cout << '\n';
+        }
+        std::cout << "\nChange on a deck's games, fitted without that deck:\n";
+        for (std::size_t m = 1; m < scores.size(); ++m) {
+            std::cout << "  " << std::left << std::setw(20) << scores[m].name << std::right;
+            for (std::size_t d = 0; d < scores[m].left_out.size(); ++d) {
+                std::cout << "  " << set.decks[d];
+                print_change(scores[m].left_out[d].change, scores[m].left_out[d].change_error);
+            }
+            std::cout << '\n';
+        }
+        std::cout << "\nAdjusted loss by the smaller prize count, 1 to 6:\n";
+        for (const ModelScore& score : scores) {
+            std::cout << "  " << std::left << std::setw(20) << score.name << std::right << std::setprecision(4);
+            for (std::size_t p = 1; p < score.adjusted.by_prizes.size(); ++p) {
+                std::cout << std::setw(9) << score.adjusted.by_prizes[p].loss;
+            }
+            std::cout << '\n';
+        }
+        std::cout << "\nWeights, " << scores.front().name << " and " << scores.back().name << ":\n";
+        for (std::size_t i = 0; i < kFeatureCount; ++i) {
+            std::cout << "  " << std::left << std::setw(20) << to_string(static_cast<Feature>(i)) << std::right << std::setprecision(3);
+            for (const ModelScore* score : {&scores.front(), &scores.back()}) {
+                std::cout << std::setw(10) << score->weights[i] << " +/- " << 1.96 * score->weight_errors[i];
+            }
+            std::cout << '\n';
+        }
+        if (!options.save_weights_to.empty()) {
+            std::filesystem::create_directories(options.save_weights_to);
+            save_weights(file, scores.front().weights);
+            std::cout << "\nSaved " << file.string() << '\n';
+        }
+        return 0;
+    }
+
     int run_evaluate(const CardDB& db, const Options& options) {
         const int threads = options.threads > 0 ? options.threads : static_cast<int>(std::max(std::thread::hardware_concurrency(), 1U));
         const auto start = std::chrono::steady_clock::now();
@@ -884,6 +996,7 @@ namespace {
             fit.l2 = l2;
             fit.non_negative = non_negative;
             fit.game_terms = game_terms;
+            fit.use = first_features(kFirstCandidate);
             return fit;
         };
         const std::vector<Model> models{fixed_model("coin", Weights{}),
@@ -936,7 +1049,7 @@ namespace {
             std::cout << std::setw(20) << scores[m].name;
         }
         std::cout << '\n';
-        for (std::size_t i = 0; i < kFeatureCount; ++i) {
+        for (std::size_t i = 0; i < kFirstCandidate; ++i) {
             std::cout << "  " << std::left << std::setw(20) << to_string(static_cast<Feature>(i)) << std::right << std::setprecision(3);
             for (const std::size_t m : shown) {
                 std::cout << std::setw(10) << scores[m].weights[i] << " +/- " << scores[m].weight_errors[i] * 1.96;
@@ -963,8 +1076,8 @@ namespace {
                           << scores[m].left_out[d].loss;
                 print_change(scores[m].left_out[d].change, scores[m].left_out[d].change_error);
                 std::cout << "   weights" << std::setprecision(2);
-                for (const double weight : scores[m].left_out_weights[d]) {
-                    std::cout << ' ' << weight;
+                for (std::size_t i = 0; i < kFirstCandidate; ++i) {
+                    std::cout << ' ' << scores[m].left_out_weights[d][i];
                 }
                 std::cout << '\n';
             }
@@ -1039,7 +1152,7 @@ int main(int argc, char** argv) {
             return run_check_games(db, options.check_games);
         }
         if (!options.evaluate.empty()) {
-            return run_evaluate(db, options);
+            return options.candidates ? run_candidates(db, options) : run_evaluate(db, options);
         }
         const auto files = deck_files();
         if (files.size() < 2) {
