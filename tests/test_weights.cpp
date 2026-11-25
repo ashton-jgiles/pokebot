@@ -16,6 +16,7 @@
 
 using pokebot::default_weights;
 using pokebot::kFeatureCount;
+using pokebot::learned_weights;
 using pokebot::load_weights;
 using pokebot::save_weights;
 using pokebot::set_weights;
@@ -67,6 +68,30 @@ TEST_CASE("weights survive saving and loading exactly", "[weights]") {
 
 TEST_CASE("the hand weights file holds the default weights", "[weights]") {
     CHECK(load_weights(hand_file()) == default_weights());
+}
+
+TEST_CASE("the learned weights are those of the file M10 signed off", "[weights]") {
+    CHECK(load_weights(std::filesystem::path(POKEBOT_SOURCE_DIR) / "data/weights/m10/fitted-evolved-deck_out.txt") == learned_weights());
+}
+
+TEST_CASE("IS-MCTS and the endgame agent use the learned weights by default, the others the hand-set ones", "[weights]") {
+    const pokebot::IsMctsAgentOptions is_mcts;
+    CHECK(is_mcts.weights == learned_weights());
+    CHECK(is_mcts.search.playout.weights == learned_weights());
+    CHECK(is_mcts.search.macros.weights == learned_weights());
+    CHECK(is_mcts.search.iterations == 42);
+    CHECK(is_mcts.search.playout.depth == 2);
+    CHECK(is_mcts.search.matched_worlds);
+
+    const pokebot::EndgameAgentOptions endgame;
+    CHECK(endgame.is_mcts.weights == learned_weights());
+    CHECK(endgame.is_mcts.search.playout.weights == learned_weights());
+    CHECK(endgame.is_mcts.search.macros.weights == learned_weights());
+    CHECK(endgame.solver.search.weights == learned_weights());
+
+    CHECK(pokebot::PlannerOptions{}.weights == default_weights());
+    CHECK(pokebot::FlatMcOptions{}.weights == default_weights());
+    CHECK(pokebot::FlatMcOptions{}.playout.weights == default_weights());
 }
 
 TEST_CASE("a weights file can have Windows line endings, blank lines and any order", "[weights]") {

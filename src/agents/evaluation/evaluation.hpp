@@ -31,6 +31,7 @@ namespace pokebot {
     const char* to_string(Feature feature);
 
     Weights default_weights();
+    Weights learned_weights();
     Features features(const GameState& game, int player);
     Features features(const GameState& game, int player, const Weights& wanted);
     double utility(const GameState& game, int player);

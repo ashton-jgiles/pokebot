@@ -70,7 +70,7 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 | `--mcts-fresh-worlds` | off | Deal every iteration a fresh world, instead of the [matched worlds](../../src/agents/is_mcts/is_mcts.md#matched-worlds-matched_worlds) the agent uses by default |
 | `--mcts-final-mean` | off | Play the best mean among the root moves visited often enough, not the most visited |
 | `--mcts-min-visits N` | 3 | With `--mcts-final-mean`: the visits a move needs (at least 1) |
-| `--weights FILE` | hand-set | The [evaluation's weights](../../src/agents/evaluation/weights.md) for every agent, from a file such as `data/weights/hand.txt`. Not with the labs, which use the default weights |
+| `--weights FILE` | learned for `ismcts` and `endgame`, hand-set for the others | The [evaluation's weights](../../src/agents/evaluation/weights.md) for every agent, from a file such as `data/weights/hand.txt`. Not with the labs, which use the hand-set weights |
 | `--weights-a FILE`, `--weights-b FILE` | `--weights` | With `--agents A,B`: one side's weights, so an agent can play itself on different ones |
 | `--playout-weights-a FILE`, `--playout-weights-b FILE` | that side's weights | With `--agents A,B`: the weights one side's [playouts](../../src/agents/flat_mc/playout.md) are played with; their ends are still scored with the side's weights |
 | `--planner-lab N` | | Play `N` Greedy-against-Greedy games and measure the planner's searches at one in every `K` main-phase decisions ([planner lab](../../src/harness/planner_lab.md)). Uses `--seed`, `--planner-samples` and `--planner-or-budget`, and prints its progress after each game to stderr |

@@ -12,6 +12,8 @@ after each action with it; Models 1–3 use it at their leaves; M10 learns θ.
 
 ```cpp
 double evaluate(const GameState& game, int player, const Weights& weights = default_weights());
+Weights default_weights();                            // hand-set
+Weights learned_weights();                            // fitted in M10
 Features features(const GameState& game, int player); // phi(w, i), for M10's training data
 Features features(const GameState& game, int player, const Weights& wanted); // 0 where wanted is 0
 double utility(const GameState& game, int player);    // u_i(w); throws if the game isn't over
@@ -43,7 +45,7 @@ the same value.
 
 `Evolved` and `DeckOut` were added in M10.6, the two of six candidates that passed its rules (the others
 were prizes taken squared, a Knock Out threat, payable damage and the board's HP). The hand θ doesn't use
-them; `data/weights/m10/fitted-evolved-deck_out.txt` does.
+them; `learned_weights()` does.
 
 Whose turn it is was dropped as a feature: a playout that reaches its full depth always ends at the searcher's
 own main phase, so there it would be almost a constant, and in Greedy and the and-tree mostly a flat price on
@@ -59,8 +61,10 @@ cost. An attack that does no damage, or no attack at all, counts as 5 turns. Dam
 most HP left were Active, so the moment between a Knock Out and the promotion isn't scored as having
 no Active at all.
 
-The weights are set by hand, with Prize cards far the heaviest; M10 fits them by logistic regression
-on self-play. They can be read from a file and given to every agent: see [weights](weights.md).
+There are two sets of weights. `default_weights()` is set by hand, with Prize cards far the heaviest, and
+Greedy, the Planner and Flat MC use it. `learned_weights()` is M10's, fitted by logistic regression on
+self-play, and IS-MCTS and the endgame agent use it: in IS-MCTS it scores 57.6% (56.8% to 58.4%) against the
+hand-set ones. Weights can also be read from a file and given to every agent: see [weights](weights.md).
 
 **Hand against deck (step 5.6b).** At first the hand counted in full (scale 10) and the deck only
 below 10 cards. Drawing then always looked good, so Greedy drew its deck away: in the first full

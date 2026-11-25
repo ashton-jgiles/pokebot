@@ -998,7 +998,11 @@ pairing, `--seed 2100001`, no invariant checks. **A scores 55.1% (53.9% to 56.4%
 - **`ready_attackers`, `conditions` and `prizes_at_risk` are fitted at 0** (θ ≥ 0), so they're skipped. In 10.4's free fit
   of the ten features, `conditions` and `prizes_at_risk` came out negative, for reasons that aren't known, so their 0 is the
   limit rather than a fitted value; `ready_attackers` came out about 0.
-- **The default weights are still the hand-set ones:** the final θ is only used where a weights file is given.
+
+**The default (2026-11-25):** the final θ, `learned_weights()`, is now IS-MCTS's and the endgame agent's default. Greedy, the
+Planner and Flat MC keep the hand-set weights, since they haven't been played with the final θ. The earlier IS-MCTS and endgame
+runs above that name no weights files were played with the hand-set ones: `--weights data/weights/hand.txt` repeats them. Not yet
+tested or run.
 
 ## M5 onward
 

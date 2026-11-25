@@ -151,7 +151,8 @@ namespace {
                      "  --mcts-fresh-worlds      deal every iteration a fresh world, not the k-th world shared by every root move\n"
                      "  --mcts-final-mean        play the root move with the best mean among those visited often enough\n"
                      "  --mcts-min-visits N      with --mcts-final-mean: visits a root move needs (default 3)\n"
-                     "  --weights FILE           the evaluation's weights for every agent (default: the hand-set ones)\n"
+                     "  --weights FILE           the evaluation's weights for every agent (default: the learned ones for\n"
+                     "                           ismcts and endgame, the hand-set ones for the others)\n"
                      "  --weights-a FILE         with --agents A,B: A's weights\n"
                      "  --weights-b FILE         with --agents A,B: B's weights\n"
                      "  --playout-weights-a FILE with --agents A,B: the weights A's playouts are played with (default: A's weights)\n"
@@ -743,11 +744,12 @@ namespace {
             std::cout << "  planner: " << options.planner.samples << " sampled worlds, or-tree budget " << options.planner.or_budget
                       << ", and-tree budget " << options.planner.and_budget << '\n';
         }
-        const auto weights_of = [&](const std::string& side_file, const std::string& playout_file) {
+        const auto weights_of = [&](const std::string& agent, const std::string& side_file, const std::string& playout_file) {
             const std::string& file = side_file.empty() ? options.weights_file : side_file;
-            return (file.empty() ? std::string("the hand-set ones") : file) + (playout_file.empty() ? "" : " (playouts played with " + playout_file + ")");
+            const std::string unset = agent == "ismcts" || agent == "endgame" ? "the learned ones" : "the hand-set ones";
+            return (file.empty() ? unset : file) + (playout_file.empty() ? "" : " (playouts played with " + playout_file + ")");
         };
-        std::cout << "  weights: " << a.name << " " << weights_of(options.weights_a_file, options.playout_weights_a_file) << ", " << b.name << " " << weights_of(options.weights_b_file, options.playout_weights_b_file) << '\n';
+        std::cout << "  weights: " << a.name << " " << weights_of(options.agents[0], options.weights_a_file, options.playout_weights_a_file) << ", " << b.name << " " << weights_of(options.agents[1], options.weights_b_file, options.playout_weights_b_file) << '\n';
         std::cout << "Played " << result.games << " games in " << result.seconds << " s: "
                   << static_cast<double>(result.games) / result.seconds << " games/s, "
                   << static_cast<double>(result.actions) / result.seconds / 1e6 << " million actions/s, "
@@ -795,7 +797,7 @@ namespace {
                                     : "Invariant checks were off (--no-check)\n");
         if (!options.save_games.empty()) {
             for (Replay& game : result.replays) {
-                game.note = a.name + " with " + weights_of(options.weights_a_file, options.playout_weights_a_file) + ", " + b.name + " with " + weights_of(options.weights_b_file, options.playout_weights_b_file);
+                game.note = a.name + " with " + weights_of(options.agents[0], options.weights_a_file, options.playout_weights_a_file) + ", " + b.name + " with " + weights_of(options.agents[1], options.weights_b_file, options.playout_weights_b_file);
             }
             save_games(options.save_games, result.replays);
             std::cout << "Saved " << result.replays.size() << " games to " << options.save_games << '\n';

@@ -173,6 +173,20 @@ namespace pokebot {
         return theta;
     }
 
+    Weights learned_weights() {
+        Weights theta{};
+        theta[slot(Feature::Prizes)] = 1.0967029639389423;
+        theta[slot(Feature::ActiveHp)] = 0.27663085037735841;
+        theta[slot(Feature::TurnsToKnockout)] = 0.1637781499975349;
+        theta[slot(Feature::Energy)] = 1.0618131670087232;
+        theta[slot(Feature::Bench)] = 0.12461238456160043;
+        theta[slot(Feature::Hand)] = 0.27098154666535768;
+        theta[slot(Feature::Deck)] = 0.5973317118606627;
+        theta[slot(Feature::Evolved)] = 0.80795951352071971;
+        theta[slot(Feature::DeckOut)] = 1.104717986709852;
+        return theta;
+    }
+
     Features features(const GameState& game, int player) {
         Weights all{};
         all.fill(1.0);
