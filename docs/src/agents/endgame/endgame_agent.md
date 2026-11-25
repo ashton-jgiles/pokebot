@@ -38,7 +38,7 @@ or-tree still looks for a win first.
 | `prizes` | 2 | The endgame: either player at most this many Prize cards left (P_end) |
 | `min_depth` | 2 | The solver's plan is played only if its solve reached this depth (or had one plan); otherwise IS-MCTS decides, counted as a fallback. 2 since 9.6: a depth-1 solve scores a plan by e with no reply from the opponent, and playing those lost to IS-MCTS (45.9%, against 50.1% without them) |
 | `is_mcts` | `IsMctsAgentOptions` | The IS-MCTS agent outside the endgame and on fallbacks |
-| `solver` | `EndgameOptions` | The solver: 4 worlds, depth 2, 10,000 nodes |
+| `solver` | `EndgameOptions` with `learned_weights()` | The solver: 4 worlds, depth 2, 10,000 nodes |
 
 ## Counters
 

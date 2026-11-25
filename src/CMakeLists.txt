@@ -28,6 +28,7 @@ add_library(pokebot_lib
   agents/human_agent.cpp
   agents/world.cpp
   agents/evaluation/evaluation.cpp
+  agents/evaluation/weights.cpp
   agents/greedy/greedy_agent.cpp
   agents/planner/action_class.cpp
   agents/planner/state_hash.cpp
@@ -47,8 +48,12 @@ add_library(pokebot_lib
   agents/endgame/expectiminimax.cpp
   agents/endgame/endgame_solver.cpp
   agents/endgame/endgame_agent.cpp
+  agents/set_weights.cpp
   harness/match.cpp
   harness/replay.cpp
+  harness/self_play.cpp
+  harness/weight_fit.cpp
+  harness/evaluation_lab.cpp
   harness/arena.cpp
   harness/planner_lab.cpp
   harness/budget_lab.cpp

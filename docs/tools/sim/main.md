@@ -15,11 +15,15 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 ```bash
 ./build/debug/tools/sim/pokebot-sim.exe [--games N] [--agent random|biased|greedy|planner|flatmc|ismcts|endgame] [--seed S] [--no-check]
                                         [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]
-                                        [--agents A,B [--threads N] [--save-replays K]]
+                                        [--agents A,B [--threads N] [--save-replays K] [--save-games FILE]]
+                                        [--check-games FILE] [--evaluate FILE,FILE,... [--threads N] [--save-weights DIR] [--reference NAME]
+                                         [--score-weights FILE,FILE,...]]
                                         [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]
                                         [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W] [--mc-greedy-choices]
-                                        [--mcts-iterations N] [--mcts-c C] [--mcts-depth R] [--mcts-plans K]
+                                        [--mcts-iterations N] [--mcts-c C] [--mcts-c-a C] [--mcts-c-b C] [--mcts-depth R] [--mcts-plans K]
                                         [--mcts-opponent-budget B] [--mcts-opponent-plans K] [--mcts-fresh-worlds] [--mcts-final-mean [--mcts-min-visits N]]
+                                        [--weights FILE] [--weights-a FILE] [--weights-b FILE]
+                                        [--playout-weights-a FILE] [--playout-weights-b FILE]
                                         [--planner-lab N [--every K]] [--budget-lab N [--every K]]
                                         [--endgame-prizes P] [--endgame-worlds M] [--endgame-depth D] [--endgame-nodes N]
                                         [--endgame-min-depth D]
@@ -39,6 +43,12 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 | `--as 0\|1\|all` | `all` | With `--print` or `--replay`: show only what that player saw |
 | `--agents A,B` | | Play agent `A` against agent `B` instead (see [below](#one-agent-against-another)). `--games` is then the number of games **per deck pairing** |
 | `--threads N` | one per hardware thread | With `--agents`: games played at once |
+| `--save-games FILE` | | With `--agents`: save every game to `FILE`, one [replay](../../src/harness/self_play.md) a line; `FILE` must not exist. Not with `--save-replays` |
+| `--check-games FILE` | | Play back every game in `FILE` and count its [positions](../../src/harness/self_play.md) |
+| `--evaluate FILE,FILE,...` | | Measure how well the evaluation predicts the results of the [saved games](../../src/harness/self_play.md) in the files: the [evaluation lab](../../src/harness/evaluation_lab.md), with [fitted weights](../../src/harness/weight_fit.md) among its models. `--threads N` sets how many games and fits run at once |
+| `--reference NAME` | `hand-scaled-terms` | With `--evaluate`: the [model](../../src/harness/evaluation_lab.md#in-the-sim) the others are compared with |
+| `--score-weights FILE,FILE,...` | | With `--evaluate`: score the [weights in these files](../../src/harness/evaluation_lab.md#saved-weights) as they are, against the first, instead of the usual models. Not with `--reference` or `--save-weights` |
+| `--save-weights DIR` | | With `--evaluate`: save each fitted model's weights, fitted on every seed in the files, to `DIR/NAME.txt`. Those files must not exist |
 | `--save-replays K` | | With `--agents`: save every `K`th game to `replays/arena/` |
 | `--planner-samples M` | 1 | The [planner](../../src/agents/planner/planner_agent.md)'s sampled worlds for a plan that ends in chance or hidden cards |
 | `--planner-or-budget N` | 200 | The planner's node budget for its win search (the or-tree) |
@@ -52,6 +62,7 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 | `--mc-greedy-choices` | | Flat MC leaves its decisions outside the main phase to Greedy, as the Planner does. By default it plays them out like its plans |
 | `--mcts-iterations N` | 42 | [IS-MCTS](../../src/agents/is_mcts/is_mcts_agent.md)'s iterations each decision |
 | `--mcts-c C` | 0.7 | Its exploration constant |
+| `--mcts-c-a C`, `--mcts-c-b C` | `--mcts-c`'s | With `--agents A,B`: A's or B's exploration constant, for `ismcts` and `endgame` |
 | `--mcts-depth R` | 2 | How far its playouts run past a leaf, as `--mc-depth` |
 | `--mcts-plans K` | 16 | Plans at the searcher's nodes |
 | `--mcts-opponent-budget B` | 25 | Nodes for the opponent's and-tree at an opponent node (from the [budget lab](../../src/harness/budget_lab.md)) |
@@ -59,6 +70,9 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 | `--mcts-fresh-worlds` | off | Deal every iteration a fresh world, instead of the [matched worlds](../../src/agents/is_mcts/is_mcts.md#matched-worlds-matched_worlds) the agent uses by default |
 | `--mcts-final-mean` | off | Play the best mean among the root moves visited often enough, not the most visited |
 | `--mcts-min-visits N` | 3 | With `--mcts-final-mean`: the visits a move needs (at least 1) |
+| `--weights FILE` | learned for `ismcts` and `endgame`, hand-set for the others | The [evaluation's weights](../../src/agents/evaluation/weights.md) for every agent, from a file such as `data/weights/hand.txt`. Not with the labs, which use the hand-set weights |
+| `--weights-a FILE`, `--weights-b FILE` | `--weights` | With `--agents A,B`: one side's weights, so an agent can play itself on different ones |
+| `--playout-weights-a FILE`, `--playout-weights-b FILE` | that side's weights | With `--agents A,B`: the weights one side's [playouts](../../src/agents/flat_mc/playout.md) are played with; their ends are still scored with the side's weights |
 | `--planner-lab N` | | Play `N` Greedy-against-Greedy games and measure the planner's searches at one in every `K` main-phase decisions ([planner lab](../../src/harness/planner_lab.md)). Uses `--seed`, `--planner-samples` and `--planner-or-budget`, and prints its progress after each game to stderr |
 | `--budget-lab N` | | Play `N` Greedy-against-Greedy games and, at one in every `K` main-phase decisions, time the and-tree at budgets 25, 50, 100 and 150 against `--planner-and-budget` and report what each gives up ([budget lab](../../src/harness/budget_lab.md)). Uses `--seed` and `--planner-samples` |
 | `--endgame-lab N` | | Play `N` Greedy-against-Greedy games, count the hidden-card worlds at every main-phase decision and, at one in every `K` with at most `P` Prize cards left, time a two-segment search without pruning ([endgame lab](../../src/harness/endgame_lab.md)). Uses `--seed`, `--planner-and-budget`, `--planner-samples` and the `--mcts-*` plan settings, and loads the archetype library |
@@ -118,6 +132,12 @@ games; the reference machine has 16 hardware threads):
 | `ismcts,flatmc` at the M8 sign-off (the defaults; `--games 1000`, 16,000 games) | about 2.8 games/s, 2.0 with invariant checks | |
 | `endgame,ismcts` in 9.6 (only depth-2 solves played; `--games 100`) | about 2.0 games/s | |
 | `endgame,ismcts` at the M9 sign-off (the defaults; `--games 1000`, 16,000 games) | about 1.4 games/s with invariant checks | |
+| `ismcts,ismcts` in 10.5 (the defaults; `--games 400`, the run without stalls) | about 3.1 games/s | |
+| `ismcts,ismcts` in 10.6's match (the defaults; `--games 400`, learned θ on both sides) | about 3.3 games/s | |
+| `ismcts,ismcts` at the M10 sign-off (the defaults; `--games 1000`, 16,000 games, learned θ against hand θ) | about 3.1 games/s with invariant checks | |
+| `endgame,ismcts` in 10.7 (the defaults; `--games 400`, learned θ on both sides) | about 1.2 games/s (the machine slowed during the run) | |
+| `flatmc,flatmc` in 10.5 (the defaults; `--games 400`) | about 2.2 games/s | |
+| `greedy,greedy` in 10.5 (`--games 1000`) | about 228 games/s | |
 
 Greedy builds 3 worlds per decision and tries every action in each, so it costs about 9 ms per game
 on one thread against Random. Playing out follow-up choices (step 5.6c) made it about 3.3 times

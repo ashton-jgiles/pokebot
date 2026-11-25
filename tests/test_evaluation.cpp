@@ -143,6 +143,65 @@ TEST_CASE("taking a Prize card, damaging the opponent and attaching Energy each 
     CHECK(evaluate(poisoned, f.me) < before);
 }
 
+TEST_CASE("the last 8 cards of the deck count", "[evaluation]") {
+    Fixture f;
+    CHECK(at(features(f.game, f.me), Feature::DeckOut) == 0.0);
+    GameState low = f.game;
+    while (low.player(f.me).deck.size() > 2) {
+        low.player(f.me).discard.push_back(low.player(f.me).deck.pop_back());
+    }
+    CHECK(at(features(low, f.me), Feature::DeckOut) == Approx(-6.0 / 8.0));
+    CHECK(at(features(low, f.them), Feature::DeckOut) == Approx(6.0 / 8.0));
+}
+
+TEST_CASE("evolutions count by their stage", "[evaluation]") {
+    CardDB db = sample_db();
+    CardDef grown = tackler("TST-6", "Grown Tackler");
+    grown.stage = pokebot::Stage::Stage1;
+    grown.evolves_from = "Tackler";
+    db.add(grown);
+    const CardTable table(db, test::deck({{4, 1}, {4, 3}, {4, 4}, {4, 5}, {4, 6}, {40, 2}}), kDeck);
+    GameState game = pokebot::new_game(table, 2);
+    test::play_setup(game);
+    test::end_turns(game, 3);
+    for (const int p : {0, 1}) {
+        test::clear_bench(game, p);
+        test::set_active(game, p, "TST-1");
+    }
+    CHECK(at(features(game, 0), Feature::Evolved) == 0.0);
+    test::set_active(game, 0, "TST-6");
+    CHECK(at(features(game, 0), Feature::Evolved) == Approx(1.0 / 6.0));
+    CHECK(at(features(game, 1), Feature::Evolved) == Approx(-1.0 / 6.0));
+}
+
+TEST_CASE("only the wanted features are worked out, and evaluate is the same as with all of them", "[evaluation]") {
+    const CardDB db = sample_db();
+    const CardTable table(db, kDeck, kDeck);
+    Rng chooser(8);
+    GameState game = pokebot::new_game(table, 5);
+    int compared = 0;
+    for (int step = 0; step < 600 && !game.is_over(); ++step) {
+        if (game.turn > 0) {
+            const auto all = features(game, 0);
+            pokebot::Weights weights{};
+            double sum = 0.0;
+            for (std::size_t i = 0; i < pokebot::kFeatureCount; ++i) {
+                weights[i] = chooser.below(2) == 0 ? 0.0 : 0.1 * static_cast<double>(i + 1);
+                sum += weights[i] * all[i];
+            }
+            const auto some = features(game, 0, weights);
+            for (std::size_t i = 0; i < pokebot::kFeatureCount; ++i) {
+                REQUIRE(some[i] == (weights[i] == 0.0 ? 0.0 : all[i]));
+            }
+            REQUIRE(evaluate(game, 0, weights) == std::tanh(sum));
+            ++compared;
+        }
+        const auto actions = pokebot::legal_actions(game);
+        pokebot::apply(game, actions[chooser.below(static_cast<std::uint32_t>(actions.size()))]);
+    }
+    CHECK(compared > 20);
+}
+
 TEST_CASE("a player choosing a new Active is scored by their Benched Pokemon with the most HP left", "[evaluation]") {
     Fixture f;
     GameState game = f.game;

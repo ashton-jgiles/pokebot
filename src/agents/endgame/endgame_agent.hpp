@@ -19,7 +19,7 @@ namespace pokebot {
         int prizes = 2;
         int min_depth = 2;
         IsMctsAgentOptions is_mcts{};
-        EndgameOptions solver{};
+        EndgameOptions solver{.search{.weights = learned_weights()}};
     };
 
     struct EndgameAgentStats {

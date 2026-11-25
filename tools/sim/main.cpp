@@ -7,12 +7,17 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <optional>
+#include <set>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <thread>
+#include <tuple>
 #include <vector>
 
 #include "agents/endgame/endgame_agent.hpp"
+#include "agents/evaluation/weights.hpp"
 #include "agents/flat_mc/deck_model.hpp"
 #include "agents/flat_mc/flat_mc_agent.hpp"
 #include "agents/flat_mc/playout.hpp"
@@ -20,14 +25,17 @@
 #include "agents/is_mcts/is_mcts_agent.hpp"
 #include "agents/planner/planner_agent.hpp"
 #include "agents/random/random_agent.hpp"
+#include "agents/set_weights.hpp"
 #include "cards/db/card_db.hpp"
 #include "core/decklist.hpp"
 #include "harness/arena.hpp"
 #include "harness/budget_lab.hpp"
 #include "harness/endgame_lab.hpp"
+#include "harness/evaluation_lab.hpp"
 #include "harness/match.hpp"
 #include "harness/planner_lab.hpp"
 #include "harness/replay.hpp"
+#include "harness/self_play.hpp"
 
 #ifdef _WIN32
 #ifndef NOMINMAX
@@ -60,6 +68,20 @@ namespace {
         FlatMcOptions flat_mc;
         IsMctsAgentOptions is_mcts;
         EndgameAgentOptions endgame;
+        Weights weights = default_weights();
+        std::string save_games;
+        std::string check_games;
+        std::vector<std::filesystem::path> evaluate;
+        std::string save_weights_to;
+        std::string reference;
+        std::vector<std::filesystem::path> score_weights;
+        std::string weights_file;
+        std::string weights_a_file;
+        std::string weights_b_file;
+        std::string playout_weights_a_file;
+        std::string playout_weights_b_file;
+        std::optional<double> mcts_c_a;
+        std::optional<double> mcts_c_b;
         const DeckModel* model = nullptr;
         int lab_games = 0;
         int budget_lab_games = 0;
@@ -73,12 +95,16 @@ namespace {
     void print_usage() {
         std::cerr << "usage: pokebot-sim [--games N] [--agent random|biased|greedy|planner|flatmc|ismcts|endgame] [--seed S] [--no-check]\n"
                      "                   [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]\n"
-                     "                   [--agents A,B [--threads N] [--save-replays K]]\n"
+                     "                   [--agents A,B [--threads N] [--save-replays K] [--save-games FILE]]\n"
+                     "                   [--check-games FILE] [--evaluate FILE,FILE,... [--threads N] [--save-weights DIR] [--reference NAME]\n"
+                     "                    [--score-weights FILE,FILE,...]]\n"
                      "                   [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]\n"
                      "                   [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W] [--mc-greedy-choices]\n"
-                     "                   [--mcts-iterations N] [--mcts-c C] [--mcts-depth R] [--mcts-plans K]\n"
+                     "                   [--mcts-iterations N] [--mcts-c C] [--mcts-c-a C] [--mcts-c-b C] [--mcts-depth R] [--mcts-plans K]\n"
                      "                   [--mcts-opponent-budget B] [--mcts-opponent-plans K] [--mcts-fresh-worlds]\n"
                      "                   [--mcts-final-mean [--mcts-min-visits N]]\n"
+                     "                   [--weights FILE] [--weights-a FILE] [--weights-b FILE]\n"
+                     "                   [--playout-weights-a FILE] [--playout-weights-b FILE]\n"
                      "                   [--planner-lab N [--every K]] [--budget-lab N [--every K]]\n"
                      "                   [--endgame-prizes P] [--endgame-worlds M] [--endgame-depth D] [--endgame-nodes N]\n"
                      "                   [--endgame-min-depth D]\n"
@@ -95,8 +121,15 @@ namespace {
                      "                       ends in exactly the same state (slower)\n"
                      "  --agents A,B         play agent A against agent B on every deck pairing, each seed once with\n"
                      "                       A in each seat; --games is then the number of games per pairing\n"
-                     "  --threads N          with --agents: games played at once (default: one per hardware thread)\n"
+                     "  --threads N          with --agents or --evaluate: games at once (default: one per hardware thread)\n"
+                     "  --save-weights DIR   with --evaluate: save every fitted model's weights to DIR; no file may exist\n"
+                     "  --reference NAME     with --evaluate: the model the others are compared with (default hand-scaled-terms)\n"
+                     "  --score-weights FILE,...  with --evaluate: score the weights in these files as they are, instead of the usual\n"
+                     "                       models, against the first\n"
                      "  --save-replays K     with --agents: save every Kth game to replays/arena/\n"
+                     "  --save-games FILE    with --agents: save every game to FILE, one a line; FILE must not exist\n"
+                     "  --check-games FILE   play back every game in FILE and count its positions\n"
+                     "  --evaluate FILE,...  measure how well the evaluation predicts the results of the saved games in the files\n"
                      "  --planner-samples M      the planner's sampled worlds for a plan that ends in chance (default 1)\n"
                      "  --planner-or-budget N    the planner's nodes for its win search (default 200)\n"
                      "  --planner-and-budget N   the planner's nodes for its best-plan search (default 300)\n"
@@ -109,6 +142,8 @@ namespace {
                      "  --mc-greedy-choices      flat MC leaves its decisions outside the main phase to Greedy (default: plays them out)\n"
                      "  --mcts-iterations N      IS-MCTS's iterations each decision (default 42)\n"
                      "  --mcts-c C               IS-MCTS's exploration constant (default 0.7)\n"
+                     "  --mcts-c-a C             with --agents A,B: A's exploration constant (default: --mcts-c's)\n"
+                     "  --mcts-c-b C             with --agents A,B: B's exploration constant (default: --mcts-c's)\n"
                      "  --mcts-depth R           turns of the searching player an IS-MCTS playout runs to (default 2)\n"
                      "  --mcts-plans K           IS-MCTS's plans at the searcher's nodes (default 16)\n"
                      "  --mcts-opponent-budget B nodes for the opponent's and-tree at an IS-MCTS node (default 25)\n"
@@ -116,6 +151,12 @@ namespace {
                      "  --mcts-fresh-worlds      deal every iteration a fresh world, not the k-th world shared by every root move\n"
                      "  --mcts-final-mean        play the root move with the best mean among those visited often enough\n"
                      "  --mcts-min-visits N      with --mcts-final-mean: visits a root move needs (default 3)\n"
+                     "  --weights FILE           the evaluation's weights for every agent (default: the learned ones for\n"
+                     "                           ismcts and endgame, the hand-set ones for the others)\n"
+                     "  --weights-a FILE         with --agents A,B: A's weights\n"
+                     "  --weights-b FILE         with --agents A,B: B's weights\n"
+                     "  --playout-weights-a FILE with --agents A,B: the weights A's playouts are played with (default: A's weights)\n"
+                     "  --playout-weights-b FILE with --agents A,B: the weights B's playouts are played with (default: B's weights)\n"
                      "  --planner-lab N          play N greedy games and measure the planner's searches at every Kth\n"
                      "                           main-phase decision (--every K, default 5)\n"
                      "  --budget-lab N           play N greedy games and time the and-tree at cheap budgets against\n"
@@ -151,6 +192,24 @@ namespace {
                 }
             } else if (arg == "--threads" && has_value) {
                 options.threads = std::stoi(argv[++i]);
+            } else if (arg == "--save-games" && has_value) {
+                options.save_games = argv[++i];
+            } else if (arg == "--check-games" && has_value) {
+                options.check_games = argv[++i];
+            } else if (arg == "--evaluate" && has_value) {
+                std::stringstream names(argv[++i]);
+                for (std::string name; std::getline(names, name, ',');) {
+                    options.evaluate.emplace_back(name);
+                }
+            } else if (arg == "--save-weights" && has_value) {
+                options.save_weights_to = argv[++i];
+            } else if (arg == "--reference" && has_value) {
+                options.reference = argv[++i];
+            } else if (arg == "--score-weights" && has_value) {
+                std::stringstream names(argv[++i]);
+                for (std::string name; std::getline(names, name, ',');) {
+                    options.score_weights.emplace_back(name);
+                }
             } else if (arg == "--save-replays" && has_value) {
                 options.replay_every = std::stoi(argv[++i]);
             } else if (arg == "--planner-samples" && has_value) {
@@ -179,6 +238,10 @@ namespace {
                 options.is_mcts.search.iterations = std::stoi(argv[++i]);
             } else if (arg == "--mcts-c" && has_value) {
                 options.is_mcts.search.exploration = std::stod(argv[++i]);
+            } else if (arg == "--mcts-c-a" && has_value) {
+                options.mcts_c_a = std::stod(argv[++i]);
+            } else if (arg == "--mcts-c-b" && has_value) {
+                options.mcts_c_b = std::stod(argv[++i]);
             } else if (arg == "--mcts-depth" && has_value) {
                 options.is_mcts.search.playout.depth = std::stoi(argv[++i]);
             } else if (arg == "--mcts-plans" && has_value) {
@@ -207,6 +270,16 @@ namespace {
                 options.endgame.min_depth = std::stoi(argv[++i]);
             } else if (arg == "--endgame-nodes" && has_value) {
                 options.endgame.solver.max_nodes = std::stoll(argv[++i]);
+            } else if (arg == "--weights" && has_value) {
+                options.weights_file = argv[++i];
+            } else if (arg == "--playout-weights-a" && has_value) {
+                options.playout_weights_a_file = argv[++i];
+            } else if (arg == "--playout-weights-b" && has_value) {
+                options.playout_weights_b_file = argv[++i];
+            } else if (arg == "--weights-a" && has_value) {
+                options.weights_a_file = argv[++i];
+            } else if (arg == "--weights-b" && has_value) {
+                options.weights_b_file = argv[++i];
             } else if (arg == "--planner-lab" && has_value) {
                 options.lab_games = std::stoi(argv[++i]);
             } else if (arg == "--every" && has_value) {
@@ -250,7 +323,7 @@ namespace {
         options.flat_mc.samples = options.planner.samples;
         const IsMctsOptions& mcts = options.is_mcts.search;
         if (mcts.iterations < 1 || mcts.exploration < 0.0 || mcts.playout.depth < 0 || mcts.macros.searcher_plans < 1 || mcts.macros.opponent_budget < 1 ||
-            mcts.macros.opponent_plans < 1 || mcts.final_min_visits < 1) {
+            mcts.macros.opponent_plans < 1 || mcts.final_min_visits < 1 || options.mcts_c_a.value_or(0.0) < 0.0 || options.mcts_c_b.value_or(0.0) < 0.0) {
             return false;
         }
         options.is_mcts.or_budget = options.planner.or_budget;
@@ -281,15 +354,40 @@ namespace {
              (!options.agents.empty() || options.print || options.check_replays || options.lab_games > 0 || options.budget_lab_games > 0))) {
             return false;
         }
+        if (!options.evaluate.empty() && (!options.agents.empty() || options.print || options.check_replays || !options.check_games.empty() ||
+                                          options.lab_games > 0 || options.budget_lab_games > 0 || options.endgame_lab_games > 0 || options.threads < 0)) {
+            return false;
+        }
+        if (options.evaluate.empty() && (!options.save_weights_to.empty() || !options.reference.empty() || !options.score_weights.empty())) {
+            return false;
+        }
+        if (!options.score_weights.empty() && (!options.reference.empty() || !options.save_weights_to.empty())) {
+            return false;
+        }
+        const bool lab = options.lab_games > 0 || options.budget_lab_games > 0 || options.endgame_lab_games > 0 || !options.evaluate.empty();
+        if (lab && !options.weights_file.empty()) {
+            return false;
+        }
         if (options.agents.empty()) {
-            if (options.threads != 0 || options.replay_every != 0) {
+            if ((options.threads != 0 && options.evaluate.empty()) || options.replay_every != 0 || !options.weights_a_file.empty() || !options.weights_b_file.empty() ||
+                !options.save_games.empty() || options.mcts_c_a || options.mcts_c_b || !options.playout_weights_a_file.empty() ||
+                !options.playout_weights_b_file.empty()) {
                 return false;
             }
         } else if (options.agents.size() != 2 || !known(options.agents[0]) || !known(options.agents[1]) || options.print ||
-                   options.check_replays || options.threads < 0 || options.replay_every < 0) {
+                   options.check_replays || options.threads < 0 || options.replay_every < 0 || (!options.save_games.empty() && options.replay_every > 0) ||
+                   !options.check_games.empty()) {
             return false;
         }
         return options.games > 0 && known(options.agent);
+    }
+
+    void use_weights(Options& options, const Weights& weights) {
+        options.weights = weights;
+        set_weights(options.planner, weights);
+        set_weights(options.flat_mc, weights);
+        set_weights(options.is_mcts, weights);
+        set_weights(options.endgame, weights);
     }
 
     std::unique_ptr<Agent> make_agent(const std::string& name, std::uint64_t seed, const Options& options) {
@@ -297,7 +395,7 @@ namespace {
             return std::make_unique<RandomAgent>(seed);
         }
         if (name == "greedy") {
-            return std::make_unique<GreedyAgent>(seed);
+            return std::make_unique<GreedyAgent>(seed, 3, options.weights);
         }
         if (name == "planner") {
             return std::make_unique<PlannerAgent>(seed, options.planner);
@@ -564,23 +662,41 @@ namespace {
     // --agents A,B: A against B on every deck pairing, with win rates and their confidence intervals.
     int run_match(const CardDB& db, const std::vector<std::filesystem::path>& files, const std::vector<Decklist>& decks,
                   const Options& options) {
+        if (!options.save_games.empty() && std::filesystem::exists(options.save_games)) {
+            throw std::runtime_error(options.save_games + " already exists");
+        }
         std::vector<ArenaDeck> arena_decks;
         for (std::size_t i = 0; i < files.size(); ++i) {
             arena_decks.push_back(ArenaDeck{files[i].filename().string(), decks[i]});
         }
         // The same agent on both sides is labelled with its side, such as random-A and random-B.
         const bool same = options.agents[0] == options.agents[1];
-        const auto contestant = [&](const std::string& name, const char* side) {
-            return Contestant{same ? name + "-" + side : name, [name, &options](std::uint64_t seed) { return make_agent(name, seed, options); }};
+        const auto contestant = [&](const std::string& name, const char* side, const std::string& weights_file, const std::string& playout_file,
+                                    const std::optional<double>& c) {
+            Options mine = options;
+            if (!weights_file.empty()) {
+                use_weights(mine, load_weights(weights_file));
+            }
+            if (!playout_file.empty()) {
+                const Weights playout = load_weights(playout_file);
+                set_playout_weights(mine.flat_mc, playout);
+                set_playout_weights(mine.is_mcts, playout);
+                set_playout_weights(mine.endgame, playout);
+            }
+            if (c) {
+                mine.is_mcts.search.exploration = *c;
+                mine.endgame.is_mcts.search.exploration = *c;
+            }
+            return Contestant{same ? name + "-" + side : name, [name, mine](std::uint64_t seed) { return make_agent(name, seed, mine); }};
         };
-        const Contestant a = contestant(options.agents[0], "A");
-        const Contestant b = contestant(options.agents[1], "B");
+        const Contestant a = contestant(options.agents[0], "A", options.weights_a_file, options.playout_weights_a_file, options.mcts_c_a);
+        const Contestant b = contestant(options.agents[1], "B", options.weights_b_file, options.playout_weights_b_file, options.mcts_c_b);
         ArenaOptions arena;
         arena.games = static_cast<int>(options.games);
         arena.seed = options.seed;
         arena.threads = options.threads;
         arena.check_invariants = options.check;
-        arena.replay_every = options.replay_every;
+        arena.replay_every = options.save_games.empty() ? options.replay_every : 1;
         const auto started = std::chrono::steady_clock::now();
         arena.on_progress = [started](long long done, long long total) {
             const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
@@ -608,7 +724,8 @@ namespace {
                   << " games each (every seed once with " << a.name << " in each seat), " << result.threads << " threads\n";
         if (options.agents[0] == "ismcts" || options.agents[1] == "ismcts" || options.agents[0] == "endgame" || options.agents[1] == "endgame") {
             const IsMctsOptions& m = options.is_mcts.search;
-            std::cout << "  ismcts: " << m.iterations << " iterations, C " << m.exploration << ", depth " << m.playout.depth << ", " << m.macros.searcher_plans
+            std::cout << "  ismcts: " << m.iterations << " iterations, C " << std::setprecision(2) << options.mcts_c_a.value_or(m.exploration) << " for " << a.name
+                      << " and " << options.mcts_c_b.value_or(m.exploration) << " for " << b.name << std::setprecision(1) << ", depth " << m.playout.depth << ", " << m.macros.searcher_plans
                       << " plans, opponent and-tree " << m.macros.opponent_budget << " nodes keeping " << m.macros.opponent_plans
                       << (m.matched_worlds ? ", matched worlds" : "") << (m.final_by_mean ? ", final by mean" : "") << '\n';
         }
@@ -627,6 +744,12 @@ namespace {
             std::cout << "  planner: " << options.planner.samples << " sampled worlds, or-tree budget " << options.planner.or_budget
                       << ", and-tree budget " << options.planner.and_budget << '\n';
         }
+        const auto weights_of = [&](const std::string& agent, const std::string& side_file, const std::string& playout_file) {
+            const std::string& file = side_file.empty() ? options.weights_file : side_file;
+            const std::string unset = agent == "ismcts" || agent == "endgame" ? "the learned ones" : "the hand-set ones";
+            return (file.empty() ? unset : file) + (playout_file.empty() ? "" : " (playouts played with " + playout_file + ")");
+        };
+        std::cout << "  weights: " << a.name << " " << weights_of(options.agents[0], options.weights_a_file, options.playout_weights_a_file) << ", " << b.name << " " << weights_of(options.agents[1], options.weights_b_file, options.playout_weights_b_file) << '\n';
         std::cout << "Played " << result.games << " games in " << result.seconds << " s: "
                   << static_cast<double>(result.games) / result.seconds << " games/s, "
                   << static_cast<double>(result.actions) / result.seconds / 1e6 << " million actions/s, "
@@ -672,6 +795,14 @@ namespace {
         print_counters(b.name, result.b_counters);
         std::cout << (options.check ? "Invariants checked after every action: no problems found\n"
                                     : "Invariant checks were off (--no-check)\n");
+        if (!options.save_games.empty()) {
+            for (Replay& game : result.replays) {
+                game.note = a.name + " with " + weights_of(options.agents[0], options.weights_a_file, options.playout_weights_a_file) + ", " + b.name + " with " + weights_of(options.agents[1], options.weights_b_file, options.playout_weights_b_file);
+            }
+            save_games(options.save_games, result.replays);
+            std::cout << "Saved " << result.replays.size() << " games to " << options.save_games << '\n';
+            result.replays.clear();
+        }
         for (std::size_t i = 0; i < result.replays.size(); ++i) {
             const Replay& replay = result.replays[i];
             std::ostringstream path;
@@ -684,6 +815,269 @@ namespace {
             std::cout << "Saved " << result.replays.size() << " replays to replays/arena/\n";
         }
         return result.ends[static_cast<std::size_t>(GameEnd::ActionLimit)] == 0 ? 0 : 1;
+    }
+
+    int run_check_games(const CardDB& db, const std::string& file) {
+        const std::vector<Replay> games = load_games(file);
+        std::set<std::uint64_t> seeds;
+        std::set<std::tuple<std::uint64_t, std::string, std::string>> deals;
+        std::set<std::string> notes;
+        std::array<long long, 2> rows{};
+        std::array<std::array<long long, 7>, 2> by_prizes{};
+        long long unfinished = 0;
+        double first_player = 0.0;
+        for (std::size_t g = 0; g < games.size(); ++g) {
+            const Replay& game = games[g];
+            seeds.insert(game.seed);
+            deals.emplace(game.seed, game.players[0].deck_name, game.players[1].deck_name);
+            notes.insert(game.note);
+            const std::vector<Position> found = positions(db, game, g);
+            if (found.empty()) {
+                ++unfinished;
+                continue;
+            }
+            first_player += found.front().went_first ? found.front().result : 1.0 - found.front().result;
+            for (const Position& position : found) {
+                const std::size_t kind = position.start ? 0 : 1;
+                ++rows[kind];
+                ++by_prizes[kind][static_cast<std::size_t>(std::min(position.prizes, position.opponent_prizes))];
+            }
+        }
+        if (games.empty()) {
+            std::cout << "No games in " << file << '\n';
+            return 1;
+        }
+        const double played = static_cast<double>(std::max<std::size_t>(games.size() - static_cast<std::size_t>(unfinished), 1));
+        std::cout << std::fixed << std::setprecision(1) << games.size() << " games, all played back to their saved result; seeds " << *seeds.begin() << " to "
+                  << *seeds.rbegin() << " (" << seeds.size() << "), " << deals.size() << " different deals, " << unfinished << " without positions\n";
+        for (const std::string& note : notes) {
+            std::cout << "  " << note << '\n';
+        }
+        std::cout << "  the player who went first scored " << 100.0 * first_player / played << "%\n";
+        std::cout << "  positions: " << rows[0] << " at a turn's start, " << rows[1] << " later in a turn (" << static_cast<double>(rows[0] + rows[1]) / played
+                  << " a game)\n  by the smaller prize count, 0 to 6:";
+        for (std::size_t p = 0; p < by_prizes[0].size(); ++p) {
+            std::cout << ' ' << by_prizes[0][p] + by_prizes[1][p];
+        }
+        std::cout << '\n';
+        return 0;
+    }
+
+    void print_group(const std::string& name, const Group& group) {
+        if (group.positions == 0) {
+            return;
+        }
+        std::cout << "    " << std::left << std::setw(22) << name << std::right << std::setw(8) << group.positions << std::setprecision(4) << std::setw(9)
+                  << group.loss << std::setprecision(1) << std::setw(9) << 100.0 * group.predicted << "%" << std::setw(8) << 100.0 * group.result << "%"
+                  << std::showpos << std::setw(9) << 100.0 * (group.result - group.predicted) << std::noshowpos << " +/- " << 196.0 * group.gap_error << '\n';
+    }
+
+    void print_change(double change, double error) {
+        std::cout << std::setprecision(4) << std::showpos << std::setw(10) << change << std::noshowpos << " +/- " << 1.96 * error;
+    }
+
+    int run_score_weights(const CardDB& db, const Options& options) {
+        const int threads = options.threads > 0 ? options.threads : static_cast<int>(std::max(std::thread::hardware_concurrency(), 1U));
+        std::vector<Model> models;
+        for (const std::filesystem::path& file : options.score_weights) {
+            models.push_back(fixed_model(file.stem().string(), load_weights(file)));
+        }
+        const SampleSet set = load_samples(db, options.evaluate, threads);
+        if (set.samples.empty()) {
+            std::cout << "No positions in the files\n";
+            return 1;
+        }
+        const std::vector<ModelScore> scores = score_models(set, models, 0, threads);
+
+        std::cout << std::fixed << set.games << " games, " << set.samples.size() << " positions; the weights as they are, the terms fitted in " << kFolds
+                  << " folds by seed\n";
+        std::cout << "Log loss, and its change from " << scores[0].name << " (lower is better; 95% by seed):\n"
+                  << "  " << std::left << std::setw(26) << "" << std::setw(32) << "raw" << "adjusted for the decks, first player and player to move\n"
+                  << std::right;
+        for (const ModelScore& score : scores) {
+            std::cout << "  " << std::left << std::setw(24) << score.name << std::right;
+            for (const Breakdown* breakdown : {&score.raw, &score.adjusted}) {
+                std::cout << std::setprecision(4) << std::setw(8) << breakdown->total.loss;
+                print_change(breakdown->total.change, breakdown->total.change_error);
+            }
+            std::cout << '\n';
+        }
+        std::cout << "\nAdjusted change on each deck's games:\n";
+        for (const ModelScore& score : scores) {
+            std::cout << "  " << std::left << std::setw(24) << score.name << std::right;
+            for (std::size_t d = 0; d < score.left_out.size(); ++d) {
+                std::cout << "  " << set.decks[d];
+                print_change(score.left_out[d].change, score.left_out[d].change_error);
+            }
+            std::cout << '\n';
+        }
+        std::cout << "\nAdjusted loss by the smaller prize count, 1 to 6:\n";
+        for (const ModelScore& score : scores) {
+            std::cout << "  " << std::left << std::setw(24) << score.name << std::right << std::setprecision(4);
+            for (std::size_t p = 1; p < score.adjusted.by_prizes.size(); ++p) {
+                std::cout << std::setw(9) << score.adjusted.by_prizes[p].loss;
+            }
+            std::cout << '\n';
+        }
+        for (const ModelScore& score : scores) {
+            std::cout << "\n" << score.name << ", raw (as played):\n    " << std::left << std::setw(22) << "" << std::right << std::setw(8) << "n" << std::setw(9)
+                      << "loss" << std::setw(10) << "predicted" << std::setw(9) << "result" << std::setw(9) << "gap" << '\n';
+            print_group("all", score.raw.all);
+            for (std::size_t b = 0; b < score.raw.by_prediction.size(); ++b) {
+                print_group("predicted " + std::to_string(10 * b) + " to " + std::to_string(10 * b + 10) + "%", score.raw.by_prediction[b]);
+            }
+        }
+        return 0;
+    }
+
+    int run_evaluate(const CardDB& db, const Options& options) {
+        const int threads = options.threads > 0 ? options.threads : static_cast<int>(std::max(std::thread::hardware_concurrency(), 1U));
+        const auto start = std::chrono::steady_clock::now();
+        const SampleSet set = load_samples(db, options.evaluate, threads);
+        if (set.samples.empty()) {
+            std::cout << "No positions in the files\n";
+            return 1;
+        }
+        const double loaded = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+        std::set<std::uint64_t> seeds;
+        for (const Sample& sample : set.samples) {
+            seeds.insert(sample.seed);
+        }
+
+        const std::size_t decks = set.decks.size();
+        Weights prizes{};
+        prizes[static_cast<std::size_t>(Feature::Prizes)] = default_weights()[static_cast<std::size_t>(Feature::Prizes)];
+        const auto fit_options = [](double l2, bool non_negative, bool game_terms) {
+            FitOptions fit;
+            fit.l2 = l2;
+            fit.non_negative = non_negative;
+            fit.game_terms = game_terms;
+            return fit;
+        };
+        const std::vector<Model> models{fixed_model("coin", Weights{}),
+                                        scaled_model("prizes-scaled", prizes, decks, fit_options(0.0, true, false)),
+                                        fixed_model("hand", default_weights()),
+                                        scaled_model("hand-scaled", default_weights(), decks, fit_options(0.0, true, false)),
+                                        scaled_model("hand-scaled-terms", default_weights(), decks, fit_options(0.0, true, true)),
+                                        fitted_model("fitted", decks, fit_options(0.0, false, true)),
+                                        fitted_model("fitted-nonneg", decks, fit_options(0.0, true, true)),
+                                        fitted_model("fitted-l2-1000", decks, fit_options(1000.0, false, true)),
+                                        fitted_model("fitted-l2-10000", decks, fit_options(10000.0, false, true)),
+                                        fitted_model("fitted-no-terms", decks, fit_options(0.0, false, false))};
+        const std::string reference_name = options.reference.empty() ? "hand-scaled-terms" : options.reference;
+        const auto chosen = std::find_if(models.begin(), models.end(), [&](const Model& model) { return model.name == reference_name; });
+        if (chosen == models.end()) {
+            throw std::runtime_error("no model called " + reference_name);
+        }
+        const std::size_t reference = static_cast<std::size_t>(chosen - models.begin());
+        const std::vector<std::size_t> shown{4, 5, 6, 8, 9};
+        const auto weights_file = [&](const std::string& name) {
+            return std::filesystem::path(options.save_weights_to) / (name + ".txt");
+        };
+        const auto saved = [&](const std::string& name) {
+            return !options.save_weights_to.empty() && (name.starts_with("fitted") || name.starts_with("hand-scaled"));
+        };
+        for (const Model& model : models) {
+            if (saved(model.name) && std::filesystem::exists(weights_file(model.name))) {
+                throw std::runtime_error(weights_file(model.name).string() + " already exists");
+            }
+        }
+        const std::vector<ModelScore> scores = score_models(set, models, reference, threads);
+        const double total = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+
+        std::cout << std::fixed << std::setprecision(1) << set.games << " games, " << seeds.size() << " seeds, " << set.samples.size() << " positions; "
+                  << kFolds << " folds by seed; " << loaded << " s to play back, " << total << " s in all\n";
+        std::cout << "Held-out log loss, and its change from " << models[reference].name << " (lower is better; 95% by seed):\n"
+                  << "  " << std::left << std::setw(20) << "" << std::setw(32) << "raw" << "adjusted for the decks, first player and player to move\n"
+                  << std::right;
+        for (const ModelScore& score : scores) {
+            std::cout << "  " << std::left << std::setw(18) << score.name << std::right;
+            for (const Breakdown* breakdown : {&score.raw, &score.adjusted}) {
+                std::cout << std::setprecision(4) << std::setw(8) << breakdown->total.loss;
+                print_change(breakdown->total.change, breakdown->total.change_error);
+            }
+            std::cout << '\n';
+        }
+
+        std::cout << "\nWeights fitted on every seed (95%, from the folds):\n  " << std::setw(20) << "";
+        for (const std::size_t m : shown) {
+            std::cout << std::setw(20) << scores[m].name;
+        }
+        std::cout << '\n';
+        for (std::size_t i = 0; i < kFeatureCount; ++i) {
+            std::cout << "  " << std::left << std::setw(20) << to_string(static_cast<Feature>(i)) << std::right << std::setprecision(3);
+            for (const std::size_t m : shown) {
+                std::cout << std::setw(10) << scores[m].weights[i] << " +/- " << scores[m].weight_errors[i] * 1.96;
+            }
+            std::cout << '\n';
+        }
+
+        std::cout << "\nTerms (dropped at play time):";
+        for (const std::size_t m : {std::size_t{4}, std::size_t{5}}) {
+            std::cout << "\n  " << scores[m].name << ": first " << scores[m].terms[kFirstTerm] << ", turn start " << scores[m].terms[kStartTerm] << ", later "
+                      << scores[m].terms[kLaterTerm];
+            for (std::size_t a = 0; a < decks; ++a) {
+                for (std::size_t b = a + 1; b < decks; ++b) {
+                    std::cout << "; " << set.decks[a] << " over " << set.decks[b] << ' ' << scores[m].terms[pairing_term(a, b, decks)];
+                }
+            }
+        }
+
+        std::cout << "\n\nFitted without a deck, scored on its games (adjusted, change from " << models[reference].name << "):\n";
+        for (const std::size_t m : {std::size_t{5}, std::size_t{6}, std::size_t{9}}) {
+            std::cout << "  " << scores[m].name << '\n';
+            for (std::size_t d = 0; d < scores[m].left_out.size(); ++d) {
+                std::cout << "    " << std::left << std::setw(20) << set.decks[d] << std::right << std::setprecision(4) << std::setw(8)
+                          << scores[m].left_out[d].loss;
+                print_change(scores[m].left_out[d].change, scores[m].left_out[d].change_error);
+                std::cout << "   weights" << std::setprecision(2);
+                for (const double weight : scores[m].left_out_weights[d]) {
+                    std::cout << ' ' << weight;
+                }
+                std::cout << '\n';
+            }
+        }
+
+        std::cout << "\nAdjusted loss by the smaller prize count:\n  " << std::setw(18) << "";
+        for (std::size_t p = 1; p < 7; ++p) {
+            std::cout << std::setw(9) << p;
+        }
+        std::cout << '\n' << std::setprecision(4);
+        for (const ModelScore& score : scores) {
+            std::cout << "  " << std::left << std::setw(18) << score.name << std::right;
+            for (std::size_t p = 1; p < score.adjusted.by_prizes.size(); ++p) {
+                std::cout << std::setw(9) << score.adjusted.by_prizes[p].loss;
+            }
+            std::cout << '\n';
+        }
+
+        for (const std::size_t m : {std::size_t{4}, std::size_t{5}, std::size_t{6}}) {
+            const Breakdown& breakdown = scores[m].adjusted;
+            std::cout << "\n" << scores[m].name << ", adjusted:\n    " << std::left << std::setw(22) << "" << std::right << std::setw(8) << "n" << std::setw(9)
+                      << "loss" << std::setw(10) << "predicted" << std::setw(9) << "result" << std::setw(9) << "gap" << '\n';
+            print_group("all", breakdown.all);
+            print_group("turn start", breakdown.by_kind[0]);
+            print_group("later in the turn", breakdown.by_kind[1]);
+            for (std::size_t p = 0; p < breakdown.by_prizes.size(); ++p) {
+                print_group("smaller prizes " + std::to_string(p), breakdown.by_prizes[p]);
+            }
+            for (std::size_t d = 0; d < breakdown.by_deck.size(); ++d) {
+                print_group(set.decks[d], breakdown.by_deck[d]);
+            }
+            for (std::size_t b = 0; b < breakdown.by_prediction.size(); ++b) {
+                print_group("predicted " + std::to_string(10 * b) + " to " + std::to_string(10 * b + 10) + "%", breakdown.by_prediction[b]);
+            }
+        }
+
+        for (const ModelScore& score : scores) {
+            if (saved(score.name)) {
+                std::filesystem::create_directories(options.save_weights_to);
+                save_weights(weights_file(score.name), score.weights);
+                std::cout << "\nSaved " << weights_file(score.name).string();
+            }
+        }
+        std::cout << '\n';
+        return 0;
     }
 
 } // namespace
@@ -700,11 +1094,20 @@ int main(int argc, char** argv) {
     }
 
     try {
+        if (!options.weights_file.empty()) {
+            use_weights(options, load_weights(options.weights_file));
+        }
         const CardDB db = CardDB::load("data/cards/generated", "data/cards/effects");
         if (!options.replay.empty()) {
             const Replay replay = load_replay(options.replay);
             print_replay(std::cout, replay_table(db, replay), replay, options.as);
             return 0;
+        }
+        if (!options.check_games.empty()) {
+            return run_check_games(db, options.check_games);
+        }
+        if (!options.evaluate.empty()) {
+            return options.score_weights.empty() ? run_evaluate(db, options) : run_score_weights(db, options);
         }
         const auto files = deck_files();
         if (files.size() < 2) {

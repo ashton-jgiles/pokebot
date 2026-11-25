@@ -12,7 +12,10 @@ after each action with it; Models 1–3 use it at their leaves; M10 learns θ.
 
 ```cpp
 double evaluate(const GameState& game, int player, const Weights& weights = default_weights());
+Weights default_weights();                            // hand-set
+Weights learned_weights();                            // fitted in M10
 Features features(const GameState& game, int player); // phi(w, i), for M10's training data
+Features features(const GameState& game, int player, const Weights& wanted); // 0 where wanted is 0
 double utility(const GameState& game, int player);    // u_i(w); throws if the game isn't over
 ```
 
@@ -34,6 +37,19 @@ e_opponent(w) = −e_i(w): the evaluation is zero-sum, as Model 3's minimax need
 | `Deck` | φ6 | Cards in the deck, counting at most 30, so every card drawn has a price long before the deck runs out | 30 | 0.5 |
 | `Conditions` | φ7 | Special Conditions on the opponent's Active minus on i's | 3 | 0.2 |
 | `PrizesAtRisk` | φ8 | Prize cards the opponent's Active is worth minus i's | 3 | 0.2 |
+| `Evolved` | M10 | Pokémon in play, a Stage 1 counting 1 and a Stage 2 counting 2 | 6 | 0 |
+| `DeckOut` | M10 | Cards in the deck, counting at most 8 | 8 | 0 |
+
+**Only features with a weight are worked out:** `evaluate` skips those whose θ is 0, which gives exactly
+the same value.
+
+`Evolved` and `DeckOut` were added in M10.6, the two of six candidates that passed its rules (the others
+were prizes taken squared, a Knock Out threat, payable damage and the board's HP). The hand θ doesn't use
+them; `learned_weights()` does.
+
+Whose turn it is was dropped as a feature: a playout that reaches its full depth always ends at the searcher's
+own main phase, so there it would be almost a constant, and in Greedy and the and-tree mostly a flat price on
+ending the turn.
 
 **Turns to Knock Out** (φ3) is relaxed, as in the proposal: the attacking side's strongest attack
 among all its Pokémon in play, with Weakness, Resistance and other effects through
@@ -45,8 +61,10 @@ cost. An attack that does no damage, or no attack at all, counts as 5 turns. Dam
 most HP left were Active, so the moment between a Knock Out and the promotion isn't scored as having
 no Active at all.
 
-The weights are set by hand, with Prize cards far the heaviest; M10 fits them by logistic regression
-on self-play.
+There are two sets of weights. `default_weights()` is set by hand, with Prize cards far the heaviest, and
+Greedy, the Planner and Flat MC use it. `learned_weights()` is M10's, fitted by logistic regression on
+self-play, and IS-MCTS and the endgame agent use it: in IS-MCTS it scores 57.6% (56.8% to 58.4%) against the
+hand-set ones. Weights can also be read from a file and given to every agent: see [weights](weights.md).
 
 **Hand against deck (step 5.6b).** At first the hand counted in full (scale 10) and the deck only
 below 10 cards. Drawing then always looked good, so Greedy drew its deck away: in the first full
@@ -77,6 +95,8 @@ own cost matching.
   values), attaching Energy (one ready attacker) each score higher, and Poison scores lower;
 - a player choosing a new Active scored by their healthiest Benched Pokémon;
 - cards in hand counting up to 7 and cards in the deck up to 30;
+- the last 8 cards of the deck, and evolutions counted by their stage;
+- only the wanted features worked out, with `evaluate` exactly the same as with all of them;
 - in random games, the two players' features are exact opposites, every feature is in [−1, 1], and e
   is in (−1, 1) with e_1 = −e_0;
 - on the real decks, a world built for either player gives exactly the same features and evaluation,

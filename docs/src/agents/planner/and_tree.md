@@ -60,6 +60,8 @@ the result.
 | Deck | + the hand shuffled back in |
 | Conditions | the opponent's Active with 2 more Special Conditions, the player's with none |
 | PrizesAtRisk | the opponent's most valuable Pokémon in front of the player's least valuable |
+| Evolved | + the stages of every evolution in the player's hand (a Stage 2 counting 2), + those of the most evolved opposing Pokémon that the damage could Knock Out |
+| DeckOut | the player's hand shuffled back into the deck, the opponent's deck one card smaller for their draw |
 
 **It isn't proven to be a true upper bound** for every card. An effect could raise a feature further
 than this allows. It needs non-negative weights (with a negative weight it returns 1, so nothing is
@@ -84,5 +86,7 @@ children `generated`, nodes skipped as `closed`, children `pruned` by f_bound, a
 - the closed set and f_bound each expand fewer nodes, and all four combinations find the same best
   value;
 - the upper bound is at least e, and 1 when a Knock Out would take the last Prize card;
+- its evolved and deck-out terms at known positions, and f_bound finding the same best plan with those
+  features weighted;
 - on the real decks, the bound is at least e at every decision, the best plan is legal and worth what
   the search says, and f_bound doesn't change the best value when neither search ran out of budget.

@@ -19,8 +19,11 @@ namespace pokebot {
 
     struct IsMctsAgentOptions {
         int or_budget = 200;
-        IsMctsOptions search{.iterations = 42, .playout{.depth = 2}, .matched_worlds = true};
-        Weights weights = default_weights();
+        IsMctsOptions search{.iterations = 42,
+                             .playout{.depth = 2, .weights = learned_weights()},
+                             .macros{.weights = learned_weights()},
+                             .matched_worlds = true};
+        Weights weights = learned_weights();
     };
 
     struct IsMctsAgentStats {

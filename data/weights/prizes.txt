@@ -1,0 +1,12 @@
+prizes 2
+active_hp 0
+turns_to_knock_out 0
+ready_attackers 0
+energy 0
+bench 0
+hand 0
+deck 0
+conditions 0
+prizes_at_risk 0
+evolved 0
+deck_out 0

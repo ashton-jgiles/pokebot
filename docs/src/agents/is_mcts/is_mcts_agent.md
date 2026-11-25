@@ -43,8 +43,8 @@ and the action is offered.
 | `IsMctsAgentOptions` | Default | Meaning |
 |---|---|---|
 | `or_budget` | 200 | Nodes for the win search |
-| `search` | [`IsMctsOptions`](is_mcts.md#the-search) with 42 iterations, r = 2 and matched worlds | The search: iterations, C, r, the and-tree budgets, matched worlds, choosing by mean |
-| `weights` | `default_weights()` | θ for e (Greedy's setup rule) |
+| `search` | [`IsMctsOptions`](is_mcts.md#the-search) with 42 iterations, r = 2, matched worlds and `learned_weights()` in its playouts and macro-actions | The search: iterations, C, r, the and-tree budgets, matched worlds, choosing by mean |
+| `weights` | `learned_weights()` | θ for e (Greedy's setup rule) |
 
 Step 8.5 started at 64 iterations, to match Flat MC's 64 playouts. Step 8.6 tuned against Flat MC instead
 (see the roadmap's 8.6 table): matched worlds and r = 2 won. By search time a game, 42 iterations at r = 2
