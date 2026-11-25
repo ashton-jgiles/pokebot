@@ -3,9 +3,10 @@
 | Path | Contents | Written by | In git? |
 |---|---|---|---|
 | `sets.json` | Set code → TCGdex set id | hand | yes |
+| `corrections.json` | Fixes to TCGdex's data | hand | yes |
 | `raw/` | Unmodified TCGdex responses (cache) | `pokebot-import` | **no** |
 | `generated/` | Cards in our format | `pokebot-import` | **no** |
-| `effects/` | Hand-written effects and corrections | hand | yes |
+| `effects/` | Hand-written effects, rules and labels | hand | yes |
 
 `raw/` and `generated/` contain card text, which belongs to The Pokémon Company, so they stay
 out of git. Anyone who clones the repo recreates them by running `pokebot-import`.
@@ -24,6 +25,23 @@ Maps the set codes used in decklists to TCGdex set ids:
 
 Each entry was checked against TCGdex's `abbreviation.official` field. To add a set, see
 [Adding a new set](../../tools/import/tcgdex.md#adding-a-new-set).
+
+## `corrections.json`
+
+Fixes to what TCGdex gets wrong, applied to its card before it's converted, in TCGdex's own field names:
+
+```json
+{
+  "cards": { "30th-021": { "stage": "Stage2", "evolveFrom": "Frogadier" } },
+  "evolves_from": { "Arcanine": "Growlithe" }
+}
+```
+
+- `cards`: by TCGdex id; the fields given replace the card's. The ones there are the six Pokémon ex of 30th
+  Celebration that TCGdex stores as Basic, checked on Limitless.
+- `evolves_from`: by card name, used only for a Stage 1 or Stage 2 whose `evolveFrom` is empty.
+
+The importer stops if the file is missing. A test checks that Greninja ex (30C 21) comes out as a Stage 2.
 
 ## `generated/<id>.json` — our card format
 

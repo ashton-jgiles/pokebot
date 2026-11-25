@@ -37,7 +37,7 @@ are processed once):
 1. Fetch the card through [`TcgdexClient`](tcgdex.md) (from the cache when possible).
 2. Compare TCGdex's name with the decklist's name and warn if they differ. That usually means a
    wrong set code or number. Basic Energy is skipped, since decklists write it as `Basic {D} Energy`.
-3. Convert it with [`convert_card`](convert.md) and write `data/cards/generated/<id>.json`.
+3. Apply [`corrections.json`](../../data/cards/README.md#correctionsjson), convert it with [`convert_card`](convert.md) and write `data/cards/generated/<id>.json`.
 4. Collect any review notes.
 
 Then it prints the review notes, a summary, loads everything through
@@ -85,6 +85,7 @@ is left out once its effects file sets `provides`, and a Tera note once it sets 
 |---|---|---|
 | `data/decks/*.txt` | read | yes |
 | `data/cards/sets.json` | read | yes |
+| `data/cards/corrections.json` | read | yes |
 | `data/cards/raw/` | read + write (cache) | no |
 | `data/cards/generated/` | write | no |
 | `data/cards/effects/` | read | yes |

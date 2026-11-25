@@ -31,6 +31,24 @@ namespace pokebot::import {
             return value;
         }
 
+        json without_nulls(json value) {
+            if (value.is_object()) {
+                for (auto it = value.begin(); it != value.end();) {
+                    if (it->is_null()) {
+                        it = value.erase(it);
+                    } else {
+                        *it = without_nulls(std::move(*it));
+                        ++it;
+                    }
+                }
+            } else if (value.is_array()) {
+                for (json& item : value) {
+                    item = without_nulls(std::move(item));
+                }
+            }
+            return value;
+        }
+
         // 70 -> {70, None};  "20×" -> {20, Times};  "30+" -> {30, Plus};  "120-" -> {120, Minus}
         void parse_damage(const json& damage, Attack& attack) {
             if (damage.is_number_integer()) {
@@ -65,6 +83,9 @@ namespace pokebot::import {
             }
 
             c.evolves_from = t.value("evolveFrom", "");
+            if (c.stage != Stage::Basic && c.evolves_from.empty()) {
+                out.notes.push_back("an evolution card that doesn't say what it evolves from; add it to corrections.json");
+            }
             c.hp = t.at("hp").get<int>();
             for (const auto& type : t.at("types")) {
                 c.types.push_back(energy_type(type));
@@ -78,6 +99,8 @@ namespace pokebot::import {
                 std::string value = ws[0].at("value").get<std::string>(); // "×2"
                 if (value.starts_with(kTimes)) {
                     value.erase(0, kTimes.size());
+                } else if (value.starts_with('x')) {
+                    value.erase(0, 1);
                 }
                 c.weakness = Weakness{energy_type(ws[0].at("type")), parse_number(value, "weakness")};
             }
@@ -111,7 +134,7 @@ namespace pokebot::import {
                 c.attacks.push_back(std::move(attack));
             }
 
-            c.rules.ex = t.value("suffix", "") == "ex";
+            c.rules.ex = lowercase(t.value("suffix", "")) == "ex";
             c.rules.mega = c.rules.ex && c.name.starts_with("Mega ");
             // Mega Evolution Pokemon ex have their own rule box, so they're never Tera.
             out.tera_unknown = c.rules.ex && !c.rules.mega;
@@ -132,6 +155,9 @@ namespace pokebot::import {
                 throw CardDataError("trainer type '" + kind + "' isn't supported yet");
             }
             c.text = t.value("effect", "");
+            if (c.text.empty()) {
+                out.notes.push_back("Trainer with no rules text");
+            }
             c.rules.ace_spec = t.value("rarity", "") == "ACE SPEC Rare";
         }
 
@@ -154,6 +180,10 @@ namespace pokebot::import {
                 if (!name.ends_with(" Energy")) {
                     throw CardDataError("unexpected basic Energy name '" + name + "'");
                 }
+                if (name.starts_with("Basic ")) {
+                    name.erase(0, 6);
+                    c.name = name;
+                }
                 name.resize(name.size() - 7);
                 c.provides = {energy_type_from_string(lowercase(name))};
             } else if (kind == "Special" || mislabeled_special) {
@@ -168,8 +198,9 @@ namespace pokebot::import {
 
     } // namespace
 
-    Conversion convert_card(const json& tcgdex, const std::string& our_id) {
+    Conversion convert_card(const json& raw, const std::string& our_id) {
         Conversion out;
+        const json tcgdex = without_nulls(raw);
         CardDef& c = out.card;
         try {
             c.id = our_id;
@@ -195,6 +226,22 @@ namespace pokebot::import {
             throw CardDataError(our_id + ": " + e.what());
         }
         return out;
+    }
+
+    json apply_corrections(json tcgdex, const json& corrections) {
+        const auto& cards = corrections.at("cards");
+        if (const auto card = cards.find(tcgdex.at("id").get<std::string>()); card != cards.end()) {
+            tcgdex.update(*card);
+        }
+        const auto& evolves_from = corrections.at("evolves_from");
+        const json stage = tcgdex.value("stage", json());
+        const json from = tcgdex.value("evolveFrom", json());
+        if ((stage == "Stage1" || stage == "Stage2") && (from.is_null() || from == "")) {
+            if (const auto known = evolves_from.find(tcgdex.at("name").get<std::string>()); known != evolves_from.end()) {
+                tcgdex["evolveFrom"] = *known;
+            }
+        }
+        return tcgdex;
     }
 
 } // namespace pokebot::import

@@ -1,3 +1,6 @@
+#include <filesystem>
+#include <fstream>
+
 #include <catch2/catch_test_macros.hpp>
 
 #include "convert.hpp"
@@ -7,6 +10,8 @@ using pokebot::CardDataError;
 using pokebot::CardKind;
 using pokebot::DamageMod;
 using pokebot::EnergyType;
+using pokebot::Stage;
+using pokebot::import::apply_corrections;
 using pokebot::import::convert_card;
 
 TEST_CASE("converts a Pokemon ex with modifier damage and a free attack", "[convert]") {
@@ -92,6 +97,70 @@ TEST_CASE("treats Energy with rules text as Special even if TCGdex says Normal",
     CHECK(result.card.provides.empty());
     CHECK(result.card.text.starts_with("If this card"));
     CHECK(result.notes.size() == 2); // mislabeled + fill in what it provides
+}
+
+TEST_CASE("reads the newest sets' ways of writing things", "[convert]") {
+    const json ex = json::parse(R"({"id": "x", "name": "Mega Testmon ex", "category": "Pokemon", "stage": "Basic",
+        "hp": 300, "types": ["Fire"], "suffix": "EX", "weaknesses": [{"type": "Water", "value": "x2"}],
+        "attacks": [{"name": "A", "cost": null, "damage": null, "effect": null}], "abilities": null, "evolveFrom": null})");
+    const auto c = convert_card(ex, "TST-6").card;
+    CHECK(c.rules.ex);
+    CHECK(c.rules.mega);
+    CHECK(c.prize_value() == 3);
+    REQUIRE(c.weakness);
+    CHECK(c.weakness->multiplier == 2);
+    REQUIRE(c.attacks.size() == 1);
+    CHECK(c.attacks[0].damage == 0);
+    CHECK(c.attacks[0].text.empty());
+
+    const json energy = json::parse(R"({"id": "x", "name": "Basic Grass Energy", "category": "Energy", "energyType": "Normal"})");
+    const auto e = convert_card(energy, "TST-7").card;
+    CHECK(e.name == "Grass Energy");
+    CHECK(e.provides == std::vector{EnergyType::Grass});
+}
+
+TEST_CASE("says when an evolution or a Trainer is missing something", "[convert]") {
+    const json evolution = json::parse(R"({"id": "x", "name": "Testmon", "category": "Pokemon", "stage": "Stage1", "hp": 90, "types": ["Fire"]})");
+    CHECK(convert_card(evolution, "TST-8").notes.size() == 1);
+    const json trainer = json::parse(R"({"id": "x", "name": "Blank", "category": "Trainer", "trainerType": "Item"})");
+    CHECK(convert_card(trainer, "TST-9").notes.size() == 1);
+}
+
+TEST_CASE("corrections fix one card, or fill in what an evolution evolves from", "[convert]") {
+    const json corrections = json::parse(R"({"cards": {"xx-1": {"stage": "Stage2", "evolveFrom": "Testling"}},
+        "evolves_from": {"Midmon": "Babymon"}})");
+    const json wrong = json::parse(R"({"id": "xx-1", "name": "Testmon ex", "stage": "Basic", "evolveFrom": null})");
+    CHECK(apply_corrections(wrong, corrections).at("stage") == "Stage2");
+    CHECK(apply_corrections(wrong, corrections).at("evolveFrom") == "Testling");
+
+    const json missing = json::parse(R"({"id": "xx-2", "name": "Midmon", "stage": "Stage1", "evolveFrom": null})");
+    CHECK(apply_corrections(missing, corrections).at("evolveFrom") == "Babymon");
+    const json given = json::parse(R"({"id": "xx-3", "name": "Midmon", "stage": "Stage1", "evolveFrom": "Othermon"})");
+    CHECK(apply_corrections(given, corrections) == given);
+    const json basic = json::parse(R"({"id": "xx-4", "name": "Midmon", "stage": "Basic"})");
+    CHECK(apply_corrections(basic, corrections) == basic);
+    const json trainer = json::parse(R"({"id": "xx-5", "name": "Midmon", "category": "Trainer", "stage": null})");
+    CHECK(apply_corrections(trainer, corrections) == trainer);
+}
+
+TEST_CASE("the corrections file names real stages, and what every corrected card evolves from", "[convert]") {
+    std::ifstream in(std::filesystem::path(POKEBOT_SOURCE_DIR) / "data/cards/corrections.json", std::ios::binary);
+    REQUIRE(in);
+    const json corrections = json::parse(in);
+    for (const auto& [id, fields] : corrections.at("cards").items()) {
+        INFO(id);
+        CHECK((fields.at("stage") == "Stage1" || fields.at("stage") == "Stage2"));
+        CHECK_FALSE(fields.at("evolveFrom").get<std::string>().empty());
+    }
+    for (const auto& [name, from] : corrections.at("evolves_from").items()) {
+        INFO(name);
+        CHECK(from != name);
+    }
+    const json greninja = json::parse(R"({"id": "30th-021", "name": "Greninja ex", "category": "Pokemon", "stage": "Basic",
+        "hp": 300, "types": ["Water"], "suffix": "ex"})");
+    const auto c = convert_card(apply_corrections(greninja, corrections), "30C-21").card;
+    CHECK(c.stage == Stage::Stage2);
+    CHECK(c.evolves_from == "Frogadier");
 }
 
 TEST_CASE("rejects data it doesn't understand", "[convert]") {

@@ -9,7 +9,7 @@ The milestone plan from the project proposal, with the current status of each.
 | M1 | Card data, decklist parser, deck validator | ✅ Done |
 | M2 | Basic engine | ✅ Done |
 | M3 | Effects system and every card in the four decks | ✅ Done |
-| M3b | Standard coverage: card-text translator and coverage report | ⬜ Not started |
+| M3b | Standard coverage: card-text translator and coverage report | 🔄 In progress |
 | M4 | Observation layer, command-line client, replays | ✅ Done |
 | M5 | Greedy agent, match harness, profiling | ✅ Done |
 | M6 | Model 1: turn planner (or-tree and and-tree modes) | ✅ Done |
@@ -127,14 +127,76 @@ damage, prevention, Abilities, evolution, Prize cards, Bench size…), the event
 history they check. M3 builds that whole vocabulary, so any Standard card can be expressed, but writes
 effects only for our four decks. Covering the rest of Standard is M3b.
 
-## M3b — Standard coverage ⬜
+## M3b — Standard coverage 🔄
 
-A **translator from card text to effects files**, using the vocabulary M3 builds, plus a coverage report:
-how many Standard cards it converts, and exactly which texts still need new vocabulary or custom code.
-Hand-writing all 1,455 texts isn't realistic; the scan shows the wording is patterned enough for this to
-cover most of them. **Done when:** a target share of Standard (to be set once M3 is done) imports with
-effects and passes generated tests, and the rest is listed by what it needs. Can run alongside M4–M5,
-since the search work only needs our four decks.
+A **translator from card text to effects**, in the importer, plus a coverage report: how many Standard cards have all
+their effects, and exactly what the rest need. Hand-written effects files override what it produces.
+
+**Done when (2026-11-25, before any of it was built):**
+
+- at least 60% of the 2,109 distinct cards that TCGdex marks Standard-legal (1,266) have all their effects;
+- four new decks, chosen by the end of 3b.2, are fully playable, with hand-written effects for what the translator misses;
+- a person checks a random 200 translated texts: at most 4 wrong. Each wrong one's rule is fixed, and a fresh sample must pass;
+- 100,000 random games with the invariant checks find no problems, and the old decks are at most 10% slower.
+
+**What the measurements showed (2026-11-25):** every card was downloaded again (TEF to DLR and both promo sets), and a
+prototype phrase grammar in Python, kept out of the repo, sorted every text:
+
+| | Cards, of 2,109 | |
+|---|---|---|
+| No text, or everything expressible with today's vocabulary | 846 | 40.1% |
+| Every text parsed, if all the vocabulary it needs is built | 1,540 | 73.0% |
+
+- **Both are estimates.** In a random 60 of the texts marked expressible about 1 in 10 wasn't, and the rules for passives match
+  loosely, so 73% is an upper estimate for this grammar. Against that, it parses only 57 of our own decks' 85 texts, nearly
+  all of which have working effects, so a better grammar finds more.
+- **The 97.6% of the 2026-11-16 scan isn't a share of translatable texts.** It counts texts that mention a known mechanic. The
+  1,455 texts have 1,374 different sentence templates, 230 of them used more than once, so whole sentences can't be matched.
+- **Trainers lag:** 129 of 244 parse (all 2,213 cards counted).
+- **Delta Reign is left out of the 2,109.** TCGdex doesn't mark it legal and its data is incomplete: every Pokémon ex there is a
+  Basic (Mega Golisopod ex, for one, evolves from Wimpod), and 16 of its Trainers and Energy have no text. It's reported apart.
+- **TCGdex has wrong data, and the importer copied it.** Six Pokémon ex of 30th Celebration are stored as Basic but are evolutions
+  (checked on Limitless). **One is in mega-greninja: Greninja ex (30C 21), which is a Stage 2,** so every earlier run let that
+  deck play it as a 300-HP Basic. It's one card of 60. What it changed isn't measured, except that both sides of a
+  matchup had it. Other importer problems: 10 cards of Delta Reign write `EX` and were read as not ex, 53 write Weakness as `x2`, 8 Energy are named
+  "Basic …", and 53 evolutions don't say what they evolve from.
+- **Labels TCGdex doesn't have:** Tera (159 non-Mega ex to check), Ancient and Future.
+
+**The design:** the translator must use every word of a text or it produces nothing, so a misread fails loudly. Its effects go into
+`generated/`, marked as translated, which git ignores. It must compile to the same program as our hand-written effects wherever it
+translates one. After the Greninja fix, the old decks mustn't change: each step repeats one 320-game IS-MCTS run exactly.
+
+| Step | Builds | Status |
+|---|---|---|
+| 3b.1 | **Data:** corrections to TCGdex's data, the importer's fixes, whole sets imported, reprints matched, the coverage report, the scan document restored and corrected. *[Corrections](data/cards/README.md#correctionsjson) to TCGdex's data and the importer's fixes are built. All 460 tests pass, the re-import changes only Greninja ex (30C 21), and M10's result stands after the fix: 57.8% (56.6% to 59.0%). The bulk import and the coverage report are still to do* | 🔄 |
+| 3b.2 | **Translator** for today's vocabulary, checked against the hand-written effects; the four decks chosen | ⬜ |
+| 3b.3 | Damage, healing, counts and conditions | ⬜ |
+| 3b.4 | Lasting effects and damage passives | ⬜ |
+| 3b.5 | Triggers, Abilities with costs, locks, HP and Retreat Cost | ⬜ |
+| 3b.6 | Hands, decks, Energy, Stadium actions, Special Energy | ⬜ |
+| 3b.7 | The four decks: hand-written and custom cards | ⬜ |
+| 3b.8 | Audit, stress runs, sign-off | ⬜ |
+
+**Rules for the re-measurement (2026-11-25, before any run):** after the fix, IS-MCTS with the final θ plays hand θ, 6,400 games on seeds from
+3,200,001, no invariant checks. M10's result stands if the whole interval is above 50%; mega-greninja's matchups are reported. The
+weights aren't refitted. Then 320 games of the defaults (`--games 20 --seed 2000001`) are the run that later steps must repeat.
+
+**What the fix measured (2026-11-25):**
+
+- **The re-import** (`--offline data/decks data/archetypes`): 80 cards, 0 failures, 0 missing effects, all 16 lists legal. Checked
+  against the 80 raw TCGdex files, nothing else the new importer does differently touches any of them, so only Greninja ex changed.
+  The old cards, rebuilt from today's with that one put back, are in `replays/cards-m10/`, which git ignores, for replaying M10's
+  training games. That copy is a reconstruction; it hasn't been checked by playing one back.
+- **All 460 tests pass** on the new cards.
+- **M10's result stands:** the final θ against hand θ, 6,400 games from 3,200,001, scores **57.8% (56.6% to 59.0%)**: 3,697 won,
+  2,703 lost. The sign-off had 57.6%.
+- **Mega-greninja isn't measurably weaker:** its score against the other decks, both sides together, is 62.2% (± 1.9) against
+  64.1% (± 1.2) at the sign-off, on different seeds. Its matchups, both seatings averaged (± about 3.5, the sign-off's ± about
+  2.1): basic-box 54.9% (53.3%), dragapult 60.4% (63.7%), ns-zoroark 53.1% (55.1%), its mirror 55.2% (54.6%).
+- **By the deck A plays,** A less B (± about 3.8): dragapult +23.6, ns-zoroark +14.7, basic-box +12.0, mega-greninja +11.8. Each
+  is within its error of the sign-off's.
+- **The reference run** (the defaults, `--games 20 --no-check --seed 2000001`): **158 to 162**, 18.4 turns and 140.8 actions a game,
+  ended by Prize cards 266, no Pokémon left 37, deck-out 17. Later steps must repeat it in everything but the times.
 
 ## M4 — Observation layer, client, replays ✅
 
@@ -993,6 +1055,9 @@ pairing, `--seed 2100001`, no invariant checks. **A scores 55.1% (53.9% to 56.4%
 - **C was re-checked with `fitted-nonneg`** (0.4 against 0.7), not with the final θ, and no other value was tried.
 - **Which of the two new features does it isn't known from play,** since both were always played together; their losses were
   −0.0083 for `evolved` and −0.0039 for `deck_out` (10.6).
+- **One card was wrong:** Greninja ex (30C 21) in mega-greninja was played as a Basic, though it's a Stage 2 (see M3b), in every run and all
+  the training games. After the fix the final θ scores 57.8% (56.6% to 59.0%) against hand θ over 6,400 games, so the
+  result stands; θ wasn't refitted.
 - **Not perfectly calibrated:** the player to move does better than e says, by 2.1 points on average, and before any prize is taken the loss
   (0.6415, adjusted) is not far from a coin flip's with the same terms (0.6595 in the folds).
 - **`ready_attackers`, `conditions` and `prizes_at_risk` are fitted at 0** (θ ≥ 0), so they're skipped. In 10.4's free fit

@@ -29,13 +29,13 @@ Conversion convert_card(const nlohmann::json& tcgdex, const std::string& our_id)
 | `evolveFrom` | `evolves_from` | |
 | `hp`, `retreat` | same | `retreat` defaults to 0 |
 | `types` | `types` | `"Darkness"` → `EnergyType::Darkness` |
-| `weaknesses[0]` | `weakness` | value `"×2"` → multiplier 2 |
+| `weaknesses[0]` | `weakness` | value `"×2"` or `"x2"` → multiplier 2 |
 | `resistances[0]` | `resistance` | value `"-30"` → amount 30 |
 | `abilities[]` | `abilities` | `effect` text → `text` |
 | `attacks[].cost` | `cost` | missing → free attack |
 | `attacks[].damage` | `damage` + `damage_mod` | `70` → 70; `"20×"` → 20 Times; `"30+"` → 30 Plus; `"120-"` → 120 Minus |
 | `attacks[].effect` | `text` | |
-| `suffix: "ex"` | `rules.ex` | |
+| `suffix: "ex"` or `"EX"` | `rules.ex` | |
 | name starts with `Mega ` (and ex) | `rules.mega` | 3 Prize cards |
 | `trainerType` | `trainer_kind` | `Item`, `Supporter`, `Stadium`, `Tool` |
 | `rarity: "ACE SPEC Rare"` | `rules.ace_spec` | Trainers and Special Energy |
@@ -45,6 +45,18 @@ Conversion convert_card(const nlohmann::json& tcgdex, const std::string& our_id)
 | `effect` (Trainer / Special Energy) | `text` | |
 
 TCGdex fields not listed (prices, images, illustrator, set details) are ignored.
+
+A field that's `null` counts as missing. A basic Energy named "Basic Grass Energy" becomes "Grass Energy".
+
+## Corrections
+
+```cpp
+nlohmann::json apply_corrections(nlohmann::json tcgdex, const nlohmann::json& corrections);
+```
+
+Returns the TCGdex card with [`corrections.json`](../../data/cards/README.md#correctionsjson) applied: the fields given
+for its id, then, for an evolution that doesn't say what it evolves from, the name given for its own. The
+importer calls it before `convert_card`.
 
 ## What it can't know: notes
 
@@ -56,6 +68,8 @@ TCGdex doesn't record rule boxes, so some things need a person to check:
 | "Special Energy: fill in what it provides" | Every Special Energy |
 | "TCGdex lists this as basic Energy, but it has rules text" | A Special Energy that TCGdex labels `Normal` |
 | "has more than one Weakness; only the first is kept" | Rare older cards |
+| "an evolution card that doesn't say what it evolves from" | A Stage 1 or Stage 2 with no `evolveFrom`, after corrections |
+| "Trainer with no rules text" | A Trainer whose text TCGdex doesn't have |
 
 The importer prints these under **Needs review**.
 
@@ -75,5 +89,6 @@ When a new deck hits one of these, the error says exactly what to support next.
 ## Tests
 
 [`tests/test_convert.cpp`](../../../tests/test_convert.cpp), tag `[convert]`. It uses small
-made-up TCGdex cards: an ex with `×` damage and a free attack, an ACE SPEC Trainer, a Basic
-Energy, data it must reject, and a save-and-reload check for damage modifiers.
+made-up TCGdex cards, and the repo's own corrections file: an ex with `×` damage and a free attack, an ACE SPEC Trainer, a Basic
+Energy, data it must reject, a save-and-reload check for damage modifiers, the newest sets' spellings (`EX`, `x2`,
+nulls, "Basic Grass Energy"), the notes for missing data, and corrections.

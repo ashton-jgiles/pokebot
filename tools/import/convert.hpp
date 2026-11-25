@@ -20,4 +20,6 @@ namespace pokebot::import {
     // instead of silently converted wrong.
     Conversion convert_card(const nlohmann::json& tcgdex, const std::string& our_id);
 
+    nlohmann::json apply_corrections(nlohmann::json tcgdex, const nlohmann::json& corrections);
+
 } // namespace pokebot::import

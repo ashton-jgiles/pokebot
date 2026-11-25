@@ -5,6 +5,7 @@
 #include <iostream>
 #include <map>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -78,6 +79,7 @@ int main(int argc, char** argv) {
     TcgdexOptions options;
     const std::filesystem::path generated_dir = "data/cards/generated";
     const std::filesystem::path effects_dir = "data/cards/effects";
+    const std::filesystem::path corrections_file = "data/cards/corrections.json";
     std::map<std::string, std::vector<std::string>> review; // card label -> notes
     std::vector<std::filesystem::path> decklists;
     for (int i = 1; i < argc; ++i) {
@@ -101,6 +103,11 @@ int main(int argc, char** argv) {
     try {
         CurlProcessClient http;
         TcgdexClient tcgdex(http, options);
+        std::ifstream corrections_in(corrections_file, std::ios::binary);
+        if (!corrections_in) {
+            throw std::runtime_error("cannot open " + corrections_file.string());
+        }
+        const nlohmann::json corrections = nlohmann::json::parse(corrections_in);
 
         std::set<std::pair<std::string, int>> seen;
         int failures = 0;
@@ -116,7 +123,7 @@ int main(int argc, char** argv) {
                 }
                 const std::string label = entry.set_code + " " + std::to_string(entry.number);
                 try {
-                    const auto card = tcgdex.card({entry.set_code, entry.number});
+                    const auto card = apply_corrections(tcgdex.card({entry.set_code, entry.number}), corrections);
                     const auto api_name = card.at("name").get<std::string>();
                     std::cout << "  ok    " << label << "  " << api_name << '\n';
 
