@@ -746,7 +746,7 @@ decides.
 | 10.3 | **Evaluation lab:** held-out log loss and calibration of e against the baselines. *[`evaluation_lab`](src/harness/evaluation_lab.md) is built: a coin flip, prizes with a fitted scale, the hand θ as played and with a fitted scale, scored on seeds they weren't fitted on (10 folds by seed), with errors clustered by seed. `--evaluate FILE,...`. How far to go needs the fitted θ, so that decision moves to the end of 10.4. All tests pass. The results on parts 1 to 4 are below* | ✅ |
 | 10.4 | **The fit:** logistic regression in C++ (Newton, L2), pairing and first-player terms, optional θ ≥ 0, leave-one-deck-out; recovers known weights on made-up data. *[`weight_fit`](src/harness/weight_fit.md) is built, with terms for each pairing, going first and the player to move, and the [evaluation lab](src/harness/evaluation_lab.md) scores every model raw and with those terms fitted on the training folds (deck-adjusted), and on decks left out of the fit. `--evaluate` compares the fits and `--save-weights` saves them. All tests pass, and the raw losses repeat 10.3's from a different solver. The results on parts 1 to 4 are below. `data/weights/m10/fitted-nonneg.txt` goes to 10.5* | ✅ |
 | 10.5 | **Arena tuning:** learned against hand θ in Greedy, Flat MC and IS-MCTS; C re-checked. *The main run: IS-MCTS with learned θ scores 52.4% (51.2% to 53.6%) against hand θ over 6,400 games; the hand θ only rescaled scores 49.0% (47.8% to 50.3%), and C stays at 0.7. `--mcts-c-a` and `--mcts-c-b` are built for the C run. Greedy with learned θ loses: 42.9% (42.2% to 43.7%). Flat MC with learned θ scores 52.4% (51.1% to 53.6%). Learned θ takes about 9% more search time a game in IS-MCTS. Playouts played with hand θ instead make no measurable difference (50.3%), so learned θ plays them. The runs are below* | ✅ |
-| 10.6 | **New features,** one at a time, with their `upper_bound` terms. *The measuring is built: six [candidate features](src/agents/evaluation/evaluation.md#candidates) that weigh 0 until chosen, `--candidates` and `--with` in the [evaluation lab](src/harness/evaluation_lab.md#candidate-features), and `evaluate` skipping features that weigh 0. All tests pass, and 320 games of 10.5's main run repeat exactly. Round 1 adds `evolved` and round 2 `deck_out`; the rounds are below* | 🔄 |
+| 10.6 | **New features,** one at a time, with their `upper_bound` terms. *The measuring is built: six [candidate features](src/agents/evaluation/evaluation.md#candidates) that weigh 0 until chosen, `--candidates` and `--with` in the [evaluation lab](src/harness/evaluation_lab.md#candidate-features), and `evaluate` skipping features that weigh 0. All tests pass, and 320 games of 10.5's main run repeat exactly. Round 1 adds `evolved` and round 2 `deck_out`, and in round 3 nothing passes: `data/weights/m10/fitted-evolved-deck_out.txt`. The rounds are below. Their `upper_bound` terms and the match are still to do* | 🔄 |
 | 10.7 | **Sign-off:** IS-MCTS with learned against hand θ, 16,000 games with invariant checks on unused seeds; the endgame agent re-tested; known limits | ⬜ |
 
 **What 10.3 measured (2026-11-24):** parts 1 to 4, 12,800 games, 498,549 positions, 400 seeds; 95% intervals by seed.
@@ -874,6 +874,18 @@ Round 2 (2026-11-25), on top of `evolved`: without another candidate the loss is
 | `deck_out` | **−0.0039 ± 0.0008** | 1.10 | −0.0031 | −0.0058 | −0.0020 | −0.0046 | **yes, the only one: added** |
 | all five | −0.0079 ± 0.0013 | | +0.0005 ± 0.0033 | −0.0099 | −0.0070 | −0.0015 | not a candidate |
 
+Round 3 (2026-11-25), on top of `evolved` and `deck_out`: without another candidate the loss is 0.5457.
+
+| Candidate | Change | Weight | Left-out basic-box | dragapult | mega-greninja | ns-zoroark | Passes |
+|---|---|---|---|---|---|---|---|
+| `late_prizes` | −0.0004 ± 0.0003 | 0.56 | +0.0002 | −0.0004 | −0.0008 | −0.0006 | no: under 0.0010 |
+| `knockout_threat` | −0.0013 ± 0.0003 | 0.38 | −0.0012 | −0.0016 | −0.0017 | +0.0014 ± 0.0006 | no: worse on ns-zoroark |
+| `payable_damage` | −0.0011 ± 0.0004 | 0.27 | −0.0011 | −0.0014 | −0.0016 | +0.0062 ± 0.0011 | no: worse on ns-zoroark |
+| `board_hp` | −0.0021 ± 0.0007 | 0.31 | +0.0047 ± 0.0025 | −0.0019 | −0.0021 | −0.0020 | no: worse on basic-box |
+| all four | −0.0040 ± 0.0009 | | +0.0036 ± 0.0029 | −0.0041 | −0.0049 | +0.0031 ± 0.0015 | not a candidate |
+
+- **Chosen: `evolved` (0.808) and `deck_out` (1.105),** a loss of 0.5457 against 0.5580, more than refitting the ten weights
+  gained (0.0106). With the other four added, left-out basic-box and ns-zoroark get worse.
 - **Most of the early-game gain is `evolved`'s:** before any prize is taken the loss goes from 0.6533 to 0.6434, and to 0.6432 with all
   six. A coin flip with terms is 0.6595. This is still prediction, not play.
 - **Skipping features that weigh 0 changes nothing but time:** `--games 20` of 10.5's main run is 173 to 147 again, with every
