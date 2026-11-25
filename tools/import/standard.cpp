@@ -1,5 +1,6 @@
 #include "standard.hpp"
 
+#include <algorithm>
 #include <cctype>
 #include <charconv>
 #include <fstream>
@@ -36,15 +37,6 @@ namespace pokebot::import {
                 }
             }
             return out;
-        }
-
-        bool legal(const json& card) {
-            const auto it = card.find("legal");
-            if (it == card.end() || !it->is_object()) {
-                return false;
-            }
-            const auto standard = it->find("standard");
-            return standard != it->end() && standard->is_boolean() && standard->get<bool>();
         }
 
         json read_effects(const std::filesystem::path& file) {
@@ -90,6 +82,26 @@ namespace pokebot::import {
         return set_code + "-" + std::to_string(number);
     }
 
+    bool standard_legal(const json& tcgdex) {
+        const auto it = tcgdex.find("legal");
+        if (it == tcgdex.end() || !it->is_object()) {
+            return false;
+        }
+        const auto standard = it->find("standard");
+        return standard != it->end() && standard->is_boolean() && standard->get<bool>();
+    }
+
+    std::string expand_energy_symbols(std::string name) {
+        static const std::map<char, std::string> kTypes = {{'G', "Grass"}, {'R', "Fire"}, {'W', "Water"}, {'L', "Lightning"}, {'P', "Psychic"}, {'F', "Fighting"}, {'D', "Darkness"}, {'M', "Metal"}, {'N', "Dragon"}, {'C', "Colorless"}};
+        for (std::size_t at = name.find('{'); at != std::string::npos && at + 2 < name.size(); at = name.find('{', at + 1)) {
+            const auto type = kTypes.find(name[at + 1]);
+            if (name[at + 2] == '}' && type != kTypes.end()) {
+                name.replace(at, 3, type->second);
+            }
+        }
+        return name;
+    }
+
     std::string card_signature(const CardDef& card) {
         std::string s = card.name + '|' + std::to_string(static_cast<int>(card.kind)) + '|' + std::to_string(static_cast<int>(card.stage)) + '|' +
                         std::to_string(card.hp) + '|' + clean(card.text);
@@ -108,7 +120,7 @@ namespace pokebot::import {
         for (const auto& [code, cards] : sets) {
             for (const json& tcgdex : cards) {
                 ++out.printings;
-                if (!legal(tcgdex)) {
+                if (!standard_legal(tcgdex)) {
                     ++out.not_legal[code];
                     continue;
                 }
@@ -155,6 +167,43 @@ namespace pokebot::import {
             }
         }
         return out;
+    }
+
+    std::map<std::string, std::string> link_reprints(const std::filesystem::path& generated_dir, const std::filesystem::path& effects_dir) {
+        std::vector<std::pair<std::filesystem::path, json>> cards;
+        for (const auto& file : std::filesystem::directory_iterator(generated_dir)) {
+            if (file.path().extension() == ".json") {
+                std::ifstream in(file.path(), std::ios::binary);
+                cards.emplace_back(file.path(), json::parse(in));
+            }
+        }
+        std::sort(cards.begin(), cards.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+        std::map<std::string, std::string> written;
+        for (const auto& [path, card] : cards) {
+            if (std::filesystem::exists(effects_dir / path.filename())) {
+                written.emplace(card_signature(card.get<CardDef>()), card.at("id").get<std::string>());
+            }
+        }
+        std::map<std::string, std::string> links;
+        for (auto& [path, card] : cards) {
+            std::string target;
+            if (!std::filesystem::exists(effects_dir / path.filename())) {
+                if (const auto it = written.find(card_signature(card.get<CardDef>())); it != written.end()) {
+                    target = it->second;
+                    links.emplace(card.at("id").get<std::string>(), target);
+                }
+            }
+            if (card.value("same_as", "") == target) {
+                continue;
+            }
+            if (target.empty()) {
+                card.erase("same_as");
+            } else {
+                card["same_as"] = target;
+            }
+            std::ofstream(path, std::ios::binary) << card.dump(2) << '\n';
+        }
+        return links;
     }
 
 } // namespace pokebot::import

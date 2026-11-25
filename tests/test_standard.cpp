@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <random>
 #include <string>
 #include <system_error>
@@ -8,11 +9,14 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include "cards/db/card_db.hpp"
 #include "standard.hpp"
 
 using nlohmann::json;
 using pokebot::import::card_signature;
 using pokebot::import::Coverage;
+using pokebot::import::expand_energy_symbols;
+using pokebot::import::link_reprints;
 using pokebot::import::printing_id;
 using pokebot::import::standard_coverage;
 using pokebot::import::StandardCard;
@@ -138,4 +142,35 @@ TEST_CASE("missing and contradictory data is a problem, and corrections fix it",
             CHECK(entry.problems.empty());
         }
     }
+}
+
+TEST_CASE("decklists' Energy symbols read as the names TCGdex gives", "[standard]") {
+    CHECK(expand_energy_symbols("Telepathic {P} Energy") == "Telepathic Psychic Energy");
+    CHECK(expand_energy_symbols("Rocky {F} Energy") == "Rocky Fighting Energy");
+    CHECK(expand_energy_symbols("Ultra Ball") == "Ultra Ball");
+    CHECK(expand_energy_symbols("{X} and {") == "{X} and {");
+}
+
+TEST_CASE("a printing without its own effects uses those of a reprint with the same rules", "[standard]") {
+    TempDir generated;
+    TempDir effects;
+    const auto card = [](const std::string& id, int hp) {
+        return json{{"id", id}, {"name", "Testmon"}, {"kind", "pokemon"}, {"rules", json::array()}, {"stage", "basic"}, {"hp", hp}, {"types", {"fire"}}, {"weakness", nullptr}, {"resistance", nullptr}, {"retreat", 1}, {"abilities", json::array()}, {"attacks", {{{"name", "Hit"}, {"cost", {"fire"}}, {"damage", 10}, {"damage_mod", "none"}, {"text", "Draw a card."}, {"effects", json::array()}}}}};
+    };
+    std::ofstream(generated.path / "TST-1.json") << card("TST-1", 70).dump();
+    std::ofstream(generated.path / "OLD-5.json") << card("OLD-5", 70).dump();
+    std::ofstream(generated.path / "TST-2.json") << card("TST-2", 80).dump();
+    std::ofstream(effects.path / "TST-1.json") << R"({"attacks": {"Hit": {"effects": [{"op": "draw"}]}}})";
+
+    const auto links = link_reprints(generated.path, effects.path);
+    CHECK(links == std::map<std::string, std::string>{{"OLD-5", "TST-1"}});
+    CHECK(link_reprints(generated.path, effects.path) == links);
+    const pokebot::CardDB db = pokebot::CardDB::load(generated.path, effects.path);
+    CHECK(db.at("OLD-5").attacks[0].effects.size() == 1);
+    CHECK(db.at("TST-2").attacks[0].effects.empty());
+
+    std::filesystem::remove(effects.path / "TST-1.json");
+    CHECK(link_reprints(generated.path, effects.path).empty());
+    std::ifstream in(generated.path / "OLD-5.json");
+    CHECK_FALSE(json::parse(in).contains("same_as"));
 }

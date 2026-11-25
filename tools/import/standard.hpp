@@ -30,9 +30,15 @@ namespace pokebot::import {
 
     std::string printing_id(const std::string& set_code, const std::string& local_id);
 
+    bool standard_legal(const nlohmann::json& tcgdex);
+
+    std::string expand_energy_symbols(std::string name);
+
     std::string card_signature(const CardDef& card);
 
     Coverage standard_coverage(const std::vector<std::pair<std::string, nlohmann::json>>& sets, const nlohmann::json& corrections,
                                const std::filesystem::path& effects_dir);
+
+    std::map<std::string, std::string> link_reprints(const std::filesystem::path& generated_dir, const std::filesystem::path& effects_dir);
 
 } // namespace pokebot::import

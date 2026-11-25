@@ -170,7 +170,8 @@ translates one. After the Greninja fix, the old decks mustn't change: each step 
 | Step | Builds | Status |
 |---|---|---|
 | 3b.1 | **Data:** corrections to TCGdex's data, the importer's fixes, whole sets imported, reprints matched, the coverage report, the scan document restored and corrected. *[Corrections](data/cards/README.md#correctionsjson) to TCGdex's data and the importer's fixes are built. All 460 tests pass, the re-import changes only Greninja ex (30C 21), and M10's result stands after the fix: 57.8% (56.6% to 59.0%). The bulk import and the [coverage report](tools/import/standard.md) are built: all 466 tests pass, and 373 of the 2,097 distinct cards (17.8%) have all their effects. The [scan document](research/standard-scan.md) is restored and corrected. Reprints in decklists move to 3b.2* | ✅ |
-| 3b.2 | **Translator** for today's vocabulary, checked against the hand-written effects; reprints in decklists use their card's effects; the four decks chosen | ⬜ |
+| 3b.2a | **Any deck export imports:** set codes found through TCGdex's series, reprints using their card's effects (`same_as`), and a report for each deck. Decks that aren't playable yet wait in `data/decks/incoming/`, which the sim and the tests don't read. *Built, not yet tested or run* | 🔄 |
+| 3b.2 | **Translator** for today's vocabulary, checked against the hand-written effects. *The four decks are chosen (below)* | ⬜ |
 | 3b.3 | Damage, healing, counts and conditions | ⬜ |
 | 3b.4 | Lasting effects and damage passives | ⬜ |
 | 3b.5 | Triggers, Abilities with costs, locks, HP and Retreat Cost | ⬜ |
@@ -219,6 +220,30 @@ weights aren't refitted. Then 320 games of the defaults (`--games 20 --seed 2000
   their other printings.
 - **Tera not checked: 163** Pokémon ex.
 - **The reference run repeats** 158 to 162 in everything but the times, so nothing played changed.
+
+**The four new decks (2026-11-25, chosen by the user):** `alakazam` and `festival-lead`, two popular single-Prize decks, and
+`mega-lucario` and `mega-venasaur`, two evolution decks, in [`data/decks/incoming/`](data/decks/README.md) until they're playable. Sorted by the prototype
+grammar, against the downloaded sets (distinct cards in each list):
+
+| Deck | Cards | Already complete | Need nothing new | Need new vocabulary | Not parsed |
+|---|---|---|---|---|---|
+| `alakazam` | 24 | 12 | 3 | 5 | 4 |
+| `festival-lead` | 27 | 11 | 3 | 4 | 9 |
+| `mega-lucario` | 27 | 14 | 1 | 6 | 6 |
+| `mega-venasaur` | 25 | 13 | 3 | 5 | 3, and Ultra Ball (PAF 91) |
+
+- **What they need most:** damage prevention (three decks), Abilities on evolving or when played, Ability locks, self-damage,
+  Energy counts, HP passives and next-turn damage effects (two each).
+- **The hardest:** `festival-lead`. Festival Grounds, Dipplin and Seaking attacking twice (the extra-attack flow is built, but
+  no card uses it yet), Forest of Vitality (the rule question exists), Kieran's "choose 1", and Gladion's Final Battle's "only
+  when it is the last card in your hand".
+- **Special Energy with triggers or prevention:** Telepathic, Enriching and Mist Energy in `alakazam`, Growing and Rocky
+  Energy in the others. Meganium's "each Basic {G} Energy provides {G}{G}" is a rule question (Energy provided) with no passive
+  for it yet.
+- **Printings from rotated sets:** Rare Candy (SVI 191), Switch (SVI 194), Boss's Orders (PAL 172) and Ultra Ball (PAF 91).
+  Their sets aren't in `sets.json`, so the importer can't find them yet.
+- **Variants for later:** other `basic-box` and `dragapult` lists, and `basic-box` lists with Mew ex or Mega Rayquaza ex,
+  as [archetype lists](data/archetypes/README.md). Mega Rayquaza ex is a Delta Reign card, whose data isn't trusted yet.
 
 ## M4 — Observation layer, client, replays ✅
 

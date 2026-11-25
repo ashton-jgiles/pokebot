@@ -159,6 +159,7 @@ int main(int argc, char** argv) {
     const std::filesystem::path generated_dir = "data/cards/generated";
     const std::filesystem::path effects_dir = "data/cards/effects";
     const std::filesystem::path corrections_file = "data/cards/corrections.json";
+    const std::filesystem::path archetypes_dir = "data/archetypes";
     std::map<std::string, std::vector<std::string>> review; // card label -> notes
     std::vector<std::filesystem::path> decklists;
     bool standard = false;
@@ -198,6 +199,7 @@ int main(int argc, char** argv) {
         }
 
         std::set<std::pair<std::string, int>> seen;
+        std::map<std::string, bool> standard_printing;
         int failures = 0;
         int name_mismatches = 0;
 
@@ -215,13 +217,14 @@ int main(int argc, char** argv) {
                     const auto api_name = card.at("name").get<std::string>();
                     std::cout << "  ok    " << label << "  " << api_name << '\n';
 
-                    if (api_name != entry.name && !entry.name.starts_with("Basic {")) {
+                    if (api_name != expand_energy_symbols(entry.name) && !entry.name.starts_with("Basic {")) {
                         ++name_mismatches;
                         std::cout << "        warning: decklist says \"" << entry.name << "\"\n";
                     }
 
                     // Convert to our format and save it.
                     const std::string id = card_id(entry);
+                    standard_printing[id] = standard_legal(card);
                     const auto conversion = convert_card(card, id);
                     std::filesystem::create_directories(generated_dir);
                     std::ofstream(generated_dir / (id + ".json"), std::ios::binary)
@@ -260,13 +263,50 @@ int main(int argc, char** argv) {
                   << " network requests, " << failures << " failures, " << name_mismatches
                   << " name mismatches\n";
 
+        const auto links = link_reprints(generated_dir, effects_dir);
+        std::cout << links.size() << " printings use the effects of a reprint with the same rules\n";
+
         // Load everything back exactly as the engine will, merging effects files.
         const CardDB db = CardDB::load(generated_dir, effects_dir);
         const auto missing = db.missing_effects();
-        std::cout << db.size() << " cards load cleanly; " << missing.size()
-                  << " attacks/abilities/cards still need hand-written effects\n";
-        for (const auto& item : missing) {
-            std::cout << "  needs effects: " << item << '\n';
+        std::cout << db.size() << " cards load cleanly; " << missing.size() << " attacks/abilities/cards still need effects\n";
+
+        std::cout << "\nDecks:\n";
+        for (const auto& path : decklists) {
+            std::vector<std::string> ids;
+            for (const auto& entry : load_decklist(path).entries) {
+                if (const std::string id = card_id(entry); std::find(ids.begin(), ids.end(), id) == ids.end()) {
+                    ids.push_back(id);
+                }
+            }
+            std::size_t ready = 0;
+            std::vector<std::string> lines;
+            for (const std::string& id : ids) {
+                const CardDef* card = db.find(id);
+                if (card == nullptr) {
+                    lines.push_back("not imported: " + id);
+                    continue;
+                }
+                const auto card_missing = pokebot::missing_effects(*card);
+                if (card_missing.empty()) {
+                    ++ready;
+                }
+                for (const auto& item : card_missing) {
+                    lines.push_back("needs effects: " + item);
+                }
+                if (const auto legal = standard_printing.find(id); legal != standard_printing.end() && !legal->second) {
+                    const auto link = links.find(id);
+                    lines.push_back(link != links.end() ? "older printing: " + id + " " + card->name + ", the same card as " + link->second
+                                                        : "TCGdex doesn't mark this printing Standard-legal: " + id + " " + card->name);
+                }
+            }
+            std::cout << "  " << path.string() << ": " << ready << " of " << ids.size() << " cards ready\n";
+            for (const auto& line : lines) {
+                std::cout << "    " << line << '\n';
+            }
+            if (path.parent_path().filename() == "decks" && !std::filesystem::exists(archetypes_dir / path.stem())) {
+                std::cout << "    no archetype folder " << (archetypes_dir / path.stem()).string() << ": agents can't recognise this deck as an opponent\n";
+            }
         }
 
         // Check every deck against the deck-building rules.

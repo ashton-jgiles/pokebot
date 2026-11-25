@@ -28,13 +28,14 @@ namespace pokebot::import {
         std::chrono::milliseconds retry_delay{500}; // doubles after each failed attempt
         std::chrono::milliseconds request_gap{150}; // pause between requests (be polite)
         int page_size = 250;
+        std::vector<std::string> series = {"sv", "me"};
     };
 
     class TcgdexClient {
     public:
         TcgdexClient(HttpClient& http, TcgdexOptions options);
 
-        std::string set_id(const std::string& set_code) const;
+        std::string set_id(const std::string& set_code);
 
         std::string card_id(const CardRef& ref);
 
@@ -56,6 +57,8 @@ namespace pokebot::import {
         TcgdexOptions options_;
         std::map<std::string, std::string> set_ids_;
         std::map<std::string, nlohmann::json> sets_;
+        std::map<std::string, std::string> found_codes_;
+        bool series_read_ = false;
         int network_requests_ = 0;
     };
 

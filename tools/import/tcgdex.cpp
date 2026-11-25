@@ -51,12 +51,36 @@ namespace pokebot::import {
         }
     }
 
-    std::string TcgdexClient::set_id(const std::string& set_code) const {
-        const auto it = set_ids_.find(set_code);
-        if (it == set_ids_.end()) {
-            throw std::runtime_error("unknown set code '" + set_code + "' - add it to " + options_.sets_file.string());
+    std::string TcgdexClient::set_id(const std::string& set_code) {
+        if (const auto it = set_ids_.find(set_code); it != set_ids_.end()) {
+            return it->second;
         }
-        return it->second;
+        const auto codes_file = options_.cache_dir / "set-codes.json";
+        if (found_codes_.empty() && std::filesystem::exists(codes_file)) {
+            const nlohmann::json saved = read_json_file(codes_file);
+            for (const auto& [code, id] : saved.items()) {
+                found_codes_[code] = id.get<std::string>();
+            }
+        }
+        if (!found_codes_.contains(set_code) && !series_read_ && !options_.offline) {
+            series_read_ = true;
+            for (const std::string& series : options_.series) {
+                const auto detail = cached_get(options_.cache_dir / "series" / (series + ".json"), "/series/" + series);
+                for (const auto& set : detail.value("sets", nlohmann::json::array())) {
+                    const std::string id = set.at("id").get<std::string>();
+                    const auto abbreviation = set_detail(id).value("abbreviation", nlohmann::json());
+                    const std::string code = abbreviation.is_object() ? abbreviation.value("official", "") : "";
+                    if (!code.empty()) {
+                        found_codes_.emplace(code, id);
+                    }
+                }
+            }
+            write_json_file(codes_file, nlohmann::json(found_codes_));
+        }
+        if (const auto it = found_codes_.find(set_code); it != found_codes_.end()) {
+            return it->second;
+        }
+        throw std::runtime_error("unknown set code '" + set_code + "': it isn't in " + options_.sets_file.string() + " or any set of the series TCGdex lists");
     }
 
     const nlohmann::json& TcgdexClient::set_detail(const std::string& id) {

@@ -1,3 +1,9 @@
+#include <filesystem>
+#include <fstream>
+#include <random>
+#include <string>
+#include <system_error>
+
 #include <catch2/catch_test_macros.hpp>
 
 #include "cards/db/card_db.hpp"
@@ -73,4 +79,33 @@ TEST_CASE("bad card data is reported, not silently accepted", "[card_db]") {
     auto wrong_type = sample_pokemon();
     wrong_type["hp"] = "200";
     CHECK_THROWS_AS(wrong_type.get<CardDef>(), CardDataError);
+}
+
+TEST_CASE("a card's same_as uses another card's effects file, unless it has its own", "[card_db]") {
+    std::random_device rd;
+    const auto root = std::filesystem::temp_directory_path() / ("pokebot-same-as-" + std::to_string(rd()));
+    const auto generated = root / "generated";
+    const auto effects = root / "effects";
+    std::filesystem::create_directories(generated);
+    std::filesystem::create_directories(effects);
+    json reprint = sample_pokemon();
+    reprint["id"] = "OLD-1";
+    reprint["same_as"] = "TST-1";
+    json own = sample_pokemon();
+    own["id"] = "OWN-1";
+    own["same_as"] = "TST-1";
+    std::ofstream(generated / "TST-1.json") << sample_pokemon().dump();
+    std::ofstream(generated / "OLD-1.json") << reprint.dump();
+    std::ofstream(generated / "OWN-1.json") << own.dump();
+    std::ofstream(effects / "TST-1.json") << R"({"attacks": {"Zap": {"effects": [{"op": "draw"}]}}})";
+    std::ofstream(effects / "OWN-1.json") << R"({"attacks": {"Zap": {"effects": [{"op": "draw"}, {"op": "draw"}]}}})";
+    {
+        const CardDB db = CardDB::load(generated, effects);
+        CHECK(db.at("OLD-1").attacks[0].effects.size() == 1);
+        CHECK(db.at("OWN-1").attacks[0].effects.size() == 2);
+    }
+    std::filesystem::remove(effects / "TST-1.json");
+    CHECK_THROWS_AS(CardDB::load(generated, effects), CardDataError);
+    std::error_code ignored;
+    std::filesystem::remove_all(root, ignored);
 }

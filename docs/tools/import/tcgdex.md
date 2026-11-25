@@ -43,13 +43,14 @@ A card as a decklist names it: `{set_code, number}`, e.g. `{"TWM", 130}`.
 | `retry_delay` | 500 ms | Wait after a failed try; doubles each time |
 | `request_gap` | 150 ms | Pause between requests, to be polite to a free service |
 | `page_size` | 250 | Cards per request for a whole set |
+| `series` | `sv`, `me` | The series searched for a set code that isn't in `sets.json` |
 
 ### `class TcgdexClient`
 
 | Member | Behavior |
 |---|---|
 | `TcgdexClient(HttpClient& http, TcgdexOptions options)` | Loads `sets.json`. The `HttpClient` must outlive the client |
-| `std::string set_id(const std::string& set_code) const` | `"TWM"` → `"sv06"`. Throws if the code isn't in `sets.json` |
+| `std::string set_id(const std::string& set_code)` | `"TWM"` → `"sv06"`, from `sets.json` or [TCGdex's series](#set-codes). Throws if neither has it |
 | `std::string card_id(const CardRef&)` | `{"POR", 62}` → `"me03-062"`. Throws if the number isn't in the set |
 | `nlohmann::json card(const CardRef&)` | The full TCGdex card object |
 | `nlohmann::json set_cards(const std::string& set_code)` | Every card of a set, from [one request a page](#whole-sets) |
@@ -75,6 +76,8 @@ The fields are TCGdex's own names, but missing values come as `null`, which
 data/cards/raw/
 ├── sets/me03.json        one file per set
 ├── bulk/me03.json        a whole set's cards, from set_cards
+├── series/sv.json        a series' sets, for set codes
+├── set-codes.json        the set codes found
 └── cards/me03-062.json   one file per card
 ```
 
@@ -91,10 +94,18 @@ response only counts once it parses as a JSON object. Otherwise the request is r
 500 ms, then 1 s, up to `max_attempts` tries, and then a `runtime_error` names the URL and the
 last problem.
 
+## Set codes
+
+`sets.json` holds the codes of the sets the [coverage report](standard.md) reads. Any other code, such as `PAF` (Paldean
+Fates) in an older printing, is found the first time it's needed: `GET /series/sv` and `/series/me` list their sets,
+each set's page gives its `abbreviation.official`, and every code found is saved to `raw/set-codes.json`. That's about
+30 requests once, and none after: set pages are cached like any other. With `offline`, only the saved codes are used.
+If two sets share a code, the first in the series' order wins; `sets.json` decides for its own codes.
+
 ## Adding a new set
 
-If a decklist uses a set code that isn't in `sets.json`, the import fails with
-`unknown set code 'XYZ' - add it to data/cards/sets.json`. To find the TCGdex id:
+If a decklist uses a set code that neither `sets.json` nor the series have (a promo code written differently in an
+export, say), the import fails with `unknown set code 'XYZ'`. To find the TCGdex id:
 
 1. Open `https://api.tcgdex.net/v2/en/sets` and find the set by name.
 2. Open `https://api.tcgdex.net/v2/en/sets/<id>` and check that `abbreviation.official`
@@ -106,4 +117,4 @@ If a decklist uses a set code that isn't in `sets.json`, the import fails with
 [`tests/test_tcgdex.cpp`](../../../tests/test_tcgdex.cpp), tag `[tcgdex]`. It uses a fake
 `HttpClient` and a temporary folder, and covers padded ids, unknown sets and numbers, caching,
 offline mode, retries after empty or failed responses, and giving up; and whole sets in pages, keeping only the set's
-cards, from the cache, offline, and after too many attempts.
+cards, from the cache, offline, and after too many attempts; and set codes found through the series and remembered.

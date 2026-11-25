@@ -64,6 +64,12 @@ namespace pokebot {
                 const auto effects_file = effects_dir / file.path().filename();
                 if (std::filesystem::exists(effects_file)) {
                     card = merge_effects(std::move(card), read_json(effects_file));
+                } else if (const std::string same_as = card.value("same_as", ""); !same_as.empty()) {
+                    const auto linked = effects_dir / (same_as + ".json");
+                    if (!std::filesystem::exists(linked)) {
+                        throw CardDataError("same_as names " + same_as + ", which has no effects file");
+                    }
+                    card = merge_effects(std::move(card), read_json(linked));
                 }
                 db.add(card.get<CardDef>());
             } catch (const CardDataError& e) {

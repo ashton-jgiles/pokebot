@@ -39,14 +39,21 @@ are processed once):
 
 1. Fetch the card through [`TcgdexClient`](tcgdex.md) (from the cache when possible).
 2. Compare TCGdex's name with the decklist's name and warn if they differ. That usually means a
-   wrong set code or number. Basic Energy is skipped, since decklists write it as `Basic {D} Energy`.
+   wrong set code or number. Energy symbols count as their names, so "Telepathic {P} Energy" matches
+   "Telepathic Psychic Energy", and basic Energy is skipped, since decklists write it as `Basic {D} Energy`.
+   A set code that isn't in `sets.json`, such as `PAF` for an older printing, is
+   [found through TCGdex's series](tcgdex.md#set-codes).
 3. Apply [`corrections.json`](../../data/cards/README.md#correctionsjson), convert it with [`convert_card`](convert.md) and write `data/cards/generated/<id>.json`.
 4. Collect any review notes.
 
-Then it prints the review notes, a summary, loads everything through
-[`CardDB::load`](../../src/cards/db/card_db.md), exactly as the engine will. That last step checks
-that every generated file and every effects file is valid, and counts what still needs effects.
-Finally it checks each decklist with the [deck validator](../../src/cards/validator/deck_validator.md) and
+Then it prints the review notes and a summary, and [links reprints](standard.md#reprints): every card in
+`generated/` without its own effects file gets `same_as` naming a card with the same rules that has one, so an
+older printing such as Ultra Ball (PAF 91) plays with Ultra Ball (MEG 131)'s effects. It loads everything through
+[`CardDB::load`](../../src/cards/db/card_db.md), exactly as the engine will. That checks
+that every generated file and every effects file is valid, and counts what still needs effects. Then it
+reports each decklist: how many of its cards are ready, what each one that isn't still needs, older printings
+and the card whose effects they use, printings TCGdex doesn't mark Standard-legal, and, for a deck in
+`data/decks/`, a missing archetype folder. Finally it checks each decklist with the [deck validator](../../src/cards/validator/deck_validator.md) and
 prints `legal`, or `ILLEGAL` followed by every problem.
 
 ## Output
@@ -61,7 +68,15 @@ Needs review:
   ...
 
 80 distinct cards, 0 network requests, 0 failures, 0 name mismatches
-80 cards load cleanly; 0 attacks/abilities/cards still need hand-written effects
+2 printings use the effects of a reprint with the same rules
+80 cards load cleanly; 0 attacks/abilities/cards still need effects
+
+Decks:
+  data/decks/alakazam.txt: 12 of 24 cards ready
+    needs effects: MEG-56 Alakazam: attack Mind Ruler
+    ...
+    older printing: SVI-191 Rare Candy, the same card as MEG-125
+  ...
 
 Deck legality:
   legal    data/decks/basic-box.txt
@@ -71,7 +86,7 @@ Deck legality:
 
 A card that fails is shown as `FAIL` with the reason, and the import continues with the next card.
 
-Everything still needing effects is listed by name under the count. A Special Energy's review note
+What still needs effects is listed under each deck that uses it. A Special Energy's review note
 is left out once its effects file sets `provides`, and a Tera note once it sets `rules`.
 
 ## `--standard`: the coverage report
@@ -118,6 +133,8 @@ cached sets only. It always exits with 0 once the report is printed.
 | `data/cards/sets.json` | read | yes |
 | `data/cards/corrections.json` | read | yes |
 | `data/cards/raw/bulk/` | read + write with `--standard` (cache) | no |
+| `data/cards/raw/series/`, `data/cards/raw/set-codes.json` | read + write when a set code isn't in `sets.json` (cache) | no |
+| `data/archetypes/` | checked for a folder for each deck | yes |
 | `data/cards/raw/` | read + write (cache) | no |
 | `data/cards/generated/` | write | no |
 | `data/cards/effects/` | read | yes |

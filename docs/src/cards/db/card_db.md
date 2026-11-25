@@ -36,7 +36,7 @@ file is caught instead of silently ignored.
 
 | Member | Behavior |
 |---|---|
-| `static CardDB load(generated_dir, effects_dir)` | Reads every `*.json` in `generated_dir`, merges `effects_dir/<same name>` when it exists, and parses the result into a `CardDef` |
+| `static CardDB load(generated_dir, effects_dir)` | Reads every `*.json` in `generated_dir`, merges `effects_dir/<same name>` when it exists, or else the effects file of the card its `same_as` names (a [reprint](../../../tools/import/standard.md#reprints)), and parses the result into a `CardDef` |
 | `void add(CardDef card)` | Compiles each attack's effects into its `program`, an Item's or Supporter's effects into the card's `program`, `requirements` into `conditions`, and every `passive` list into `modifiers`, then adds or replaces the card. A bad effect throws `CardDataError` naming the card and attack. `load` uses it too |
 | `const CardDef* find(std::string_view id) const` | The card, or `nullptr` |
 | `const CardDef& at(std::string_view id) const` | The card; throws `CardDataError` if unknown |
@@ -45,7 +45,8 @@ file is caught instead of silently ignored.
 
 `load` throws `CardDataError` when:
 - a file isn't valid JSON or isn't valid card data. The message starts with the file name;
-- an effects file has **no matching generated card**, which almost always means a typo in its file name.
+- an effects file has **no matching generated card**, which almost always means a typo in its file name;
+- a card's `same_as` names a card with no effects file. Run `pokebot-import` again to relink.
 
 If `generated_dir` doesn't exist, `load` fails with the standard library's filesystem error.
 Run `pokebot-import` first.

@@ -97,6 +97,9 @@ by `to_json` in [`card.cpp`](../../src/cards/card/card.md) and read back by `fro
 }
 ```
 
+A card without its own effects file may have `"same_as": "MEG-131"`: the card with the same rules whose effects it
+uses. The importer writes it; see [reprints](../../tools/import/standard.md#reprints).
+
 ### Allowed values
 
 | Field | Values |
@@ -236,6 +239,8 @@ be of different types.
 raw/sets/<tcgdex set id>.json
 raw/cards/<tcgdex card id>.json
 raw/bulk/<tcgdex set id>.json
+raw/series/<tcgdex series id>.json
+raw/set-codes.json
 ```
 
 Exactly what TCGdex returned. See [the TCGdex client's cache](../../tools/import/tcgdex.md#cache).

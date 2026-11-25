@@ -36,15 +36,26 @@ const Coverage coverage = standard_coverage({{"TWM", tcgdex.set_cards("TWM")}}, 
 |---|---|
 | `StandardCard` | One distinct card: its `CardDef` (with effects merged), its `printings`, `problems`, `missing` effects, the printing its effects came from (`effects_from`), and `tera_unchecked` |
 | `Coverage` | `printings` read, `unnumbered`, `not_legal` (by set code), and the `cards` in the order first seen |
+| `standard_legal(tcgdex)` | Whether TCGdex marks the printing `legal.standard` |
+| `expand_energy_symbols(name)` | `"Telepathic {P} Energy"` → `"Telepathic Psychic Energy"`, for comparing a decklist's names with TCGdex's |
+| `link_reprints(generated_dir, effects_dir)` | [Links reprints](#reprints) in `generated/` and returns them, printing → card |
 | `printing_id(set_code, local_id)` | `"TWM"`, `"130"` → `"TWM-130"`; `""` if the local id isn't a positive number |
 | `card_signature(card)` | The text that decides which printings are one card |
 | `standard_coverage(sets, corrections, effects_dir)` | Converts every legal, numbered printing of the sets (pairs of set code and TCGdex card list), groups them, and checks each card |
 
 Problems are found before effects are checked; a card with a problem has no `missing` list.
 
+## Reprints
+
+`link_reprints` reads every card in `generated/`. For each one without its own effects file, it looks for a card with
+the same [signature](#what-counts) that has one, and writes its id as `same_as`, or takes `same_as` away when there's
+none any more. [`CardDB::load`](../../src/cards/db/card_db.md) then uses that card's effects file. Nothing is copied,
+so fixing an effects file fixes every printing. A card with its own effects file keeps it. Running it again changes
+nothing.
+
 ## Tests
 
 [`tests/test_standard.cpp`](../../../tests/test_standard.cpp), tag `[standard]`, with made-up cards and a temporary effects folder:
 printing ids; reprints grouped whatever their tags and spacing, and printings that aren't legal or numbered left out; effects
 from another printing, missing effects listed, and Tera not checked; and missing or contradictory data found, then fixed by
-corrections.
+corrections; Energy symbols in names; and reprints linked, used by `CardDB::load`, and unlinked when the effects file goes.

@@ -205,3 +205,31 @@ TEST_CASE("a whole set fails cleanly offline or after too many attempts", "[tcgd
     CHECK_THROWS(client.set_cards("POR"));
     CHECK(http.calls == 3);
 }
+
+TEST_CASE("finds a set code that isn't in sets.json through the series, and remembers it", "[tcgdex]") {
+    TempDir dir;
+    {
+        FakeHttp http;
+        http.queue("/series/sv", R"({"id": "sv", "sets": [{"id": "sv01"}, {"id": "sv04.5"}, {"id": "sve"}]})");
+        http.queue("/sets/sv01", R"({"id": "sv01", "abbreviation": {"official": "SVI"}, "cards": []})");
+        http.queue("/sets/sv04.5", R"({"id": "sv04.5", "abbreviation": {"official": "PAF"}, "cards": [{"id": "sv04.5-091", "localId": "091"}]})");
+        http.queue("/sets/sve", R"({"id": "sve", "cards": []})");
+        auto options = test_options(dir);
+        options.series = {"sv"};
+        TcgdexClient client(http, options);
+        CHECK(client.card_id({"PAF", 91}) == "sv04.5-091");
+        CHECK(client.set_id("SVI") == "sv01");
+        CHECK(client.set_id("POR") == "me03");
+        CHECK_THROWS(client.set_id("XYZ"));
+        CHECK(http.calls == 4);
+    }
+    {
+        FakeHttp http;
+        auto options = test_options(dir);
+        options.offline = true;
+        TcgdexClient client(http, options);
+        CHECK(client.set_id("PAF") == "sv04.5");
+        CHECK_THROWS(client.set_id("XYZ"));
+        CHECK(http.calls == 0);
+    }
+}
