@@ -82,6 +82,7 @@ legal actions.
 | | [budget_lab.md](src/harness/budget_lab.md) | Timing the and-tree at cheap budgets against the full one, for IS-MCTS's opponent nodes |
 | | [planner_lab.md](src/harness/planner_lab.md) | Measuring the turn planner: wins found, and nodes with and without the closed set and f_bound |
 | `src/client` | [main.md](src/client/main.md) | The `pokebot` command: `play`, `watch`, `replay` |
+| Research | [standard-scan.md](research/standard-scan.md) | Every Standard card's mechanics, the rules cards change, events, history |
 | `tools/import` | [main.md](tools/import/main.md) | The `pokebot-import` command |
 | | [tcgdex.md](tools/import/tcgdex.md) | TCGdex lookup, cache, retries |
 | | [convert.md](tools/import/convert.md) | TCGdex → our card format |

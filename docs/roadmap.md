@@ -134,7 +134,8 @@ their effects, and exactly what the rest need. Hand-written effects files overri
 
 **Done when (2026-11-25, before any of it was built):**
 
-- at least 60% of the 2,109 distinct cards that TCGdex marks Standard-legal (1,266) have all their effects;
+- at least 60% of the distinct cards that TCGdex marks Standard-legal, as [the coverage report](tools/import/standard.md) counts them (2,097 on
+  2026-11-25, so 1,259), have all their effects. The 60% was set against the prototype's 2,109;
 - four new decks, chosen by the end of 3b.2, are fully playable, with hand-written effects for what the translator misses;
 - a person checks a random 200 translated texts: at most 4 wrong. Each wrong one's rule is fixed, and a fresh sample must pass;
 - 100,000 random games with the invariant checks find no problems, and the old decks are at most 10% slower.
@@ -168,8 +169,8 @@ translates one. After the Greninja fix, the old decks mustn't change: each step 
 
 | Step | Builds | Status |
 |---|---|---|
-| 3b.1 | **Data:** corrections to TCGdex's data, the importer's fixes, whole sets imported, reprints matched, the coverage report, the scan document restored and corrected. *[Corrections](data/cards/README.md#correctionsjson) to TCGdex's data and the importer's fixes are built. All 460 tests pass, the re-import changes only Greninja ex (30C 21), and M10's result stands after the fix: 57.8% (56.6% to 59.0%). The bulk import and the [coverage report](tools/import/standard.md) are built, not yet tested or run* | 🔄 |
-| 3b.2 | **Translator** for today's vocabulary, checked against the hand-written effects; the four decks chosen | ⬜ |
+| 3b.1 | **Data:** corrections to TCGdex's data, the importer's fixes, whole sets imported, reprints matched, the coverage report, the scan document restored and corrected. *[Corrections](data/cards/README.md#correctionsjson) to TCGdex's data and the importer's fixes are built. All 460 tests pass, the re-import changes only Greninja ex (30C 21), and M10's result stands after the fix: 57.8% (56.6% to 59.0%). The bulk import and the [coverage report](tools/import/standard.md) are built: all 466 tests pass, and 373 of the 2,097 distinct cards (17.8%) have all their effects. The [scan document](research/standard-scan.md) is restored and corrected. Reprints in decklists move to 3b.2* | ✅ |
+| 3b.2 | **Translator** for today's vocabulary, checked against the hand-written effects; reprints in decklists use their card's effects; the four decks chosen | ⬜ |
 | 3b.3 | Damage, healing, counts and conditions | ⬜ |
 | 3b.4 | Lasting effects and damage passives | ⬜ |
 | 3b.5 | Triggers, Abilities with costs, locks, HP and Retreat Cost | ⬜ |
@@ -197,6 +198,27 @@ weights aren't refitted. Then 320 games of the defaults (`--games 20 --seed 2000
   is within its error of the sign-off's.
 - **The reference run** (the defaults, `--games 20 --no-check --seed 2000001`): **158 to 162**, 18.4 turns and 140.8 actions a game,
   ended by Prize cards 266, no Pokémon left 37, deck-out 17. Later steps must repeat it in everything but the times.
+
+**The first coverage report (2026-11-25):** `pokebot-import --standard`, 23 requests, then the same with `--offline` and 0 requests.
+
+| | Complete | Missing effects | Problems | Total |
+|---|---|---|---|---|
+| Pokémon | 329 | 1,512 | 0 | 1,841 |
+| Trainers | 34 | 196 | 1 | 231 |
+| Energy | 10 | 15 | 0 | 25 |
+| **All** | **373 (17.8%)** | 1,723 | 1 | 2,097 |
+
+- **21 sets, 3,594 printings.** Left out as not legal: Delta Reign's 141, 121 old SVP promos, 30 classic reprints of 30th
+  Celebration, 29 of Prismatic Evolutions and 21 others; and 30th Celebration's three Mew with letters for numbers.
+- **2,097, not the prototype's 2,109:** 8 Basic Energy named "Basic Grass Energy" and the like are now the same cards as "Grass
+  Energy", and 4 corrected 30th Celebration ex (Greninja, Espeon, Sylveon, Umbreon) now match their MEP promos exactly, which
+  the promos' stage and HP confirm. A Python check repeats 2,097.
+- **Complete today:** the cards with no text, our decks' cards and their reprints. The 40.1% expressible with today's vocabulary
+  is what the translator would add; none of it is written yet.
+- **One problem:** 30th Celebration's Ultra Ball has no text in TCGdex. The six corrected 30th Celebration ex no longer clash with
+  their other printings.
+- **Tera not checked: 163** Pokémon ex.
+- **The reference run repeats** 158 to 162 in everything but the times, so nothing played changed.
 
 ## M4 — Observation layer, client, replays ✅
 
