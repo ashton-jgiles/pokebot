@@ -11,6 +11,7 @@ Run from the repository root; all paths are relative to it.
 
 ```bash
 ./build/debug/tools/import/pokebot-import.exe [--refresh] [--offline] <decklist.txt or directory>...
+./build/debug/tools/import/pokebot-import.exe [--refresh] [--offline] --standard [--list-missing]
 ```
 
 A directory stands for every `.txt` decklist in it and its subdirectories, in sorted order, so
@@ -20,6 +21,8 @@ A directory stands for every `.txt` decklist in it and its subdirectories, in so
 |---|---|
 | `--refresh` | Download every card again, ignoring the cache |
 | `--offline` | Use only cached files; never touch the network |
+| `--standard` | Instead of decklists: [the coverage report](#--standard-the-coverage-report) |
+| `--list-missing` | With `--standard`: list every effect still missing |
 
 Examples:
 
@@ -71,6 +74,34 @@ A card that fails is shown as `FAIL` with the reason, and the import continues w
 Everything still needing effects is listed by name under the count. A Special Energy's review note
 is left out once its effects file sets `provides`, and a Tera note once it sets `rules`.
 
+## `--standard`: the coverage report
+
+Downloads every card of every set in `sets.json`, a set at a time with
+[`set_cards`](tcgdex.md#whole-sets), and prints what [`standard_coverage`](standard.md) finds:
+
+```
+  30C  30th  191 cards
+  ...
+21 sets, 3594 printings, 25 network requests
+Left out, not marked Standard-legal by TCGdex: 30C 30 DLR 141 ...
+Left out, no card number: 3
+
+2109 distinct Standard cards
+            complete   missing  problems   total
+Pokemon          ...
+Trainer          ...
+Energy           ...
+All              ...
+Complete: ...% of distinct cards
+Pokemon ex whose Tera isn't checked yet: ...
+
+Problems:
+  ...
+```
+
+It writes nothing in `generated/`, so the decks' cards are untouched. With `--offline` it uses the
+cached sets only. It always exits with 0 once the report is printed.
+
 ## Exit codes
 
 | Code | Meaning |
@@ -86,6 +117,7 @@ is left out once its effects file sets `provides`, and a Tera note once it sets 
 | `data/decks/*.txt` | read | yes |
 | `data/cards/sets.json` | read | yes |
 | `data/cards/corrections.json` | read | yes |
+| `data/cards/raw/bulk/` | read + write with `--standard` (cache) | no |
 | `data/cards/raw/` | read + write (cache) | no |
 | `data/cards/generated/` | write | no |
 | `data/cards/effects/` | read | yes |

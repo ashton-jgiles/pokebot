@@ -12,7 +12,8 @@ namespace pokebot::import {
     struct Conversion {
         CardDef card;
         std::vector<std::string> notes; // things a person should check
-        bool tera_unknown = false;      // a non-Mega Pokemon ex: TCGdex doesn't say whether it's Tera
+        std::vector<std::string> problems;
+        bool tera_unknown = false; // a non-Mega Pokemon ex: TCGdex doesn't say whether it's Tera
     };
 
     // Turns a TCGdex card object into our CardDef. our_id is the decklist-style id ("TWM-130").

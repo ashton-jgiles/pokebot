@@ -50,6 +50,7 @@ TEST_CASE("converts a Pokemon ex with modifier damage and a free attack", "[conv
     CHECK(c.prize_value() == 2);
     CHECK(result.tera_unknown);
     CHECK(result.notes.empty());
+    CHECK(result.problems.empty());
 }
 
 TEST_CASE("Mega Pokemon ex are worth 3 Prizes and never need a Tera check", "[convert]") {
@@ -121,9 +122,9 @@ TEST_CASE("reads the newest sets' ways of writing things", "[convert]") {
 
 TEST_CASE("says when an evolution or a Trainer is missing something", "[convert]") {
     const json evolution = json::parse(R"({"id": "x", "name": "Testmon", "category": "Pokemon", "stage": "Stage1", "hp": 90, "types": ["Fire"]})");
-    CHECK(convert_card(evolution, "TST-8").notes.size() == 1);
+    CHECK(convert_card(evolution, "TST-8").problems.size() == 1);
     const json trainer = json::parse(R"({"id": "x", "name": "Blank", "category": "Trainer", "trainerType": "Item"})");
-    CHECK(convert_card(trainer, "TST-9").notes.size() == 1);
+    CHECK(convert_card(trainer, "TST-9").problems.size() == 1);
 }
 
 TEST_CASE("corrections fix one card, or fill in what an evolution evolves from", "[convert]") {

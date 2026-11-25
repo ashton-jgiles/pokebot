@@ -2,6 +2,7 @@
 #include <exception>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <map>
 #include <set>
@@ -15,6 +16,7 @@
 #include "convert.hpp"
 #include "core/decklist.hpp"
 #include "http_client.hpp"
+#include "standard.hpp"
 #include "tcgdex.hpp"
 
 #ifdef _WIN32
@@ -31,7 +33,11 @@ namespace {
 
     void print_usage() {
         std::cerr << "usage: pokebot-import [--refresh] [--offline] <decklist.txt or directory>...\n"
+                     "       pokebot-import [--refresh] [--offline] --standard [--list-missing]\n"
                      "  a directory means every .txt decklist in it and its subdirectories\n"
+                     "  --standard      download every card of every set in sets.json and report how many of the\n"
+                     "                  Standard-legal ones have all their effects\n"
+                     "  --list-missing  with --standard: list every effect still missing\n"
                      "  --refresh  download every card again, ignoring the cache\n"
                      "  --offline  use only cached files\n";
     }
@@ -65,6 +71,79 @@ namespace {
         }
     }
 
+    double percent(std::size_t part, std::size_t whole) {
+        return whole == 0 ? 0.0 : 100.0 * static_cast<double>(part) / static_cast<double>(whole);
+    }
+
+    int run_standard(pokebot::import::TcgdexClient& tcgdex, const nlohmann::json& corrections, const std::filesystem::path& effects_dir, bool list_missing) {
+        using namespace pokebot;
+        using namespace pokebot::import;
+        std::vector<std::pair<std::string, nlohmann::json>> sets;
+        for (const std::string& code : tcgdex.set_codes()) {
+            sets.emplace_back(code, tcgdex.set_cards(code));
+            std::cout << "  " << code << "  " << tcgdex.set_id(code) << "  " << sets.back().second.size() << " cards\n";
+        }
+        const Coverage coverage = standard_coverage(sets, corrections, effects_dir);
+
+        std::cout << '\n'
+                  << sets.size() << " sets, " << coverage.printings << " printings, " << tcgdex.network_requests() << " network requests\n";
+        std::cout << "Left out, not marked Standard-legal by TCGdex:";
+        for (const auto& [code, count] : coverage.not_legal) {
+            std::cout << ' ' << code << ' ' << count;
+        }
+        std::cout << "\nLeft out, no card number: " << coverage.unnumbered << '\n';
+
+        std::cout << '\n'
+                  << coverage.cards.size() << " distinct Standard cards\n";
+        std::cout << std::setw(10) << "" << std::setw(10) << "complete" << std::setw(10) << "missing" << std::setw(10) << "problems" << std::setw(8) << "total" << '\n';
+        std::size_t all[3] = {};
+        const auto column = [](const StandardCard& entry) -> std::size_t {
+            if (!entry.problems.empty()) {
+                return 2;
+            }
+            return entry.missing.empty() ? 0 : 1;
+        };
+        for (const auto& [kind, label] : {std::pair{CardKind::Pokemon, "Pokemon"}, std::pair{CardKind::Trainer, "Trainer"}, std::pair{CardKind::Energy, "Energy"}}) {
+            std::size_t counts[3] = {};
+            for (const StandardCard& entry : coverage.cards) {
+                if (entry.card.kind == kind) {
+                    ++counts[column(entry)];
+                }
+            }
+            std::cout << std::setw(10) << std::left << label << std::right;
+            for (std::size_t i = 0; i < 3; ++i) {
+                std::cout << std::setw(10) << counts[i];
+                all[i] += counts[i];
+            }
+            std::cout << std::setw(8) << counts[0] + counts[1] + counts[2] << '\n';
+        }
+        std::cout << std::setw(10) << std::left << "All" << std::right << std::setw(10) << all[0] << std::setw(10) << all[1] << std::setw(10) << all[2]
+                  << std::setw(8) << coverage.cards.size() << '\n';
+        std::cout << std::fixed << std::setprecision(1) << "Complete: " << percent(all[0], coverage.cards.size()) << "% of distinct cards\n";
+
+        std::size_t tera = 0;
+        for (const StandardCard& entry : coverage.cards) {
+            tera += entry.tera_unchecked ? 1 : 0;
+        }
+        std::cout << "Pokemon ex whose Tera isn't checked yet: " << tera << '\n';
+
+        std::cout << "\nProblems:\n";
+        for (const StandardCard& entry : coverage.cards) {
+            for (const std::string& problem : entry.problems) {
+                std::cout << "  " << entry.card.id << ' ' << entry.card.name << ": " << problem << '\n';
+            }
+        }
+        if (list_missing) {
+            std::cout << "\nMissing effects:\n";
+            for (const StandardCard& entry : coverage.cards) {
+                for (const std::string& item : entry.missing) {
+                    std::cout << "  " << item << '\n';
+                }
+            }
+        }
+        return 0;
+    }
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -82,10 +161,16 @@ int main(int argc, char** argv) {
     const std::filesystem::path corrections_file = "data/cards/corrections.json";
     std::map<std::string, std::vector<std::string>> review; // card label -> notes
     std::vector<std::filesystem::path> decklists;
+    bool standard = false;
+    bool list_missing = false;
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         if (arg == "--refresh") {
             options.refresh = true;
+        } else if (arg == "--standard") {
+            standard = true;
+        } else if (arg == "--list-missing") {
+            list_missing = true;
         } else if (arg == "--offline") {
             options.offline = true;
         } else if (arg.starts_with("--")) {
@@ -95,7 +180,7 @@ int main(int argc, char** argv) {
             add_decklists(arg, decklists);
         }
     }
-    if (decklists.empty()) {
+    if (standard ? !decklists.empty() : (decklists.empty() || list_missing)) {
         print_usage();
         return 2;
     }
@@ -108,6 +193,9 @@ int main(int argc, char** argv) {
             throw std::runtime_error("cannot open " + corrections_file.string());
         }
         const nlohmann::json corrections = nlohmann::json::parse(corrections_in);
+        if (standard) {
+            return run_standard(tcgdex, corrections, effects_dir, list_missing);
+        }
 
         std::set<std::pair<std::string, int>> seen;
         int failures = 0;
@@ -139,6 +227,9 @@ int main(int argc, char** argv) {
                     std::ofstream(generated_dir / (id + ".json"), std::ios::binary)
                         << nlohmann::json(conversion.card).dump(2) << '\n';
                     const bool provides_written = effects_file_sets(effects_dir, id, "provides");
+                    for (const auto& problem : conversion.problems) {
+                        review[id + " " + api_name].push_back(problem);
+                    }
                     for (const auto& note : conversion.notes) {
                         if (provides_written && conversion.card.kind == CardKind::Energy) {
                             continue; // the effects file already says what this Energy provides

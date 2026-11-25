@@ -3,7 +3,7 @@
 **Files:** [`tools/import/http_client.hpp`](../../../tools/import/http_client.hpp), [`tools/import/http_client.cpp`](../../../tools/import/http_client.cpp)
 **Library:** `pokebot_import_lib` · **Namespace:** `pokebot::import`
 
-The importer's only network code: "GET this URL and give me the body."
+The importer's only network code: "GET this URL and give me the body," and "POST this JSON to it."
 
 ## Types
 
@@ -11,6 +11,7 @@ The importer's only network code: "GET this URL and give me the body."
 
 ```cpp
 virtual std::string get(const std::string& url) = 0;  // throws HttpError on failure
+virtual std::string post_json(const std::string& url, const std::string& body) = 0;
 ```
 
 Everything else talks to this interface, never to curl directly. That gives two benefits:
@@ -35,6 +36,11 @@ curl --silent --show-error --fail --location --max-time <timeout> "<url>"
 | `--max-time` | Give up after `timeout_seconds` (default 20) |
 
 `get` throws `HttpError` if curl can't start or exits with a non-zero status.
+
+`post_json` writes the body to a temporary file and sends it with
+`--header "Content-Type: application/json" --data-binary "@<file>"`, so the body never goes on the command line. The file
+is removed afterwards, even when curl fails. It refuses a temporary path with characters the shell could read as
+commands, as `get` does a URL.
 
 ### `class HttpError`
 

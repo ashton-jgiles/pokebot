@@ -9,6 +9,11 @@ namespace pokebot::import {
     namespace {
 
         constexpr const char* kBaseUrl = "https://api.tcgdex.net/v2/en";
+        constexpr const char* kGraphqlUrl = "https://api.tcgdex.net/v2/graphql";
+        constexpr const char* kFields =
+            "id localId name category stage hp suffix types evolveFrom retreat regulationMark rarity "
+            "effect trainerType energyType legal { standard expanded } abilities { type name effect } "
+            "attacks { name cost damage effect } weaknesses { type value } resistances { type value }";
 
         nlohmann::json read_json_file(const std::filesystem::path& path) {
             std::ifstream in(path, std::ios::binary);
@@ -91,8 +96,61 @@ namespace pokebot::import {
         return j;
     }
 
+    std::vector<std::string> TcgdexClient::set_codes() const {
+        std::vector<std::string> codes;
+        for (const auto& [code, id] : set_ids_) {
+            codes.push_back(code);
+        }
+        return codes;
+    }
+
+    nlohmann::json TcgdexClient::set_cards(const std::string& set_code) {
+        const std::string sid = set_id(set_code);
+        const auto cache_file = options_.cache_dir / "bulk" / (sid + ".json");
+        if (!options_.refresh && std::filesystem::exists(cache_file)) {
+            return read_json_file(cache_file).at("cards");
+        }
+        if (options_.offline) {
+            throw std::runtime_error("offline, and not cached: " + cache_file.string());
+        }
+        nlohmann::json cards = nlohmann::json::array();
+        for (int page = 1;; ++page) {
+            const std::string query = "{ cards(pagination: {page: " + std::to_string(page) + ", itemsPerPage: " + std::to_string(options_.page_size) +
+                                      "}, filters: {id: \"" + sid + "-\"}) { " + kFields + " } }";
+            const std::string body = nlohmann::json{{"query", query}}.dump();
+            const nlohmann::json batch = with_retries("POST " + std::string(kGraphqlUrl) + " for " + sid + " page " + std::to_string(page), [&] {
+                const auto j = nlohmann::json::parse(http_.post_json(kGraphqlUrl, body));
+                if (!j.is_object() || j.contains("errors") || !j.contains("data") || !j.at("data").is_object()) {
+                    return nlohmann::json();
+                }
+                const auto& found = j.at("data").value("cards", nlohmann::json());
+                return found.is_null() ? nlohmann::json::array() : found;
+            });
+            if (!batch.is_array()) {
+                throw std::runtime_error("TCGdex's cards for " + sid + " aren't a list");
+            }
+            for (const auto& card : batch) {
+                if (card.is_object() && card.value("id", "").starts_with(sid + "-")) {
+                    cards.push_back(card);
+                }
+            }
+            if (static_cast<int>(batch.size()) < options_.page_size) {
+                break;
+            }
+        }
+        write_json_file(cache_file, nlohmann::json{{"id", sid}, {"cards", cards}});
+        return cards;
+    }
+
     nlohmann::json TcgdexClient::fetch_with_retries(const std::string& api_path) {
         const std::string url = std::string(kBaseUrl) + api_path;
+        return with_retries("GET " + url, [&] {
+            auto j = nlohmann::json::parse(http_.get(url));
+            return j.is_object() ? j : nlohmann::json();
+        });
+    }
+
+    nlohmann::json TcgdexClient::with_retries(const std::string& what, const std::function<nlohmann::json()>& attempt_once) {
         auto delay = options_.retry_delay;
         std::string last_error;
 
@@ -102,11 +160,11 @@ namespace pokebot::import {
             }
             ++network_requests_;
             try {
-                auto j = nlohmann::json::parse(http_.get(url));
-                if (j.is_object()) {
+                auto j = attempt_once();
+                if (!j.is_null()) {
                     return j;
                 }
-                last_error = "response is not a JSON object";
+                last_error = "response isn't what was expected";
             } catch (const HttpError& e) {
                 last_error = e.what();
             } catch (const nlohmann::json::parse_error& e) {
@@ -117,6 +175,6 @@ namespace pokebot::import {
                 delay *= 2;
             }
         }
-        throw std::runtime_error("GET " + url + " failed after " + std::to_string(options_.max_attempts) + " attempts: " + last_error);
+        throw std::runtime_error(what + " failed after " + std::to_string(options_.max_attempts) + " attempts: " + last_error);
     }
 } // namespace pokebot::import

@@ -2,7 +2,7 @@
 
 | Path | Contents | Written by | In git? |
 |---|---|---|---|
-| `sets.json` | Set code → TCGdex set id | hand | yes |
+| `sets.json` | Set code → TCGdex set id, the 19 sets from Temporal Forces to Delta Reign and both promo sets | hand | yes |
 | `corrections.json` | Fixes to TCGdex's data | hand | yes |
 | `raw/` | Unmodified TCGdex responses (cache) | `pokebot-import` | **no** |
 | `generated/` | Cards in our format | `pokebot-import` | **no** |
@@ -235,6 +235,7 @@ be of different types.
 ```
 raw/sets/<tcgdex set id>.json
 raw/cards/<tcgdex card id>.json
+raw/bulk/<tcgdex set id>.json
 ```
 
 Exactly what TCGdex returned. See [the TCGdex client's cache](../../tools/import/tcgdex.md#cache).

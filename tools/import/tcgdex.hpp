@@ -2,8 +2,10 @@
 
 #include <chrono>
 #include <filesystem>
+#include <functional>
 #include <map>
 #include <string>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
@@ -25,6 +27,7 @@ namespace pokebot::import {
         int max_attempts = 3;
         std::chrono::milliseconds retry_delay{500}; // doubles after each failed attempt
         std::chrono::milliseconds request_gap{150}; // pause between requests (be polite)
+        int page_size = 250;
     };
 
     class TcgdexClient {
@@ -37,12 +40,17 @@ namespace pokebot::import {
 
         nlohmann::json card(const CardRef& ref);
 
+        nlohmann::json set_cards(const std::string& set_code);
+
+        std::vector<std::string> set_codes() const;
+
         int network_requests() const { return network_requests_; }
 
     private:
         const nlohmann::json& set_detail(const std::string& set_id);
         nlohmann::json cached_get(const std::filesystem::path& cache_file, const std::string& api_path);
         nlohmann::json fetch_with_retries(const std::string& api_path);
+        nlohmann::json with_retries(const std::string& what, const std::function<nlohmann::json()>& attempt);
 
         HttpClient& http_;
         TcgdexOptions options_;

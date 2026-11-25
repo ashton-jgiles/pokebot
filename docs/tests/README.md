@@ -28,8 +28,9 @@ List every test:
 | File | Tag | Tests | Covers |
 |---|---|---|---|
 | [`test_decklist.cpp`](../../tests/test_decklist.cpp) | `[decklist]` | 5 | Parsing names with spaces/apostrophes/`{D}`, Windows line endings, total mismatch, error line numbers, both project decklists load with 60 cards |
-| [`test_tcgdex.cpp`](../../tests/test_tcgdex.cpp) | `[tcgdex]` | 5 | Padded card ids, unknown sets and numbers, cache then offline reuse, retries after empty/failed responses, giving up, offline with no cache |
+| [`test_tcgdex.cpp`](../../tests/test_tcgdex.cpp) | `[tcgdex]` | 7 | Padded card ids, unknown sets and numbers, cache then offline reuse, retries after empty/failed responses, giving up, offline with no cache; whole sets in pages, cached, and failing cleanly |
 | [`test_convert.cpp`](../../tests/test_convert.cpp) | `[convert]` | 11 | Pokémon ex with `×` damage and a free attack, damage modifiers surviving save and reload, Mega ex worth 3 Prizes with no Tera check, ACE SPEC detection, Basic Energy type from its name, Special Energy mislabeled as Normal, the newest sets' spellings, notes for missing data, corrections and the repo's corrections file, rejecting unknown data |
+| [`test_standard.cpp`](../../tests/test_standard.cpp) | `[standard]` | 4 | Coverage of Standard: printing ids, reprints grouped, printings not legal or not numbered left out, effects from another printing, missing effects and Tera not checked, problems found and fixed by corrections |
 | [`test_deck_validator.cpp`](../../tests/test_deck_validator.cpp) | `[deck_validator]` | 9 | One test per deck-building rule, all printings of a name counting together, Basic Energy exemption, unknown cards, several problems at once, and every real deck in `data/decks/` (skipped without generated data) |
 | [`test_card_db.cpp`](../../tests/test_card_db.cpp) | `[card_db]` | 6 | JSON round trip, effects files adding rules and attack effects, typo'd attack names rejected, `missing_effects` list, `no_effect` Abilities not missing, bad card data rejected |
 | [`test_engine_state.cpp`](../../tests/test_engine_state.cpp) | `[engine]` | 10 | `FixedVector`, `Rng` determinism and shuffles, independent `GameState` copies, card ownership, `CardTable` numbering and illegal decks |
@@ -89,7 +90,7 @@ List every test:
 | [`test_coverage.cpp`](../../tests/test_coverage.cpp) | `[coverage]` | 3 | Every card in our decks has its effects written, every search whose text says "reveal" sets `reveal`, and 2,000 biased random games use every attack (copied ones too), every Ability you choose to use, every Trainer, every Stadium action and every Special Energy in our decks, listing whatever was never used |
 | [`test_stress.cpp`](../../tests/test_stress.cpp) | `[stress]` | 3 | 1,000 biased and 1,000 uniform random real-deck games with invariant checks, and every state and action can be described. More than 300 of the biased games must end by Knock Out (random players burn through their decks with draw and search Trainers, so deck-outs are common) |
 
-**460 tests in total.** Tests that need the real card data skip themselves if `data/cards/generated/`
+**466 tests in total.** Tests that need the real card data skip themselves if `data/cards/generated/`
 doesn't exist yet; run `pokebot-import` first.
 
 ## Every card is tested
@@ -115,7 +116,8 @@ Milestone 3's sign-off asks for a test per card. It's covered three ways:
 
 ## Helpers worth knowing
 
-- **`FakeHttp`** (`test_tcgdex.cpp`): queue responses per URL with `queue(path, body)`. An empty
+- **`FakeHttp`** (`test_tcgdex.cpp`): queue responses per URL with `queue(path, body)`, and POST responses in order with
+  `queue_post(body)`; it keeps the bodies sent in `bodies`. An empty
   body simulates TCGdex's "200 with empty body" glitch; `"!error"` simulates a failed request.
   `calls` counts requests, which is how the cache tests prove nothing was downloaded.
 - **`TempDir`** (`test_tcgdex.cpp`): a fresh temporary folder with a `sets.json`, deleted when the

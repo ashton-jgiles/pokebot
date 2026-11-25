@@ -13,7 +13,8 @@ Conversion convert_card(const nlohmann::json& tcgdex, const std::string& our_id)
 ```
 
 - `our_id` is the decklist-style id, e.g. `"TWM-130"`.
-- Returns a `Conversion`: the `CardDef`, `notes` (things a person should check by hand), and
+- Returns a `Conversion`: the `CardDef`, `notes` (things a person should check by hand), `problems` (data that's
+  missing, so the card can't be played as printed), and
   `tera_unknown`, which is true for a non-Mega Pokémon ex because TCGdex doesn't say whether it's Tera.
   Mega ex have their own rule box, so they're never Tera.
 - Throws `CardDataError` (message prefixed with the id) for any value it doesn't understand.
@@ -68,10 +69,10 @@ TCGdex doesn't record rule boxes, so some things need a person to check:
 | "Special Energy: fill in what it provides" | Every Special Energy |
 | "TCGdex lists this as basic Energy, but it has rules text" | A Special Energy that TCGdex labels `Normal` |
 | "has more than one Weakness; only the first is kept" | Rare older cards |
-| "an evolution card that doesn't say what it evolves from" | A Stage 1 or Stage 2 with no `evolveFrom`, after corrections |
-| "Trainer with no rules text" | A Trainer whose text TCGdex doesn't have |
+| "an evolution card that doesn't say what it evolves from" (a problem) | A Stage 1 or Stage 2 with no `evolveFrom`, after corrections |
+| "Trainer with no rules text" (a problem) | A Trainer whose text TCGdex doesn't have |
 
-The importer prints these under **Needs review**.
+The importer prints notes and problems under **Needs review**.
 
 ## Rejected on purpose
 

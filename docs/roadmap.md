@@ -168,7 +168,7 @@ translates one. After the Greninja fix, the old decks mustn't change: each step 
 
 | Step | Builds | Status |
 |---|---|---|
-| 3b.1 | **Data:** corrections to TCGdex's data, the importer's fixes, whole sets imported, reprints matched, the coverage report, the scan document restored and corrected. *[Corrections](data/cards/README.md#correctionsjson) to TCGdex's data and the importer's fixes are built. All 460 tests pass, the re-import changes only Greninja ex (30C 21), and M10's result stands after the fix: 57.8% (56.6% to 59.0%). The bulk import and the coverage report are still to do* | 🔄 |
+| 3b.1 | **Data:** corrections to TCGdex's data, the importer's fixes, whole sets imported, reprints matched, the coverage report, the scan document restored and corrected. *[Corrections](data/cards/README.md#correctionsjson) to TCGdex's data and the importer's fixes are built. All 460 tests pass, the re-import changes only Greninja ex (30C 21), and M10's result stands after the fix: 57.8% (56.6% to 59.0%). The bulk import and the [coverage report](tools/import/standard.md) are built, not yet tested or run* | 🔄 |
 | 3b.2 | **Translator** for today's vocabulary, checked against the hand-written effects; the four decks chosen | ⬜ |
 | 3b.3 | Damage, healing, counts and conditions | ⬜ |
 | 3b.4 | Lasting effects and damage passives | ⬜ |

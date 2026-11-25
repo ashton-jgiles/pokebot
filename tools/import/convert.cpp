@@ -84,7 +84,7 @@ namespace pokebot::import {
 
             c.evolves_from = t.value("evolveFrom", "");
             if (c.stage != Stage::Basic && c.evolves_from.empty()) {
-                out.notes.push_back("an evolution card that doesn't say what it evolves from; add it to corrections.json");
+                out.problems.push_back("an evolution card that doesn't say what it evolves from; add it to corrections.json");
             }
             c.hp = t.at("hp").get<int>();
             for (const auto& type : t.at("types")) {
@@ -156,7 +156,7 @@ namespace pokebot::import {
             }
             c.text = t.value("effect", "");
             if (c.text.empty()) {
-                out.notes.push_back("Trainer with no rules text");
+                out.problems.push_back("Trainer with no rules text");
             }
             c.rules.ace_spec = t.value("rarity", "") == "ACE SPEC Rare";
         }

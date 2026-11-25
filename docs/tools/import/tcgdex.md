@@ -42,6 +42,7 @@ A card as a decklist names it: `{set_code, number}`, e.g. `{"TWM", 130}`.
 | `max_attempts` | `3` | Tries per request |
 | `retry_delay` | 500 ms | Wait after a failed try; doubles each time |
 | `request_gap` | 150 ms | Pause between requests, to be polite to a free service |
+| `page_size` | 250 | Cards per request for a whole set |
 
 ### `class TcgdexClient`
 
@@ -51,15 +52,29 @@ A card as a decklist names it: `{set_code, number}`, e.g. `{"TWM", 130}`.
 | `std::string set_id(const std::string& set_code) const` | `"TWM"` → `"sv06"`. Throws if the code isn't in `sets.json` |
 | `std::string card_id(const CardRef&)` | `{"POR", 62}` → `"me03-062"`. Throws if the number isn't in the set |
 | `nlohmann::json card(const CardRef&)` | The full TCGdex card object |
+| `nlohmann::json set_cards(const std::string& set_code)` | Every card of a set, from [one request a page](#whole-sets) |
+| `std::vector<std::string> set_codes() const` | Every set code in `sets.json`, sorted |
 | `int network_requests() const` | Requests made so far, including retries |
 
 Errors are thrown as `std::runtime_error` with a message saying what failed.
+
+## Whole sets
+
+`set_cards` asks TCGdex's GraphQL endpoint (`POST https://api.tcgdex.net/v2/graphql`) for the cards whose id starts with
+the set's id and a dash, `page_size` at a time, with only the fields the importer reads. It keeps only cards of that
+set, so `me03-` doesn't pick up `me03.5-`, and stops at the first page that isn't full. A response counts once it's
+a JSON object with a `data` object and no `errors`, and is retried like any other. A set is a page or two, so all of
+Standard is about 25 requests instead of one for each of 3,594 printings.
+
+The fields are TCGdex's own names, but missing values come as `null`, which
+[`convert_card`](convert.md) ignores.
 
 ## Cache
 
 ```
 data/cards/raw/
 ├── sets/me03.json        one file per set
+├── bulk/me03.json        a whole set's cards, from set_cards
 └── cards/me03-062.json   one file per card
 ```
 
@@ -90,4 +105,5 @@ If a decklist uses a set code that isn't in `sets.json`, the import fails with
 
 [`tests/test_tcgdex.cpp`](../../../tests/test_tcgdex.cpp), tag `[tcgdex]`. It uses a fake
 `HttpClient` and a temporary folder, and covers padded ids, unknown sets and numbers, caching,
-offline mode, retries after empty or failed responses, and giving up.
+offline mode, retries after empty or failed responses, and giving up; and whole sets in pages, keeping only the set's
+cards, from the cache, offline, and after too many attempts.
