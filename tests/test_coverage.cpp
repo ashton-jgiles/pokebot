@@ -104,9 +104,17 @@ TEST_CASE("every card in our decks has its effects written", "[coverage]") {
     if (!real) {
         SKIP("no generated card data; run pokebot-import first");
     }
+    std::set<std::string> missing;
+    for (const auto& deck : real->decks) {
+        for (const auto& entry : deck.entries) {
+            for (const auto& item : pokebot::missing_effects(real->db.at(pokebot::card_id(entry)))) {
+                missing.insert(item);
+            }
+        }
+    }
     std::string list;
-    for (const auto& missing : real->db.missing_effects()) {
-        list += "\n  " + missing;
+    for (const auto& item : missing) {
+        list += "\n  " + item;
     }
     INFO("still missing:" << list);
     CHECK(list.empty());

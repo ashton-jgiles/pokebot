@@ -170,7 +170,7 @@ translates one. After the Greninja fix, the old decks mustn't change: each step 
 | Step | Builds | Status |
 |---|---|---|
 | 3b.1 | **Data:** corrections to TCGdex's data, the importer's fixes, whole sets imported, reprints matched, the coverage report, the scan document restored and corrected. *[Corrections](data/cards/README.md#correctionsjson) to TCGdex's data and the importer's fixes are built. All 460 tests pass, the re-import changes only Greninja ex (30C 21), and M10's result stands after the fix: 57.8% (56.6% to 59.0%). The bulk import and the [coverage report](tools/import/standard.md) are built: all 466 tests pass, and 373 of the 2,097 distinct cards (17.8%) have all their effects. The [scan document](research/standard-scan.md) is restored and corrected. Reprints in decklists move to 3b.2* | ✅ |
-| 3b.2a | **Any deck export imports:** set codes found through TCGdex's series, reprints using their card's effects (`same_as`), and a report for each deck. Decks that aren't playable yet wait in `data/decks/incoming/`, which the sim and the tests don't read. *Built, not yet tested or run* | 🔄 |
+| 3b.2a | **Any deck export imports:** set codes found through TCGdex's series, reprints using their card's effects (`same_as`), and a report for each deck. Decks that aren't playable yet wait in `data/decks/incoming/`, which the sim and the tests don't read. *Done: all 470 tests pass, the four new decks import with 0 failures, 6 printings use a reprint's effects, and the reference run repeats. Results below* | ✅ |
 | 3b.2 | **Translator** for today's vocabulary, checked against the hand-written effects. *The four decks are chosen (below)* | ⬜ |
 | 3b.3 | Damage, healing, counts and conditions | ⬜ |
 | 3b.4 | Lasting effects and damage passives | ⬜ |
@@ -244,6 +244,25 @@ grammar, against the downloaded sets (distinct cards in each list):
   Their sets aren't in `sets.json`, so the importer can't find them yet.
 - **Variants for later:** other `basic-box` and `dragapult` lists, and `basic-box` lists with Mew ex or Mega Rayquaza ex,
   as [archetype lists](data/archetypes/README.md). Mega Rayquaza ex is a Delta Reign card, whose data isn't trusted yet.
+
+**What 3b.2a measured (2026-11-25):** `pokebot-import data/decks/incoming`, 75 requests, 82 new cards, 0 failures, 0 name mismatches,
+all four decks legal.
+
+| Deck | Cards ready | Still missing effects |
+|---|---|---|
+| `alakazam` | 12 of 24 | 12 cards, 15 effects |
+| `festival-lead` | 11 of 27 | 16 cards, 20 effects |
+| `mega-lucario` | 14 of 27 | 13 cards, 16 effects |
+| `mega-venasaur` | 14 of 25 | 11 cards, 13 effects |
+
+- **Set codes found through TCGdex:** SVI, PAL and PAF.
+- **6 printings use a reprint's effects:** the older Rare Candy (SVI 191), Switch (SVI 194), Boss's Orders (PAL 172) and Ultra Ball
+  (PAF 91), and Ultra Ball (ASC 213) and Night Stretcher (SFA 61). The old decks get no links: every one of their cards has its own
+  effects file.
+- **The ready counts match the prototype's,** and mega-venasaur's PAF Ultra Ball, which the prototype couldn't place, is ready.
+- **To check by hand:** Cornerstone Mask Ogerpon ex (TWM 112) for Tera, and what five Special Energy provide (Growing Grass,
+  Rocky Fighting, Telepathic Psychic, Enriching, Mist).
+- **The reference run repeats** 158 to 162, so nothing played changed, and all 470 tests pass with the new cards in `generated/`.
 
 ## M4 — Observation layer, client, replays ✅
 

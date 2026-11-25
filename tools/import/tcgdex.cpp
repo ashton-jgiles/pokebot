@@ -80,7 +80,8 @@ namespace pokebot::import {
         if (const auto it = found_codes_.find(set_code); it != found_codes_.end()) {
             return it->second;
         }
-        throw std::runtime_error("unknown set code '" + set_code + "': it isn't in " + options_.sets_file.string() + " or any set of the series TCGdex lists");
+        throw std::runtime_error("unknown set code '" + set_code + "': it isn't in " + options_.sets_file.string() +
+                                 (options_.offline ? ", and offline the series aren't searched; run once online to find it" : " or any set of the series TCGdex lists"));
     }
 
     const nlohmann::json& TcgdexClient::set_detail(const std::string& id) {

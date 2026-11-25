@@ -99,7 +99,7 @@ last problem.
 `sets.json` holds the codes of the sets the [coverage report](standard.md) reads. Any other code, such as `PAF` (Paldean
 Fates) in an older printing, is found the first time it's needed: `GET /series/sv` and `/series/me` list their sets,
 each set's page gives its `abbreviation.official`, and every code found is saved to `raw/set-codes.json`. That's about
-30 requests once, and none after: set pages are cached like any other. With `offline`, only the saved codes are used.
+30 requests once, and none after: set pages are cached like any other. With `offline`, only the saved codes are used, and the error for an unknown code says to run once online.
 If two sets share a code, the first in the series' order wins; `sets.json` decides for its own codes.
 
 ## Adding a new set

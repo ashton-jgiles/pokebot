@@ -14,7 +14,8 @@ Run from the repository root; all paths are relative to it.
 ./build/debug/tools/import/pokebot-import.exe [--refresh] [--offline] --standard [--list-missing]
 ```
 
-A directory stands for every `.txt` decklist in it and its subdirectories, in sorted order, so
+A directory stands for every `.txt` decklist in it and its subdirectories, in sorted order (so `data/decks` includes
+`data/decks/incoming`), so
 `data/decks data/archetypes` imports and checks every deck and every [archetype list](../../data/archetypes/README.md).
 
 | Option | Meaning |
