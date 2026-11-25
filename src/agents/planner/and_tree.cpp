@@ -20,6 +20,8 @@ namespace pokebot {
     namespace {
 
         constexpr int kMaxTurns = 5;
+        constexpr int kLastCards = 8;
+        constexpr double kMostStages = 6.0;
 
         template <class Visit>
         void each_in_play(const PlayerState& player, Visit visit) {
@@ -61,6 +63,20 @@ namespace pokebot {
                 }
             }
             return most;
+        }
+
+        int stages_of(const CardDef& def) {
+            if (def.kind != CardKind::Pokemon) {
+                return 0;
+            }
+            if (def.stage == Stage::Stage2) {
+                return 2;
+            }
+            return def.stage == Stage::Stage1 ? 1 : 0;
+        }
+
+        bool bounded(Feature feature) {
+            return feature < static_cast<Feature>(kFirstCandidate) || feature == Feature::Evolved || feature == Feature::DeckOut;
         }
 
         int turns_to_knock_out(int hp, int damage) {
@@ -191,8 +207,10 @@ namespace pokebot {
         if (std::any_of(weights.begin(), weights.end(), [](double w) { return w < 0.0; })) {
             return 1.0;
         }
-        if (std::any_of(weights.begin() + kFirstCandidate, weights.end(), [](double w) { return w != 0.0; })) {
-            return 1.0;
+        for (std::size_t i = 0; i < kFeatureCount; ++i) {
+            if (weights[i] != 0.0 && !bounded(static_cast<Feature>(i))) {
+                return 1.0;
+            }
         }
         Features phi = features(game, player, weights);
         const auto raise = [&](Feature feature, double value) {
@@ -207,6 +225,7 @@ namespace pokebot {
 
         int prize_gain = 0;
         int their_most_prizes = 0;
+        int stage_gain = 0;
         int their_fewest_turns = kMaxTurns;
         double their_lowest_hp = 1.0;
         each_in_play(theirs, [&](const PokemonInPlay& target) {
@@ -215,6 +234,7 @@ namespace pokebot {
             const int max = rules::max_hp(game, target);
             if (damage >= hp) {
                 prize_gain = std::max(prize_gain, rules::prize_value(game, target));
+                stage_gain = std::max(stage_gain, stages_of(game.def(target.top())));
             }
             their_most_prizes = std::max(their_most_prizes, rules::prize_value(game, target));
             their_fewest_turns = std::min(their_fewest_turns, turns_to_knock_out(hp, damage));
@@ -233,6 +253,15 @@ namespace pokebot {
             my_fewest_prizes = std::min(my_fewest_prizes, rules::prize_value(game, pokemon));
         });
 
+        for (const CardIndex card : mine.hand) {
+            stage_gain += stages_of(game.def(card));
+        }
+        const auto last_cards = [](int cards) {
+            return std::clamp(cards, 0, kLastCards);
+        };
+        const int my_last = last_cards(static_cast<int>(mine.deck.size() + mine.hand.size()));
+        const int their_last = last_cards(static_cast<int>(theirs.deck.size()) - 1);
+
         const double bench_space = static_cast<double>(rules::bench_size(game, player)) - static_cast<double>(mine.bench.size());
         const double their_hand = static_cast<double>(std::min<std::size_t>(theirs.hand.size(), 7));
         const int their_conditions = theirs.active ? conditions(*theirs.active) : 0;
@@ -247,6 +276,8 @@ namespace pokebot {
         raise(Feature::Deck, at(Feature::Deck) + static_cast<double>(mine.hand.size()) / 30.0);
         raise(Feature::Conditions, std::min(their_conditions + 2, 3) / 3.0);
         raise(Feature::PrizesAtRisk, static_cast<double>(their_most_prizes - my_fewest_prizes) / 3.0);
+        raise(Feature::Evolved, at(Feature::Evolved) + stage_gain / kMostStages);
+        raise(Feature::DeckOut, static_cast<double>(my_last - their_last) / kLastCards);
 
         double sum = 0.0;
         for (std::size_t i = 0; i < kFeatureCount; ++i) {

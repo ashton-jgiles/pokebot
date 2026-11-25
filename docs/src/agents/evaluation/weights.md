@@ -40,7 +40,7 @@ leaves it alone. Unset, playouts are played with the weights they're scored with
 Greedy takes weights in its constructor. An agent's search models its opponent with its own weights
 (in playouts and macro-actions), since it can't know the opponent's.
 
-A negative weight, or any weight on a candidate, makes the and-tree's [`upper_bound`](../planner/and_tree.md) 1 everywhere, so it
+A negative weight, or a weight on a candidate that has no term there, makes the and-tree's [`upper_bound`](../planner/and_tree.md) 1 everywhere, so it
 prunes nothing with it and searches differently on the same budget.
 
 In the [sim](../../../tools/sim/main.md): `--weights FILE` for every agent, and with `--agents A,B`,

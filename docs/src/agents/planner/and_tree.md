@@ -60,10 +60,12 @@ the result.
 | Deck | + the hand shuffled back in |
 | Conditions | the opponent's Active with 2 more Special Conditions, the player's with none |
 | PrizesAtRisk | the opponent's most valuable Pokémon in front of the player's least valuable |
+| Evolved | + the stages of every evolution in the player's hand (a Stage 2 counting 2), + those of the most evolved opposing Pokémon that the damage could Knock Out |
+| DeckOut | the player's hand shuffled back into the deck, the opponent's deck one card smaller for their draw |
 
 **It isn't proven to be a true upper bound** for every card. An effect could raise a feature further
 than this allows. It needs non-negative weights (with a negative weight it returns 1, so nothing is
-pruned), and returns 1 for a weight on a [candidate feature](../evaluation/evaluation.md#candidates), which
+pruned), and returns 1 for a weight on any other [candidate feature](../evaluation/evaluation.md#candidates), which
 it has no term for. The tests check, on positions built for it and on real-deck positions, that f_bound never
 changes the best plan found. If it's too loose to prune well, the proposal's fallback is beam search.
 
@@ -85,6 +87,8 @@ children `generated`, nodes skipped as `closed`, children `pruned` by f_bound, a
 - the closed set and f_bound each expand fewer nodes, and all four combinations find the same best
   value;
 - the upper bound is at least e, and 1 when a Knock Out would take the last Prize card;
-- a weight on a candidate feature makes it 1;
+- its evolved and deck-out terms at known positions, and f_bound finding the same best plan with those
+  features weighted;
+- a weight on a feature without a term makes it 1;
 - on the real decks, the bound is at least e at every decision, the best plan is legal and worth what
   the search says, and f_bound doesn't change the best value when neither search ran out of budget.

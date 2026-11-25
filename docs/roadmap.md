@@ -746,7 +746,7 @@ decides.
 | 10.3 | **Evaluation lab:** held-out log loss and calibration of e against the baselines. *[`evaluation_lab`](src/harness/evaluation_lab.md) is built: a coin flip, prizes with a fitted scale, the hand θ as played and with a fitted scale, scored on seeds they weren't fitted on (10 folds by seed), with errors clustered by seed. `--evaluate FILE,...`. How far to go needs the fitted θ, so that decision moves to the end of 10.4. All tests pass. The results on parts 1 to 4 are below* | ✅ |
 | 10.4 | **The fit:** logistic regression in C++ (Newton, L2), pairing and first-player terms, optional θ ≥ 0, leave-one-deck-out; recovers known weights on made-up data. *[`weight_fit`](src/harness/weight_fit.md) is built, with terms for each pairing, going first and the player to move, and the [evaluation lab](src/harness/evaluation_lab.md) scores every model raw and with those terms fitted on the training folds (deck-adjusted), and on decks left out of the fit. `--evaluate` compares the fits and `--save-weights` saves them. All tests pass, and the raw losses repeat 10.3's from a different solver. The results on parts 1 to 4 are below. `data/weights/m10/fitted-nonneg.txt` goes to 10.5* | ✅ |
 | 10.5 | **Arena tuning:** learned against hand θ in Greedy, Flat MC and IS-MCTS; C re-checked. *The main run: IS-MCTS with learned θ scores 52.4% (51.2% to 53.6%) against hand θ over 6,400 games; the hand θ only rescaled scores 49.0% (47.8% to 50.3%), and C stays at 0.7. `--mcts-c-a` and `--mcts-c-b` are built for the C run. Greedy with learned θ loses: 42.9% (42.2% to 43.7%). Flat MC with learned θ scores 52.4% (51.1% to 53.6%). Learned θ takes about 9% more search time a game in IS-MCTS. Playouts played with hand θ instead make no measurable difference (50.3%), so learned θ plays them. The runs are below* | ✅ |
-| 10.6 | **New features,** one at a time, with their `upper_bound` terms. *The measuring is built: six [candidate features](src/agents/evaluation/evaluation.md#candidates) that weigh 0 until chosen, `--candidates` and `--with` in the [evaluation lab](src/harness/evaluation_lab.md#candidate-features), and `evaluate` skipping features that weigh 0. All tests pass, and 320 games of 10.5's main run repeat exactly. Round 1 adds `evolved` and round 2 `deck_out`, and in round 3 nothing passes: `data/weights/m10/fitted-evolved-deck_out.txt`. The rounds are below. Their `upper_bound` terms and the match are still to do* | 🔄 |
+| 10.6 | **New features,** one at a time, with their `upper_bound` terms. *The measuring is built: six [candidate features](src/agents/evaluation/evaluation.md#candidates) that weigh 0 until chosen, `--candidates` and `--with` in the [evaluation lab](src/harness/evaluation_lab.md#candidate-features), and `evaluate` skipping features that weigh 0. All tests pass, and 320 games of 10.5's main run repeat exactly. Round 1 adds `evolved` and round 2 `deck_out`, and in round 3 nothing passes: `data/weights/m10/fitted-evolved-deck_out.txt`. The rounds are below. Their [`upper_bound` terms](src/agents/planner/and_tree.md#the-upper-bound) are built, and all tests pass. The match: the new θ scores 55.1% (53.9% to 56.4%) against `fitted-nonneg` over 6,400 games, with 1% more search time, so it's kept. The four candidates that weren't kept are still to be removed* | 🔄 |
 | 10.7 | **Sign-off:** IS-MCTS with learned against hand θ, 16,000 games with invariant checks on unused seeds; the endgame agent re-tested; known limits | ⬜ |
 
 **What 10.3 measured (2026-11-24):** parts 1 to 4, 12,800 games, 498,549 positions, 400 seeds; 95% intervals by seed.
@@ -886,6 +886,21 @@ Round 3 (2026-11-25), on top of `evolved` and `deck_out`: without another candid
 
 - **Chosen: `evolved` (0.808) and `deck_out` (1.105),** a loss of 0.5457 against 0.5580, more than refitting the ten weights
   gained (0.0106). With the other four added, left-out basic-box and ns-zoroark get worse.
+**The match (2026-11-25):** IS-MCTS's defaults, `fitted-evolved-deck_out` for A against `fitted-nonneg` for B, 400 games per
+pairing, `--seed 2100001`, no invariant checks. **A scores 55.1% (53.9% to 56.4%): 3,529 won, 2,871 lost.**
+
+- **The rule is met:** the whole interval is above 50%, and the search takes 2.39 s a game against 2.36, 1% more, well inside
+  10%, so the new θ is kept.
+- **It's bigger than the refit's gain** (52.4% against hand θ), on different seeds and against a different opponent. The two don't add up
+  to a score against hand θ, which is 10.7's to measure.
+- **By the deck it plays,** A less B over the same 1,600 games each, all ± about 3.8: dragapult +14.1, mega-greninja
+  +13.6, ns-zoroark +9.4, basic-box +4.0. Basic-box's is just outside its error; its mirror is 50.0% (45.1% to 54.9%).
+- **The mirrors:** mega-greninja 60.8% (55.9% to 65.4%), dragapult 58.8% (53.9% to 63.5%), ns-zoroark 55.5% (50.6% to
+  60.3%). Mega-greninja's was the one `fitted-nonneg` did badly in against hand θ; against hand θ with the new θ it's
+  for 10.7.
+- **It runs out of cards less:** A loses 98 games that way and wins 193. All games: 4.5% end so, against 6.4% in 10.5's main run.
+- **What won't be known from this:** which of the two features does it, as only both were played together.
+
 - **Most of the early-game gain is `evolved`'s:** before any prize is taken the loss goes from 0.6533 to 0.6434, and to 0.6432 with all
   six. A coin flip with terms is 0.6595. This is still prediction, not play.
 - **Skipping features that weigh 0 changes nothing but time:** `--games 20` of 10.5's main run is 173 to 147 again, with every
