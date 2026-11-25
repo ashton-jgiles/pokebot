@@ -134,6 +134,8 @@ games; the reference machine has 16 hardware threads):
 | `endgame,ismcts` at the M9 sign-off (the defaults; `--games 1000`, 16,000 games) | about 1.4 games/s with invariant checks | |
 | `ismcts,ismcts` in 10.5 (the defaults; `--games 400`, the run without stalls) | about 3.1 games/s | |
 | `ismcts,ismcts` in 10.6's match (the defaults; `--games 400`, learned θ on both sides) | about 3.3 games/s | |
+| `ismcts,ismcts` at the M10 sign-off (the defaults; `--games 1000`, 16,000 games, learned θ against hand θ) | about 3.1 games/s with invariant checks | |
+| `endgame,ismcts` in 10.7 (the defaults; `--games 400`, learned θ on both sides) | about 1.2 games/s (the machine slowed during the run) | |
 | `flatmc,flatmc` in 10.5 (the defaults; `--games 400`) | about 2.2 games/s | |
 | `greedy,greedy` in 10.5 (`--games 1000`) | about 228 games/s | |
 
