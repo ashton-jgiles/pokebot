@@ -123,6 +123,28 @@ TEST_CASE("set_weights sets every copy an agent's options hold", "[weights]") {
     CHECK(endgame.solver.search.weights == weights);
 }
 
+TEST_CASE("set_playout_weights sets every agent's playout policy, and set_weights leaves it", "[weights]") {
+    const Weights weights = some_weights();
+    pokebot::FlatMcOptions flat_mc;
+    pokebot::IsMctsAgentOptions is_mcts;
+    pokebot::EndgameAgentOptions endgame;
+    CHECK(!flat_mc.playout.policy_weights);
+    CHECK(!is_mcts.search.playout.policy_weights);
+    CHECK(!endgame.is_mcts.search.playout.policy_weights);
+    pokebot::set_playout_weights(flat_mc, weights);
+    pokebot::set_playout_weights(is_mcts, weights);
+    pokebot::set_playout_weights(endgame, weights);
+    set_weights(flat_mc, default_weights());
+    set_weights(is_mcts, default_weights());
+    set_weights(endgame, default_weights());
+    CHECK(flat_mc.playout.policy_weights == weights);
+    CHECK(is_mcts.search.playout.policy_weights == weights);
+    CHECK(endgame.is_mcts.search.playout.policy_weights == weights);
+    CHECK(flat_mc.playout.weights == default_weights());
+    CHECK(is_mcts.search.playout.weights == default_weights());
+    CHECK(endgame.is_mcts.search.playout.weights == default_weights());
+}
+
 TEST_CASE("on the real decks, the saved hand weights play the default's games, and other weights don't", "[weights]") {
     const auto real = test::load_real_decks();
     if (!real) {

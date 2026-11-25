@@ -22,4 +22,16 @@ namespace pokebot {
         options.solver.search.weights = weights;
     }
 
+    void set_playout_weights(FlatMcOptions& options, const Weights& weights) {
+        options.playout.policy_weights = weights;
+    }
+
+    void set_playout_weights(IsMctsAgentOptions& options, const Weights& weights) {
+        options.search.playout.policy_weights = weights;
+    }
+
+    void set_playout_weights(EndgameAgentOptions& options, const Weights& weights) {
+        set_playout_weights(options.is_mcts, weights);
+    }
+
 } // namespace pokebot

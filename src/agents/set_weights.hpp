@@ -13,4 +13,8 @@ namespace pokebot {
     void set_weights(IsMctsAgentOptions& options, const Weights& weights);
     void set_weights(EndgameAgentOptions& options, const Weights& weights);
 
+    void set_playout_weights(FlatMcOptions& options, const Weights& weights);
+    void set_playout_weights(IsMctsAgentOptions& options, const Weights& weights);
+    void set_playout_weights(EndgameAgentOptions& options, const Weights& weights);
+
 } // namespace pokebot

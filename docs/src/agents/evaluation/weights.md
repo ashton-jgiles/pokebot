@@ -32,6 +32,10 @@ weight (2, the rest 0), a baseline: against it, IS-MCTS with the hand weights sc
 | `IsMctsAgentOptions` | its own (the setup rule), its playouts' and its macro-actions' |
 | `EndgameAgentOptions` | all of its IS-MCTS's, and its solver's search's |
 
+`set_playout_weights` sets only the weights that Flat MC's, IS-MCTS's and the endgame agent's
+[playouts](../flat_mc/playout.md) are played with, leaving the ones they're scored with; `set_weights`
+leaves it alone. Unset, playouts are played with the weights they're scored with.
+
 Greedy takes weights in its constructor. An agent's search models its opponent with its own weights
 (in playouts and macro-actions), since it can't know the opponent's.
 
@@ -39,7 +43,8 @@ A negative weight makes the and-tree's [`upper_bound`](../planner/and_tree.md) 1
 prunes nothing with it and searches differently on the same budget.
 
 In the [sim](../../../tools/sim/main.md): `--weights FILE` for every agent, and with `--agents A,B`,
-`--weights-a FILE` and `--weights-b FILE` for one side.
+`--weights-a FILE` and `--weights-b FILE` for one side, and `--playout-weights-a FILE` and
+`--playout-weights-b FILE` for one side's playouts.
 
 ## Tests
 
@@ -49,5 +54,6 @@ In the [sim](../../../tools/sim/main.md): `--weights FILE` for every agent, and 
   blank lines and order don't matter; wrong files and a missing one are rejected;
 - `set_weights` sets every copy in the table above (each is named in the test, so a field added to
   another options struct later isn't caught);
+- `set_playout_weights` sets every agent's playout policy, and `set_weights` leaves it;
 - on the real decks, Greedy plays the same games with the loaded hand weights as by default, and
   other weights change at least one.

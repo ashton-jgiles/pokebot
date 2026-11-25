@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string_view>
 
 #include "agents/agent.hpp"
@@ -23,6 +24,7 @@ namespace pokebot {
         int greedy_worlds = 1;
         int max_actions = 2000;
         Weights weights = default_weights();
+        std::optional<Weights> policy_weights = std::nullopt;
     };
 
     struct PlayoutResult {

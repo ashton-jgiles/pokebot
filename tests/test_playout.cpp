@@ -12,6 +12,7 @@
 #include "agents/agent.hpp"
 #include "agents/flat_mc/deck_model.hpp"
 #include "agents/flat_mc/playout.hpp"
+#include "agents/greedy/greedy_agent.hpp"
 #include "agents/random/random_agent.hpp"
 #include "agents/world.hpp"
 #include "engine/engine.hpp"
@@ -192,6 +193,38 @@ TEST_CASE("the same seed plays the same playout, and other seeds play others", "
         }
         CHECK(outcomes.size() > 1);
     }
+}
+
+TEST_CASE("a playout can be played with other weights than it's scored with", "[playout]") {
+    const CardDB db = sample_db();
+    const CardTable table(db, kDeck, kDeck);
+    const GameState game = at_main_phase(table, 2, 0, 3);
+    REQUIRE(!game.is_over());
+    pokebot::Weights policy = pokebot::default_weights();
+    for (double& weight : policy) {
+        weight = -weight;
+    }
+    int different = 0;
+    for (std::uint64_t seed = 0; seed < 20; ++seed) {
+        PlayoutOptions o = options(2, PlayoutPolicy::Greedy);
+        const PlayoutResult plain = play_out(game, 0, seed, o);
+        o.policy_weights = o.weights;
+        const PlayoutResult same = play_out(game, 0, seed, o);
+        CHECK(same.end == plain.end);
+        CHECK(same.value == plain.value);
+
+        o.policy_weights = policy;
+        const PlayoutResult other = play_out(game, 0, seed, o);
+        Rng rng(seed);
+        pokebot::GreedyAgent mine(rng.next(), o.greedy_worlds, policy);
+        pokebot::GreedyAgent theirs(rng.next(), o.greedy_worlds, policy);
+        const PlayoutResult expected = play_out(game, 0, mine, theirs, o);
+        CHECK(other.end == expected.end);
+        CHECK(other.actions == expected.actions);
+        CHECK(other.value == pokebot::evaluate(other.end, 0, o.weights));
+        different += other.end == plain.end ? 0 : 1;
+    }
+    CHECK(different > 0);
 }
 
 TEST_CASE("a playout stops after its most actions", "[playout]") {

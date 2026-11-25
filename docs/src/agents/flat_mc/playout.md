@@ -43,6 +43,9 @@ Greedy inside a playout builds its own worlds from its own observation, with the
 cards as the placeholder, as it always has; e reads only what both players can see, so it doesn't
 need more.
 
+Greedy plays with `weights`, the ones the end is scored with, unless `policy_weights` is set, which
+only changes who plays: the end is still scored with `weights`. Both sides play with the same ones.
+
 `to_string(policy)` and `playout_policy(name)` convert to and from `"greedy"` and `"biased"`;
 `playout_policy` throws `std::invalid_argument` for any other name.
 

@@ -71,8 +71,9 @@ namespace pokebot {
             BiasedRandomAgent theirs(theirs_seed);
             return play_out(game, player, mine, theirs, options);
         }
-        GreedyAgent mine(mine_seed, options.greedy_worlds, options.weights);
-        GreedyAgent theirs(theirs_seed, options.greedy_worlds, options.weights);
+        const Weights& policy = options.policy_weights ? *options.policy_weights : options.weights;
+        GreedyAgent mine(mine_seed, options.greedy_worlds, policy);
+        GreedyAgent theirs(theirs_seed, options.greedy_worlds, policy);
         return play_out(game, player, mine, theirs, options);
     }
 
