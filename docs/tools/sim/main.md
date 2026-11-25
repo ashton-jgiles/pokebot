@@ -17,7 +17,7 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
                                         [--print [--save-replay FILE]] [--replay FILE] [--as 0|1|all]
                                         [--agents A,B [--threads N] [--save-replays K] [--save-games FILE]]
                                         [--check-games FILE] [--evaluate FILE,FILE,... [--threads N] [--save-weights DIR] [--reference NAME]
-                                         [--candidates [--with NAME,NAME,...]]]
+                                         [--score-weights FILE,FILE,...]]
                                         [--planner-samples M] [--planner-or-budget N] [--planner-and-budget N]
                                         [--mc-plans K] [--mc-playouts N] [--mc-depth R] [--mc-policy P] [--mc-greedy-worlds W] [--mc-greedy-choices]
                                         [--mcts-iterations N] [--mcts-c C] [--mcts-c-a C] [--mcts-c-b C] [--mcts-depth R] [--mcts-plans K]
@@ -47,8 +47,7 @@ Run from the repository root. It reads `data/cards/generated`, `data/cards/effec
 | `--check-games FILE` | | Play back every game in `FILE` and count its [positions](../../src/harness/self_play.md) |
 | `--evaluate FILE,FILE,...` | | Measure how well the evaluation predicts the results of the [saved games](../../src/harness/self_play.md) in the files: the [evaluation lab](../../src/harness/evaluation_lab.md), with [fitted weights](../../src/harness/weight_fit.md) among its models. `--threads N` sets how many games and fits run at once |
 | `--reference NAME` | `hand-scaled-terms` | With `--evaluate`: the [model](../../src/harness/evaluation_lab.md#in-the-sim) the others are compared with |
-| `--candidates` | off | With `--evaluate`: fit each [candidate feature](../../src/harness/evaluation_lab.md#candidate-features) added to the played ones, instead of the usual models. Not with `--reference` |
-| `--with NAME,NAME,...` | | With `--candidates`: candidates that every fit has |
+| `--score-weights FILE,FILE,...` | | With `--evaluate`: score the [weights in these files](../../src/harness/evaluation_lab.md#saved-weights) as they are, against the first, instead of the usual models. Not with `--reference` or `--save-weights` |
 | `--save-weights DIR` | | With `--evaluate`: save each fitted model's weights, fitted on every seed in the files, to `DIR/NAME.txt`. Those files must not exist |
 | `--save-replays K` | | With `--agents`: save every `K`th game to `replays/arena/` |
 | `--planner-samples M` | 1 | The [planner](../../src/agents/planner/planner_agent.md)'s sampled worlds for a plan that ends in chance or hidden cards |

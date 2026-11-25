@@ -62,7 +62,7 @@ namespace {
         return weights;
     }
 
-    pokebot::Weights with_chosen() {
+    pokebot::Weights with_evolved_and_deck_out() {
         pokebot::Weights weights = pokebot::default_weights();
         weights[static_cast<std::size_t>(pokebot::Feature::Evolved)] = 0.8;
         weights[static_cast<std::size_t>(pokebot::Feature::DeckOut)] = 1.1;
@@ -195,16 +195,16 @@ TEST_CASE("the closed set and f_bound expand fewer nodes and find the same best 
     CHECK(bound_only.plans.front().value == neither.plans.front().value);
 }
 
-TEST_CASE("f_bound finds the same best plan with the chosen candidates weighted", "[planner]") {
+TEST_CASE("f_bound finds the same best plan with evolved and deck-out weighted", "[planner]") {
     Fixture f;
     f.give("TST-2");
     f.give("TST-3");
     f.give("TST-4");
     AndTreeOptions options;
     options.budget = 20000;
-    const auto bounded = f.search(options, with_chosen());
+    const auto bounded = f.search(options, with_evolved_and_deck_out());
     options.bound = false;
-    const auto open = f.search(options, with_chosen());
+    const auto open = f.search(options, with_evolved_and_deck_out());
     REQUIRE_FALSE(bounded.out_of_budget);
     REQUIRE_FALSE(open.out_of_budget);
     CHECK(bounded.expanded <= open.expanded);
@@ -250,21 +250,13 @@ TEST_CASE("the upper bound is at least e, and 1 when a Knock Out could win the g
     CHECK(pokebot::upper_bound(f.game, f.me, weights) == 1.0);
 }
 
-TEST_CASE("a weight on a feature without a term turns the upper bound off", "[planner]") {
-    Fixture f;
-    auto weights = with_chosen();
-    CHECK(pokebot::upper_bound(f.game, f.me, weights) < 1.0);
-    weights[static_cast<std::size_t>(pokebot::Feature::BoardHp)] = 0.1;
-    CHECK(pokebot::upper_bound(f.game, f.me, weights) == 1.0);
-}
-
 TEST_CASE("on the real decks, the upper bound is at least e, and the best plan is legal and worth what it says", "[planner]") {
     const auto real = test::load_real_decks();
     if (!real) {
         SKIP("no generated card data; run pokebot-import first");
     }
     const std::size_t n = real->decks.size();
-    const std::vector<pokebot::Weights> both{pokebot::default_weights(), with_chosen()};
+    const std::vector<pokebot::Weights> both{pokebot::default_weights(), with_evolved_and_deck_out()};
     int searches = 0;
     int compared = 0;
     for (std::uint64_t seed = 0; seed < 3; ++seed) {

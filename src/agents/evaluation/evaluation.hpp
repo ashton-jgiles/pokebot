@@ -19,16 +19,11 @@ namespace pokebot {
         Deck,
         Conditions,
         PrizesAtRisk,
-        LatePrizes,
-        KnockoutThreat,
-        PayableDamage,
         Evolved,
-        BoardHp,
         DeckOut,
     };
 
-    constexpr std::size_t kFeatureCount = 16;
-    constexpr std::size_t kFirstCandidate = 10;
+    constexpr std::size_t kFeatureCount = 12;
 
     using Features = std::array<double, kFeatureCount>;
     using Weights = std::array<double, kFeatureCount>;

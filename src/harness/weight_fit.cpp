@@ -218,21 +218,12 @@ namespace pokebot {
             }
             const std::size_t count = options.game_terms ? problem.beta.size() : problem.slopes;
             for (std::size_t j = 0; j < count; ++j) {
-                const bool feature = problem.direction == nullptr && j < kFeatureCount;
-                if (!feature || options.use[j]) {
-                    problem.free.push_back(j);
-                }
+                problem.free.push_back(j);
             }
             return minimise(std::move(problem));
         }
 
     } // namespace
-
-    FeatureMask first_features(std::size_t count) {
-        FeatureMask use{};
-        std::fill_n(use.begin(), std::min(count, kFeatureCount), true);
-        return use;
-    }
 
     std::size_t term_count(std::size_t decks) {
         return kPairingTerms + (decks > 1 ? decks * (decks - 1) / 2 : 0);

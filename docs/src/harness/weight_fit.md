@@ -41,9 +41,8 @@ a pairing's place.
 - **`fit_terms`** fits the terms with θ held fixed.
 
 `FitOptions`: `l2` adds l2/2 · Σθ² to the summed loss (so 1,000 is like 1,000 positions' worth of
-curvature at most), `non_negative` keeps θ ≥ 0 (or the scale ≥ 0), `game_terms` false leaves the
-terms out, and `use` says which features `fit_weights` fits: the others weigh 0
-(`first_features(n)` is the first n, and the default is all of them). The terms have a very small L2 of their own, so that one without samples is 0.
+curvature at most), `non_negative` keeps θ ≥ 0 (or the scale ≥ 0), and `game_terms` false leaves the
+terms out. The terms have a very small L2 of their own, so that one without samples is 0.
 
 ## The solver
 
@@ -61,7 +60,6 @@ Rows are built as they're needed, so a fit takes no memory beyond the samples.
 
 - known weights and terms recovered from exact chances, and from random wins and losses;
 - a non-negative fit has no negative weight, and no small change improves it;
-- a feature the fit doesn't use weighs 0, and the others are recovered;
 - more L2 gives smaller weights;
 - the pairing terms stop a feature that only marks the deck from getting a weight;
 - fitting the terms leaves the weights alone.

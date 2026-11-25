@@ -75,10 +75,6 @@ namespace pokebot {
             return def.stage == Stage::Stage1 ? 1 : 0;
         }
 
-        bool bounded(Feature feature) {
-            return feature < static_cast<Feature>(kFirstCandidate) || feature == Feature::Evolved || feature == Feature::DeckOut;
-        }
-
         int turns_to_knock_out(int hp, int damage) {
             if (damage <= 0) {
                 return kMaxTurns;
@@ -206,11 +202,6 @@ namespace pokebot {
         }
         if (std::any_of(weights.begin(), weights.end(), [](double w) { return w < 0.0; })) {
             return 1.0;
-        }
-        for (std::size_t i = 0; i < kFeatureCount; ++i) {
-            if (weights[i] != 0.0 && !bounded(static_cast<Feature>(i))) {
-                return 1.0;
-            }
         }
         Features phi = features(game, player, weights);
         const auto raise = [&](Feature feature, double value) {

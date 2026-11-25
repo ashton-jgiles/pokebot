@@ -8,3 +8,5 @@ hand 0.2810577424424141
 deck 0.61381829965072787
 conditions 0
 prizes_at_risk 0
+evolved 0
+deck_out 0

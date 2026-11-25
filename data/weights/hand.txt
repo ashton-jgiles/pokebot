@@ -8,3 +8,5 @@ hand 0.2
 deck 0.5
 conditions 0.2
 prizes_at_risk 0.2
+evolved 0
+deck_out 0

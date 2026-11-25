@@ -82,17 +82,15 @@ adjusted loss by prizes, and calibration for the reference and the two main fits
 [roadmap](../../roadmap.md) under M10. M10's part 5 is kept aside for the final weights, so it isn't
 passed here until then. 12,800 games take 24.7 s on 16 threads, 2.8 s of it to play them back.
 
-### Candidate features
+### Saved weights
 
-`--evaluate FILE,... --candidates` fits other models, all with terms and θ ≥ 0: the played features
-(`without`, the reference), those with each [candidate](../agents/evaluation/evaluation.md#candidates)
-added, and with all of them. `--with NAME,...` gives every model those candidates, so the next one can be
-measured on top of them. It prints the adjusted loss and its change, the added weight, the change on each
-left-out deck, the loss by prizes, and the weights. `--save-weights DIR` saves only the `without` model, as
-`fitted-NAME-NAME.txt` from `--with`, which it needs.
+`--evaluate FILE,... --score-weights FILE,FILE,...` scores the weights in the files as they are, against the
+first of them, instead of the usual models. It prints the raw and adjusted losses (with the terms fitted in
+the folds), the change on each deck's games, the adjusted loss by prizes, and calibration as played. It's for
+M10's part 5, which no weights were fitted or chosen on.
 
-Parts 1 to 4 take 30.9 s on 16 threads with all six candidates. The models of plain `--evaluate` use the
-played features only.
+M10.6 measured its candidate features with a mode that's been removed, with the numbers in the
+[roadmap](../../roadmap.md). Since then the models fit 12 features, so their numbers differ from 10.4's.
 
 ## Tests
 

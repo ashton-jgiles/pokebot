@@ -77,18 +77,6 @@ TEST_CASE("a weights file can have Windows line endings, blank lines and any ord
     CHECK(load_weights(file.path) == default_weights());
 }
 
-TEST_CASE("a candidate feature missing from a weights file weighs 0, and one that weighs 0 isn't saved", "[weights]") {
-    const TempFile file("weights-candidate");
-    Weights weights = default_weights();
-    weights.back() = 0.25;
-    save_weights(file.path, weights);
-    CHECK(load_weights(file.path) == weights);
-    std::ifstream in(file.path);
-    const std::string text{std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
-    CHECK(text.find(pokebot::to_string(static_cast<pokebot::Feature>(kFeatureCount - 1))) != std::string::npos);
-    CHECK(text.find(pokebot::to_string(static_cast<pokebot::Feature>(pokebot::kFirstCandidate))) == std::string::npos);
-}
-
 TEST_CASE("a weights file that's wrong is rejected", "[weights]") {
     const TempFile file("weights-wrong");
     const std::string good = hand_text();

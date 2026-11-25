@@ -143,41 +143,15 @@ TEST_CASE("taking a Prize card, damaging the opponent and attaching Energy each 
     CHECK(evaluate(poisoned, f.me) < before);
 }
 
-TEST_CASE("the candidate features at known positions", "[evaluation]") {
+TEST_CASE("the last 8 cards of the deck count", "[evaluation]") {
     Fixture f;
-    const auto before = features(f.game, f.me);
-    CHECK(at(before, Feature::LatePrizes) == 0.0);
-    CHECK(at(before, Feature::KnockoutThreat) == 0.0);
-    CHECK(at(before, Feature::PayableDamage) == 0.0);
-    CHECK(at(before, Feature::Evolved) == 0.0);
-    CHECK(at(before, Feature::BoardHp) == 0.0);
-
-    GameState prizes = f.game;
-    for (int i = 0; i < 3; ++i) {
-        prizes.player(f.me).hand.push_back(prizes.player(f.me).prizes.pop_back());
-    }
-    CHECK(at(features(prizes, f.me), Feature::LatePrizes) == Approx(0.25));
-
-    GameState powered = f.game;
-    test::attach_from_deck(powered, f.me, kActiveSlot, "TST-2");
-    CHECK(at(features(powered, f.me), Feature::PayableDamage) == Approx(30.0 / 300.0));
-    CHECK(at(features(powered, f.me), Feature::KnockoutThreat) == 0.0);
-
-    GameState threatened = powered;
-    threatened.player(f.them).active->damage_counters = 3;
-    CHECK(at(features(threatened, f.me), Feature::KnockoutThreat) == Approx(1.0 / 6.0));
-    CHECK(at(features(threatened, f.me), Feature::BoardHp) == Approx(30.0 / 1000.0));
-    CHECK(at(features(threatened, f.them), Feature::KnockoutThreat) == Approx(-1.0 / 6.0));
-    while (threatened.player(f.me).prizes.size() > 1) {
-        threatened.player(f.me).discard.push_back(threatened.player(f.me).prizes.pop_back());
-    }
-    CHECK(at(features(threatened, f.me), Feature::KnockoutThreat) == Approx(1.0));
-
+    CHECK(at(features(f.game, f.me), Feature::DeckOut) == 0.0);
     GameState low = f.game;
     while (low.player(f.me).deck.size() > 2) {
         low.player(f.me).discard.push_back(low.player(f.me).deck.pop_back());
     }
     CHECK(at(features(low, f.me), Feature::DeckOut) == Approx(-6.0 / 8.0));
+    CHECK(at(features(low, f.them), Feature::DeckOut) == Approx(6.0 / 8.0));
 }
 
 TEST_CASE("evolutions count by their stage", "[evaluation]") {
