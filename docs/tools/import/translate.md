@@ -57,6 +57,20 @@ Pokémon or each of them; damage to itself; damage or damage counters to every P
 the opponent's Active Pokémon. An Item or Supporter that heals 1 of your Pokémon, or each of them, needs a damaged Pokémon
 (`has_damaged`).
 
+Lasting effects from attacks: "During your opponent's next turn, this Pokémon takes N less damage from attacks (after
+applying Weakness and Resistance)"; "… prevent all damage from and effects of attacks done to this Pokémon"; "… prevent all
+damage done to this Pokémon by attacks" (with "from Basic Pokémon" or "if that damage is N or less"); "… attacks used by the
+Defending Pokémon do N less damage (before …)"; "During your next turn, the Defending Pokémon takes N more damage from
+attacks (after …)"; "During your next turn, attacks used by this Pokémon do N more damage to your opponent's Active
+Pokémon (before …)"; "… the Defending Pokémon can't use attacks"; and "… if the Defending Pokémon tries to use an attack,
+your opponent flips a coin. If tails, that attack doesn't happen", whose second sentence is read only after the first.
+
+Passives on Abilities and Tools: "This Pokémon takes N less damage from attacks (after …)" and "The Pokémon this card is
+attached to takes N less …"; "Prevent all damage done to this Pokémon by attacks from your opponent's Pokémon ex"; "As long
+as this Pokémon is on your Bench, prevent all damage from and effects of attacks from your opponent's Pokémon done to this
+Pokémon"; "As long as this Pokémon is in the Active Spot, attacks used by your opponent's Active Pokémon do N less damage
+(before …)"; and "Prevent all effects of attacks used by your opponent's Pokémon done to this Pokémon".
+
 Two shapes follow how our hand-written effects say them, so the programs compare equal:
 
 - "You may shuffle N Energy attached to this Pokémon into your deck. If you do, …" checks that the Pokémon has N Energy

@@ -207,6 +207,8 @@ namespace pokebot {
         std::int16_t amount = 0;     // DamageBonus: how much
         bool only_ex = false;        // DamageBonus: only against Pokemon ex
         std::uint16_t turn = 0;
+        bool prevent_effects = false;
+        bool from_basic = false;
 
         bool operator==(const LastingEffect&) const = default;
     };

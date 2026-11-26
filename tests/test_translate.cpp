@@ -162,6 +162,28 @@ TEST_CASE("healing, damage to itself, \"does nothing\", Weakness and Resistance,
     card_reads_as(trainer("item", "Heal 30 damage from 1 of your Pokémon."), R"({"requires": [{"has_damaged": true}], "effects": [{"op": "heal_to", "amount": 30}]})");
 }
 
+TEST_CASE("lasting damage changes, prevention, the attack flip, and damage passives", "[translate]") {
+    reads_as("During your opponent's next turn, this Pokémon takes 30 less damage from attacks (after applying Weakness and Resistance).", DamageMod::None,
+             R"([{"op": "lasting", "effect": "takes_less", "amount": 30, "until": "opponents_next_turn"}])");
+    reads_as("Flip a coin. If heads, during your opponent's next turn, prevent all damage from and effects of attacks done to this Pokémon.", DamageMod::None,
+             R"([{"op": "flip_coins"}, {"op": "if", "condition": {"heads_at_least": 1}, "then": [{"op": "lasting", "effect": "prevent_damage", "prevent_effects": true, "until": "opponents_next_turn"}]}])");
+    reads_as("During your opponent's next turn, prevent all damage done to this Pokémon by attacks from Basic Pokémon.", DamageMod::None,
+             R"([{"op": "lasting", "effect": "prevent_damage", "from_basic": true, "until": "opponents_next_turn"}])");
+    reads_as("During your opponent's next turn, attacks used by the Defending Pokémon do 30 less damage (before applying Weakness and Resistance).", DamageMod::None,
+             R"([{"op": "lasting", "effect": "deals_less", "amount": 30, "on": "defending", "until": "opponents_next_turn"}])");
+    reads_as("During your next turn, attacks used by this Pokémon do 60 more damage to your opponent's Active Pokémon (before applying Weakness and Resistance).", DamageMod::None,
+             R"([{"op": "lasting", "effect": "damage_bonus", "amount": 60, "until": "your_next_turn"}])");
+    reads_as("During your opponent's next turn, if the Defending Pokémon tries to use an attack, your opponent flips a coin. If tails, that attack doesn't happen.", DamageMod::None,
+             R"([{"op": "lasting", "effect": "attack_flip", "on": "defending", "until": "opponents_next_turn"}])");
+    not_read("If tails, that attack doesn't happen.");
+    card_reads_as(pokemon_with("Hard Shell", "This Pokémon takes 30 less damage from attacks (after applying Weakness and Resistance)."),
+                  R"({"abilities": {"Hard Shell": {"passive": [{"modify": "damage_taken", "add": -30}]}}})");
+    card_reads_as(pokemon_with("Bench Barrier", "As long as this Pokémon is on your Bench, prevent all damage from and effects of attacks from your opponent's Pokémon done to this Pokémon."),
+                  R"({"abilities": {"Bench Barrier": {"passive": [{"modify": "prevent_damage", "if_benched": true}, {"modify": "prevent_effects", "if_benched": true}]}}})");
+    card_reads_as(trainer("tool", "The Pokémon this card is attached to takes 20 less damage from attacks (after applying Weakness and Resistance)."),
+                  R"({"passive": [{"modify": "damage_taken", "add": -20}]})");
+}
+
 TEST_CASE("the translator reads all of a text or none of it", "[translate]") {
     not_read("Draw a card quickly.");
     not_read("Heal from this Pokémon the same amount of damage you did to your opponent's Active Pokémon.");

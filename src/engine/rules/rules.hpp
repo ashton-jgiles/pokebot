@@ -51,6 +51,9 @@ namespace pokebot::rules {
 
     // base damage -> attacker effects -> Weakness -> Resistance -> defender effects
     bool damage_prevented(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender);
+    bool effects_prevented(const GameState& game, const PokemonInPlay& pokemon);
+    bool effects_prevention_in_play(const GameState& game);
+    bool attack_needs_flip(const GameState& game, const PokemonInPlay& attacker);
     // ignore_defender_effects: "this attack's damage isn't affected by any effects on your opponent's Active Pokemon"
     struct DamageOptions {
         bool ignore_defender_effects = false;

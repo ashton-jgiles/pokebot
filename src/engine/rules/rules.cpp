@@ -78,23 +78,54 @@ namespace pokebot::rules {
                     in_reach = true;
                     break;
             }
+            if ((m.only_if_active || m.only_if_benched) && (holder == nullptr || is_active(game, *holder) != m.only_if_active)) {
+                return false;
+            }
             return in_reach && matches(m.filter, game.def(target.top())) && (!m.only_if_poisoned || target.special.poison > 0);
         }
 
-        int attacker_side(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, int damage) {
-            if (is_active(game, defender)) {
-                each_modifier(game, [&](const Modifier& m, int owner, const PokemonInPlay* holder) {
-                    if (m.what == Modifies::DamageDealt && applies(game, m, owner, holder, attacker)) {
-                        damage += m.add;
+        bool lasting_on(const GameState& game, const LastingEffect& effect, LastingKind kind, const PokemonInPlay& pokemon) {
+            return effect.kind == kind && effect.turn == game.turn && effect.pokemon == pokemon.id();
+        }
+
+        struct ModifierTotals {
+            int dealt = 0;
+            int taken = 0;
+            bool prevented = false;
+        };
+
+        ModifierTotals modifier_totals(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, bool defender_active, bool defender_effects) {
+            ModifierTotals totals;
+            const bool opponents = owner_of(attacker.id()) != owner_of(defender.id());
+            const CardDef& attacking = game.def(attacker.top());
+            each_modifier(game, [&](const Modifier& m, int owner, const PokemonInPlay* holder) {
+                if (m.what == Modifies::DamageDealt) {
+                    if (defender_active && applies(game, m, owner, holder, attacker)) {
+                        totals.dealt += m.add;
                     }
-                });
-            }
+                } else if (m.what == Modifies::DamageTaken) {
+                    if (defender_effects && applies(game, m, owner, holder, defender)) {
+                        totals.taken += m.add;
+                    }
+                } else if (m.what == Modifies::PreventDamage) {
+                    if (defender_effects && opponents && applies(game, m, owner, holder, defender) && matches(m.from, attacking)) {
+                        totals.prevented = true;
+                    }
+                }
+            });
+            return totals;
+        }
+
+        int attacker_side(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, int damage) {
             const int player = owner_of(attacker.id());
             const bool defender_ex = game.def(defender.top()).rules.ex;
             for (const LastingEffect& effect : game.lasting) {
                 if (effect.kind == LastingKind::DamageBonus && effect.turn == game.turn && effect.player == player &&
-                    is_active(game, defender) && (!effect.only_ex || defender_ex)) {
+                    (effect.pokemon == kNoCard || effect.pokemon == attacker.id()) && is_active(game, defender) && (!effect.only_ex || defender_ex)) {
                     damage += effect.amount;
+                }
+                if (lasting_on(game, effect, LastingKind::DealsLess, attacker)) {
+                    damage -= effect.amount;
                 }
             }
             return damage;
@@ -116,8 +147,23 @@ namespace pokebot::rules {
             return damage;
         }
 
-        int defender_side(const GameState&, const PokemonInPlay&, const PokemonInPlay&, int damage) {
-            return damage;
+        int defender_side(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, int damage, bool prevented) {
+            const bool opponents = owner_of(attacker.id()) != owner_of(defender.id());
+            const CardDef& attacking = game.def(attacker.top());
+            for (const LastingEffect& effect : game.lasting) {
+                if (lasting_on(game, effect, LastingKind::TakesLess, defender)) {
+                    damage -= effect.amount;
+                } else if (lasting_on(game, effect, LastingKind::TakesMore, defender)) {
+                    damage += effect.amount;
+                }
+            }
+            for (const LastingEffect& effect : game.lasting) {
+                if (opponents && lasting_on(game, effect, LastingKind::PreventDamage, defender) && (!effect.from_basic || attacking.stage == Stage::Basic) &&
+                    (effect.amount == 0 || std::max(damage, 0) <= effect.amount)) {
+                    prevented = true;
+                }
+            }
+            return prevented ? 0 : damage;
         }
 
     } // namespace
@@ -322,13 +368,49 @@ namespace pokebot::rules {
         return game.def(defender.top()).rules.tera && !is_active(game, defender);
     }
 
+    bool effects_prevented(const GameState& game, const PokemonInPlay& pokemon) {
+        for (const LastingEffect& effect : game.lasting) {
+            if (lasting_on(game, effect, LastingKind::PreventDamage, pokemon) && effect.prevent_effects) {
+                return true;
+            }
+        }
+        bool prevented = false;
+        each_modifier(game, [&](const Modifier& m, int owner, const PokemonInPlay* holder) {
+            if (m.what == Modifies::PreventEffects && applies(game, m, owner, holder, pokemon)) {
+                prevented = true;
+            }
+        });
+        return prevented;
+    }
+
+    bool effects_prevention_in_play(const GameState& game) {
+        for (const LastingEffect& effect : game.lasting) {
+            if (effect.kind == LastingKind::PreventDamage && effect.prevent_effects && effect.turn == game.turn) {
+                return true;
+            }
+        }
+        bool any = false;
+        each_modifier(game, [&](const Modifier& m, int, const PokemonInPlay*) {
+            any = any || m.what == Modifies::PreventEffects;
+        });
+        return any;
+    }
+
+    bool attack_needs_flip(const GameState& game, const PokemonInPlay& attacker) {
+        return std::any_of(game.lasting.begin(), game.lasting.end(), [&](const LastingEffect& effect) {
+            return lasting_on(game, effect, LastingKind::AttackFlip, attacker);
+        });
+    }
+
     int attack_damage(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, int base, DamageOptions options) {
         if (base <= 0 || damage_prevented(game, attacker, defender)) {
             return 0;
         }
-        int damage = base;
-        damage = attacker_side(game, attacker, defender, damage);
-        if (is_active(game, defender)) {
+        const bool active = is_active(game, defender);
+        const bool defender_effects = !options.ignore_defender_effects || !active;
+        const ModifierTotals totals = modifier_totals(game, attacker, defender, active, defender_effects);
+        int damage = attacker_side(game, attacker, defender, base + totals.dealt);
+        if (active) {
             if (!options.ignore_weakness) {
                 damage = apply_weakness(game, attacker, defender, damage, options.ignore_defender_effects);
             }
@@ -336,8 +418,8 @@ namespace pokebot::rules {
                 damage = apply_resistance(game, attacker, defender, damage, options.ignore_defender_effects);
             }
         }
-        if (!options.ignore_defender_effects) {
-            damage = defender_side(game, attacker, defender, damage);
+        if (defender_effects) {
+            damage = defender_side(game, attacker, defender, damage + totals.taken, totals.prevented);
         }
         return std::max(damage, 0);
     }

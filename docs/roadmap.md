@@ -172,8 +172,8 @@ translates one. After the Greninja fix, the old decks mustn't change: each step 
 | 3b.1 | **Data:** corrections to TCGdex's data, the importer's fixes, whole sets imported, reprints matched, the coverage report, the scan document restored and corrected. *[Corrections](data/cards/README.md#correctionsjson) to TCGdex's data and the importer's fixes are built. All 460 tests pass, the re-import changes only Greninja ex (30C 21), and M10's result stands after the fix: 57.8% (56.6% to 59.0%). The bulk import and the [coverage report](tools/import/standard.md) are built: all 466 tests pass, and 373 of the 2,097 distinct cards (17.8%) have all their effects. The [scan document](research/standard-scan.md) is restored and corrected. Reprints in decklists move to 3b.2* | ✅ |
 | 3b.2a | **Any deck export imports:** set codes found through TCGdex's series, reprints using their card's effects (`same_as`), and a report for each deck. Decks that aren't playable yet wait in `data/decks/incoming/`, which the sim and the tests don't read. *Done: all 470 tests pass, the four new decks import with 0 failures, 6 printings use a reprint's effects, and the reference run repeats. Results below* | ✅ |
 | 3b.2 | **Translator** for today's vocabulary, checked against the hand-written effects. *Done: the four decks are chosen, and the translator reads 81 of the 88 hand-written texts the same, completes 471 Standard cards with no effects file (844 complete in all, 40.2%), and passed its audit of 50. The design and the substeps are below* | ✅ |
-| 3b.3 | Damage, healing, counts and conditions. *The design and the substeps are below* | 🔄 |
-| 3b.4 | Lasting effects and damage passives | ⬜ |
+| 3b.3 | Damage, healing, counts and conditions. *Done: 1,047 of the 2,097 cards complete (49.9%, from 40.2%), the focused audit of 50 found none wrong, and the reference run repeats. The design and the substeps are below* | ✅ |
+| 3b.4 | Lasting effects and damage passives, built in one step: the engine's lasting kinds, damage passives and prevention, the translator's sentences, and the runs. *Built: all 502 tests pass, 81 hand-written texts the same with the same 7 not read, 1,132 of the 2,097 cards complete (54.0%), and the reference run repeats in what's played. The audit with the right words found none of 50 wrong. The run's time is being checked after a speed fix. Results below* | 🔄 |
 | 3b.5 | Triggers, Abilities with costs, locks, HP and Retreat Cost | ⬜ |
 | 3b.6 | Hands, decks, Energy, Stadium actions, Special Energy | ⬜ |
 | 3b.7 | The four decks: hand-written and custom cards | ⬜ |
@@ -245,6 +245,59 @@ grammar, against the downloaded sets (distinct cards in each list):
 - **Variants for later:** other `basic-box` and `dragapult` lists, and `basic-box` lists with Mew ex or Mega Rayquaza ex,
   as [archetype lists](data/archetypes/README.md). Mega Rayquaza ex is a Delta Reign card, whose data isn't trusted yet.
 
+**3b.4's design (2026-11-25, before any of it was built):** in the cached Standard sets, lasting damage changes and prevention
+(about 80 texts: less damage next turn 28, prevention next turn about 35, the Defending Pokémon doing less 10, taking more 3, this
+Pokémon doing more next turn 4) and passives (about 20: less damage 9, prevention from Pokémon ex 2, on the Bench 3, less damage
+while Active 3, effects prevented 3), plus "the Defending Pokémon can't use attacks" (6) and the attack coin flip (4). Left for
+later: triggers when damaged (11, 3b.5), "effects of attacks and Abilities" (4), and discarding the Defending Pokémon (2).
+**A guess, to be measured:** about 110 texts, perhaps 40 to 90 more cards complete. Two rules questions are taken as
+approximations until checked against a ruling: being switched by an attack isn't counted as an effect that prevention stops,
+and "takes less damage from attacks" doesn't reduce damage a Pokémon does to itself.
+
+**Its rules (2026-11-25, before any of it was built):** every hand-written text the translator reads must load the same, and a
+text leaves the pinned list only if it's then read and loads the same; an audit of 50 texts using the new vocabulary (`--seed 3`,
+with `--using`): at most 1 wrong, each wrong one's rule fixed; the reference run repeats, 158 to 162, 18.4 turns and 140.8
+actions a game; no coverage threshold.
+
+**What 3b.4 measured (2026-11-26):**
+
+- **Against the hand-written cards:** 88 texts, 81 the same, 0 different, the same 7 not read.
+- **On all of Standard:** **1,132 of 2,097 cards complete (54.0%)**, against 1,047, so **85 more**, inside the guess of 40 to 90.
+  759 complete by translation. Texts read: attacks 1,128 of 1,757 (from 1,043), Abilities 51 of 300 (from 35).
+- **The incoming decks:** mega-lucario 17 of 27 cards ready (from 16), mega-venasaur 19 of 25 (from 18).
+- **The audit's words were wrong.** `--using` matches ops, keys and `key:value`, and the new lasting kinds and passives are values
+  (`effect:takes_less`, `modify:damage_taken`), so the words `takes_less`, `deals_less`, `takes_more`, `attack_flip`,
+  `damage_taken` and `prevent_damage` matched nothing. The 50 drawn (of 78) were prevention with effects (16), the Bench barrier
+  (2), less damage while Active (2), this Pokémon doing more next turn (3), and 27 "can't attack" texts, mostly 3b.2's vocabulary.
+  All 50 were checked by hand and none was wrong, but the sample has no texts for less damage, more damage taken, the attack flip
+  or damage passives, so it doesn't meet the rule. It's run again with `effect:` and `modify:` words.
+- **The audit again** (`--audit 50 --seed 3 --using effect:takes_less,effect:prevent_damage,effect:deals_less,effect:takes_more,`
+  `effect:attack_flip,effect:damage_bonus,modify:damage_taken,modify:prevent_damage,modify:prevent_effects,if_active,if_benched`):
+  50 of the 97 texts that use 3b.4's vocabulary. Each was checked by hand. **None was wrong**, within the rule of at most 1. The
+  sample: less damage next turn 14, prevention with effects 12, prevention of damage only 2, up to an amount 1, from Basic Pokémon
+  3, the Defending Pokémon doing less 5 or taking more 2, the attack flip 2, this Pokémon doing more next turn 2, and passives:
+  less damage 4, prevention from Pokémon ex 1, less damage while Active 2.
+- **The protection tests' deck had 8 copies of one card**, so every one of their games was refused; it has 4 now.
+- **One approximation the audit showed:** "attacks used by your opponent's Active Pokémon do N less damage" uses `damage_dealt`,
+  which applies only to damage to the Active Pokémon, so a spread attack's damage to the Bench isn't reduced.
+- **The reference run repeats** 158 to 162, 18.4 turns and 140.8 actions a game, the same endings, but took **229.3 s**, against 84 to
+  100 s. The first 112 games went about five times slower than before (16 games in 22 to 31 s), and the rest at the old pace (16
+  in 3 to 5 s). A slowdown from the code would show in every game, so this looks like the machine being busy at the start, but it
+  isn't known; the run is repeated.
+- **Repeated, it took 134.5 s,** again with a slow stretch (games 80 to 112), and search time per game went from about 2.4 s to
+  3.3 s. Repeated in the same place, that points at the code, though it isn't proven: the damage calculation, which the agents
+  call very often, now walked the Tools and Abilities in play twice, and choosing targets for an attack walked them once per
+  Pokémon. **The fix:** one walk per damage calculation for all three passives (`damage_dealt`, `damage_taken`, `prevent_damage`),
+  and choosing targets walks once to see whether any effects prevention is in play at all before checking each Pokémon.
+- **After the fix, all 502 tests pass, and the run repeats again but took 341.6 s,** slow from the first game to the last, with every
+  part of the search about three times slower, the or-tree too (0.06 s a game against 0.02), though the fix only made the code do
+  less. Single runs on this machine have now taken 84, 88, 100, 229, 134 and 342 s, so they can't show a slowdown. **Next:** the
+  same games from 3b.3's commit and from today's code, built in two folders and run one after the other, twice each.
+
+**How 3b.4 is built:** prevention and reductions are effects on the defender, so `ignore_defender_effects` skips them for an Active
+defender. Effects prevention is checked as each effect happens: a shielded Pokémon can't be chosen for anything but damage, and
+gets no Special Condition or lasting effect. The new lasting fields are hashed so that an effect without them hashes as before.
+
 **3b.3's design (2026-11-25, before any of it was built):** the vocabulary most often missing, counted in the cached Standard sets
 (2,108 cards, 2,316 texts): healing (about 100 texts), damage to the attacker itself (83), "if tails, this attack does nothing" (44),
 conditions on the opponent's Active Pokémon (60) and on the attacker (67, some already read), counts (about 40 not yet expressible),
@@ -257,7 +310,7 @@ attack's cost", and "if you can't discard …, this attack does nothing". **A gu
 |---|---|---|
 | 3b.3.1 | The engine's vocabulary: `heal_self` and `heal_to`, `damage_self`, `"each": true` targets, `"on": "active"`, `ignore_weakness` and `ignore_resistance`, five conditions and five counts. *Done: all 492 tests pass, and the reference run repeats 158 to 162, 18.4 turns and 140.8 actions a game, with the same endings (88.2 s against 84.4 s, one run each, so not a measured slowdown; speed is checked at sign-off)* | ✅ |
 | 3b.3.2 | The translator's sentences for them, and "if tails, this attack does nothing". *[Done](tools/import/translate.md#how-it-reads): all 493 tests pass, the 81 hand-written texts read still load the same with the same 7 not read, and 1,047 of the 2,097 cards are complete (49.9%), 674 of them by translation* | ✅ |
-| 3b.3.3 | `--audit --using`, the runs, the audit and the record. *[Built](tools/import/main.md#--audit-a-sample-of-translations), not yet run* | 🔄 |
+| 3b.3.3 | `--audit --using`, the runs, the audit and the record. *[Done](tools/import/main.md#--audit-a-sample-of-translations): the audit of 50 found none wrong, and the reference run repeats* | ✅ |
 
 **Its rules (2026-11-25, before any of it was built):**
 
@@ -267,6 +320,20 @@ attack's cost", and "if you can't discard …, this attack does nothing". **A gu
   is fixed;
 - the reference run repeats, 158 to 162, 18.4 turns and 140.8 actions a game;
 - no coverage threshold; the gain is reported against the guess above.
+
+**What 3b.3.3 measured (2026-11-25):**
+
+- **The audit** (`--audit 50 --seed 2 --using` the new ops, conditions, counts, `each`, `on:active` and `damage_inside_if`): 50 of the
+  276 texts that use 3b.3's vocabulary, 49 attacks and 1 Ability. Each was checked by hand against its effects. **None was wrong**,
+  within the rule of at most 1. The sample had damage to itself (11), healing (11, one of them Potion), "if tails, this attack does
+  nothing" (5), discarding an Energy from the opponent's Active (6), conditions on the opponent's Active (8), counts (4), damage to
+  each Benched Pokémon (3) and Weakness or Resistance ignored (2).
+- **Two choices the audit leans on, as designed:** an Item or Ability that heals 1 of your Pokémon needs a damaged one, as our
+  hand-written cards leave out a card that would do nothing; and "Pokémon ex or Pokémon V" reads as a Pokémon ex, since no Pokémon V
+  is in Standard.
+- **The reference run repeats** 158 to 162, 18.4 turns and 140.8 actions a game, the same endings. It took 100.4 s, after 84.4 s and
+  88.2 s. 3b.3.2 and 3b.3.3 changed only the importer, which the sim doesn't run, so these times vary by at least 14% from run to
+  run on this machine; speed is measured at sign-off, not from single runs.
 
 **What 3b.3.2 measured (2026-11-25):**
 

@@ -191,6 +191,11 @@ namespace pokebot {
         CantRetreat,
         NoItems,
         DamageBonus,
+        TakesLess,
+        PreventDamage,
+        DealsLess,
+        TakesMore,
+        AttackFlip,
     };
 
     enum class Until : std::uint8_t {
@@ -210,6 +215,8 @@ namespace pokebot {
         Until until = Until::ThisTurn;
         LastingOn on = LastingOn::Self;
         bool only_ex = false;
+        bool prevent_effects = false;
+        bool from_basic = false;
 
         bool operator==(const LastingSpec&) const = default;
     };
@@ -247,6 +254,9 @@ namespace pokebot {
         WeaknessType,
         DamageDealt, // attacks by the Pokemon do `add` more to the opponent's Active (before Weakness)
         BenchSize,   // a player's Bench can hold `set` Pokemon
+        DamageTaken,
+        PreventDamage,
+        PreventEffects,
     };
 
     enum class AppliesTo : std::uint8_t {
@@ -265,6 +275,9 @@ namespace pokebot {
         CardFilter filter;
         bool only_if_poisoned = false;
         bool only_with_tera = false; // only for a player with a Tera Pokemon in play
+        CardFilter from;
+        bool only_if_active = false;
+        bool only_if_benched = false;
 
         bool operator==(const Modifier&) const = default;
     };

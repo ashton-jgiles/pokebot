@@ -123,7 +123,8 @@ namespace pokebot {
                     add(effect.pokemon);
                     add(effect.attack);
                     add(static_cast<std::uint64_t>(static_cast<std::uint16_t>(effect.amount)));
-                    add(effect.only_ex);
+                    add(static_cast<std::uint64_t>(effect.only_ex) | (static_cast<std::uint64_t>(effect.prevent_effects) << 1U) |
+                        (static_cast<std::uint64_t>(effect.from_basic) << 2U));
                     add(effect.turn);
                 }
 

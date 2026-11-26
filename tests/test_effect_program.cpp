@@ -238,6 +238,37 @@ TEST_CASE("conditions and counts about the opponent's Active Pokemon and this Po
     }
 }
 
+TEST_CASE("lasting damage changes and prevention, and damage passives", "[effects]") {
+    const auto lasting = compile_attack(json::parse(R"([{"op": "lasting", "effect": "prevent_damage", "until": "opponents_next_turn", "prevent_effects": true, "from_basic": true, "amount": 40}])"));
+    REQUIRE(lasting.size() == 2);
+    CHECK(lasting[1].lasting.kind == pokebot::LastingKind::PreventDamage);
+    CHECK(lasting[1].lasting.prevent_effects);
+    CHECK(lasting[1].lasting.from_basic);
+    CHECK(lasting[1].amount == 40);
+    for (const char* ok : {R"([{"op": "lasting", "effect": "takes_less", "amount": 30, "until": "opponents_next_turn"}])",
+                           R"([{"op": "lasting", "effect": "deals_less", "amount": 20, "on": "defending", "until": "opponents_next_turn"}])",
+                           R"([{"op": "lasting", "effect": "takes_more", "amount": 30, "on": "defending", "until": "your_next_turn"}])",
+                           R"([{"op": "lasting", "effect": "damage_bonus", "amount": 30, "until": "your_next_turn"}])",
+                           R"([{"op": "lasting", "effect": "attack_flip", "on": "defending", "until": "opponents_next_turn"}])"}) {
+        CHECK_NOTHROW(compile_attack(json::parse(ok)));
+    }
+    for (const char* bad : {R"([{"op": "lasting", "effect": "takes_less", "until": "opponents_next_turn"}])",
+                            R"([{"op": "lasting", "effect": "takes_less", "amount": 30, "on": "defending", "until": "opponents_next_turn"}])",
+                            R"([{"op": "lasting", "effect": "deals_less", "amount": 20, "until": "opponents_next_turn"}])",
+                            R"([{"op": "lasting", "effect": "cant_retreat", "on": "defending", "from_basic": true, "until": "opponents_next_turn"}])"}) {
+        CHECK_THROWS_AS(compile_attack(json::parse(bad)), CardDataError);
+    }
+    const auto passive = pokebot::compile_passive(json::parse(R"([{"modify": "damage_taken", "add": -30}, {"modify": "prevent_damage", "from": {"rule_box": true}},
+                                                                 {"modify": "prevent_effects", "if_benched": true}, {"modify": "damage_dealt", "add": -20, "applies_to": "opponents", "if_active": true}])"));
+    REQUIRE(passive.size() == 4);
+    CHECK(passive[0].what == pokebot::Modifies::DamageTaken);
+    CHECK(passive[1].what == pokebot::Modifies::PreventDamage);
+    CHECK(passive[1].from.rule_box == true);
+    CHECK(passive[2].only_if_benched);
+    CHECK(passive[3].only_if_active);
+    CHECK_THROWS_AS(pokebot::compile_passive(json::parse(R"([{"modify": "damage_taken"}])")), CardDataError);
+}
+
 TEST_CASE("special_condition targets the opponent unless told otherwise", "[effects]") {
     const auto program = compile_attack(json::parse(
         R"([{"op": "special_condition", "condition": "asleep"}, {"op": "special_condition", "condition": "poisoned", "count": 4, "player": "you"}])"));

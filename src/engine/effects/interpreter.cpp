@@ -259,16 +259,24 @@ namespace pokebot {
             }
 
             // The slots of that side's Pokemon this step may choose: on the Bench, or anywhere in play.
+            bool shielded(const GameState& game, const EffectRun& run, const PokemonInPlay& pokemon) {
+                return run.program.kind == ProgramKind::Attack && owner_of(pokemon.id()) != run.who.player && rules::effects_prevented(game, pokemon);
+            }
+
             FixedVector<Slot, kMaxBenchSize + 1> targetable(const GameState& game, const EffectRun& run, const Step& step) {
                 FixedVector<Slot, kMaxBenchSize + 1> slots;
                 const PlayerState& p = game.player(player_on(step.side, run.who.player));
+                const Program& program = program_of(game, run.program);
+                const bool damage_next = step.op == Op::ChooseTargets && run.pc + 1U < program.size() && program[run.pc + 1U].op == Op::DamageTargets;
+                const bool may_shield = !damage_next && run.program.kind == ProgramKind::Attack && player_on(step.side, run.who.player) != run.who.player &&
+                                        rules::effects_prevention_in_play(game);
                 for (const Slot slot : in_play_slots(p)) {
                     const PokemonInPlay& pokemon = pokemon_at(p, slot);
                     if ((slot == kActiveSlot && step.from == Zone::Bench) || (slot != kActiveSlot && step.from == Zone::Active)) {
                         continue;
                     }
                     if (run.targets.contains(pokemon.id()) || (step.needs_energy && pokemon.energy.empty()) || (step.needs_damage && pokemon.damage_counters == 0) ||
-                        !matches(step.filter, game.def(pokemon.top()))) {
+                        !matches(step.filter, game.def(pokemon.top())) || (may_shield && rules::effects_prevented(game, pokemon))) {
                         continue;
                     }
                     slots.push_back(slot);
@@ -809,7 +817,7 @@ namespace pokebot {
                     case Op::ApplySpecialCondition:
                         for (const int player : players_on(step.side, run.who.player)) {
                             PlayerState& target = game.player(player);
-                            if (target.active) {
+                            if (target.active && !shielded(game, run, *target.active)) {
                                 apply_special_condition(game, *target.active, step.special, step.max);
                             }
                         }

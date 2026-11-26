@@ -63,11 +63,19 @@ Prevented damage is 0. **Weakness and Resistance apply only when the defender is
 a Benched Pokémon skips them, as the rulebook says.
 
 The attacker-side stage adds lasting damage bonuses (Black Belt's Training) and always-on
-`damage_dealt` bonuses (Binding Mochi) when the defender is Active. The defender-side stage does
-nothing yet. An attack with no damage does none.
+`damage_dealt` bonuses (Binding Mochi) when the defender is Active, and takes away `DealsLess`. The defender-side
+stage adds `damage_taken` passives and `TakesLess` / `TakesMore`, then makes the damage 0 if it's prevented: a
+`PreventDamage` lasting effect (all of it, only up to its amount, or only from a Basic attacker) or a `prevent_damage`
+passive that matches the attacker. Prevention applies only to the opponent's attacks. An attack with no damage does none.
+
+`effects_prevented(game, pokemon)` is whether the effects of attacks on that Pokémon are prevented (a `PreventDamage`
+lasting effect with `prevent_effects`, or a `prevent_effects` passive). The interpreter asks it for the opponent's
+Pokémon during an attack: such a Pokémon can't be chosen for an effect other than damage, gets no Special Condition,
+and gets no lasting effect. Being switched isn't counted as an effect yet, a known approximation, and nor is damage
+done to itself, which stays damage counters.
 
 `attack_damage(…, options)` takes `DamageOptions`. `ignore_defender_effects` is for Shred: it uses the defender's
-**printed** Weakness and Resistance and skips the defender-side stage. `ignore_weakness` and `ignore_resistance` skip
+**printed** Weakness and Resistance and skips the defender-side stage for an Active defender. `ignore_weakness` and `ignore_resistance` skip
 that stage ("this attack's damage isn't affected by Weakness or Resistance").
 
 ## Always-on effects
@@ -78,7 +86,7 @@ Two private helpers in `rules.cpp` connect them to the questions:
 - `each_modifier(game, visit)` visits every modifier in play: the Stadium's, then each Tool's and
   each Ability's for every Pokémon in play, with its owner and the Pokémon holding it.
 - `applies(game, modifier, owner, holder, target)` decides whether a modifier reaches a Pokémon,
-  from `applies_to`, the filter, and `if_poisoned`.
+  from `applies_to`, the filter, `if_poisoned`, and `if_active` / `if_benched` (where the holder is).
 
 Nothing is cached: each question looks through what's in play when it's asked, so a Tool or Stadium
 works the moment it's played and stops the moment it leaves.

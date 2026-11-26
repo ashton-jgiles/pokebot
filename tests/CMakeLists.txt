@@ -30,6 +30,7 @@ add_executable(pokebot_tests
   test_engine_damage.cpp
   test_engine_targets.cpp
   test_engine_damage_effects.cpp
+  test_engine_protection.cpp
   test_engine_lasting.cpp
   test_engine_passive.cpp
   test_engine_abilities.cpp

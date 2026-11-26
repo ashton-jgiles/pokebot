@@ -149,7 +149,7 @@ namespace pokebot {
             ++game.flags.attacks_used;
             game.history.this_turn().attacker = who.self;
             game.history.this_turn().attack = attack;
-            if (confusion_stops_attack(game, attacker)) {
+            if (confusion_stops_attack(game, attacker) || (rules::attack_needs_flip(game, attacker) && !game.rng.coin_flip())) {
                 finish_attack(game, who);
                 return;
             }

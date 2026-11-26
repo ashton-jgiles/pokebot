@@ -26,6 +26,8 @@ namespace pokebot {
             effect.turn = turn_for(game, step.lasting.until);
             effect.amount = step.amount;
             effect.only_ex = step.lasting.only_ex;
+            effect.prevent_effects = step.lasting.prevent_effects;
+            effect.from_basic = step.lasting.from_basic;
             switch (step.lasting.on) {
                 case LastingOn::Self:
                     effect.player = run.who.player;
@@ -34,7 +36,7 @@ namespace pokebot {
                 case LastingOn::Defending: {
                     effect.player = static_cast<std::uint8_t>(opponent_of(run.who.player));
                     const PlayerState& opponent = game.player(effect.player);
-                    if (!opponent.active) {
+                    if (!opponent.active || (run.program.kind == ProgramKind::Attack && rules::effects_prevented(game, *opponent.active))) {
                         return;
                     }
                     effect.pokemon = opponent.active->id();

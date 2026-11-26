@@ -1237,6 +1237,108 @@ namespace pokebot::import {
                     return one({{"op", "damage_self"}, {"amount", *n}});
                 });
                 out.emplace_back([](Words& w) -> std::optional<json> {
+                    const auto lasting = [](const char* effect, const char* until, const char* on) {
+                        json block = {{"op", "lasting"}, {"effect", effect}, {"until", until}};
+                        if (std::string_view(on) != "self") {
+                            block["on"] = on;
+                        }
+                        return block;
+                    };
+                    if (w.take("during your opponent's next turn , this Pokémon takes")) {
+                        const auto n = w.number();
+                        if (!n || !w.take("less damage from attacks ( after applying Weakness and Resistance )")) {
+                            return std::nullopt;
+                        }
+                        json block = lasting("takes_less", "opponents_next_turn", "self");
+                        block["amount"] = *n;
+                        return one(block);
+                    }
+                    if (w.take("during your opponent's next turn , prevent all damage from and effects of attacks done to this Pokémon")) {
+                        json block = lasting("prevent_damage", "opponents_next_turn", "self");
+                        block["prevent_effects"] = true;
+                        return one(block);
+                    }
+                    if (w.take("during your opponent's next turn , prevent all damage done to this Pokémon by attacks")) {
+                        json block = lasting("prevent_damage", "opponents_next_turn", "self");
+                        if (w.take("from Basic Pokémon")) {
+                            block["from_basic"] = true;
+                        } else if (w.take("if that damage is")) {
+                            const auto n = w.number();
+                            if (!n || !w.take("or less")) {
+                                return std::nullopt;
+                            }
+                            block["amount"] = *n;
+                        }
+                        return one(block);
+                    }
+                    if (w.take("during your opponent's next turn , attacks used by the Defending Pokémon do")) {
+                        const auto n = w.number();
+                        if (!n || !w.take("less damage ( before applying Weakness and Resistance )")) {
+                            return std::nullopt;
+                        }
+                        json block = lasting("deals_less", "opponents_next_turn", "defending");
+                        block["amount"] = *n;
+                        return one(block);
+                    }
+                    if (w.take("during your next turn , the Defending Pokémon takes")) {
+                        const auto n = w.number();
+                        if (!n || !w.take("more damage from attacks ( after applying Weakness and Resistance )")) {
+                            return std::nullopt;
+                        }
+                        json block = lasting("takes_more", "your_next_turn", "defending");
+                        block["amount"] = *n;
+                        return one(block);
+                    }
+                    if (w.take("during your next turn , attacks used by this Pokémon do")) {
+                        const auto n = w.number();
+                        if (!n || !w.take("more damage to your opponent's Active Pokémon ( before applying Weakness and Resistance )")) {
+                            return std::nullopt;
+                        }
+                        json block = lasting("damage_bonus", "your_next_turn", "self");
+                        block["amount"] = *n;
+                        return one(block);
+                    }
+                    if (w.take("during your opponent's next turn , the Defending Pokémon can't use attacks")) {
+                        return one(lasting("cant_attack", "opponents_next_turn", "defending"));
+                    }
+                    if (w.take("during your opponent's next turn , if the Defending Pokémon tries to use an attack , your opponent flips a coin")) {
+                        return one(lasting("attack_flip", "opponents_next_turn", "defending"));
+                    }
+                    if (w.take("if tails , that attack doesn't happen")) {
+                        return one({{"op", "_attack_fails"}});
+                    }
+                    return std::nullopt;
+                });
+                out.emplace_back([](Words& w) -> std::optional<json> {
+                    const auto passive = [](json modifier) {
+                        return json{{"op", "_passive"}, {"modifier", std::move(modifier)}};
+                    };
+                    if (w.take("this Pokémon takes") || w.take("the Pokémon this card is attached to takes")) {
+                        const auto n = w.number();
+                        if (!n || !w.take("less damage from attacks ( after applying Weakness and Resistance )")) {
+                            return std::nullopt;
+                        }
+                        return one(passive({{"modify", "damage_taken"}, {"add", -*n}}));
+                    }
+                    if (w.take("prevent all damage done to this Pokémon by attacks from your opponent's Pokémon ex")) {
+                        return one(passive({{"modify", "prevent_damage"}, {"from", {{"rule_box", true}}}}));
+                    }
+                    if (w.take("as long as this Pokémon is on your Bench , prevent all damage from and effects of attacks from your opponent's Pokémon done to this Pokémon")) {
+                        return json::array({passive({{"modify", "prevent_damage"}, {"if_benched", true}}), passive({{"modify", "prevent_effects"}, {"if_benched", true}})});
+                    }
+                    if (w.take("as long as this Pokémon is in the Active Spot , attacks used by your opponent's Active Pokémon do")) {
+                        const auto n = w.number();
+                        if (!n || !w.take("less damage ( before applying Weakness and Resistance )")) {
+                            return std::nullopt;
+                        }
+                        return one(passive({{"modify", "damage_dealt"}, {"add", -*n}, {"applies_to", "opponents"}, {"if_active", true}}));
+                    }
+                    if (w.take("prevent all effects of attacks used by your opponent's Pokémon done to this Pokémon")) {
+                        return one(passive({{"modify", "prevent_effects"}}));
+                    }
+                    return std::nullopt;
+                });
+                out.emplace_back([](Words& w) -> std::optional<json> {
                     if (w.take("if tails , this attack does nothing")) {
                         return one({{"op", "_does_nothing"}, {"on", "tails"}});
                     }
@@ -1940,6 +2042,12 @@ namespace pokebot::import {
                         may->at("effects").push_back(read->at(0));
                         continue;
                     }
+                }
+                if (read->size() == 1 && read->at(0).value("op", "") == "_attack_fails") {
+                    if (blocks.empty() || blocks.back().value("effect", "") != "attack_flip") {
+                        return sentence;
+                    }
+                    continue;
                 }
                 if (read->size() == 1 && read->at(0).value("op", "") == "_rest") {
                     if (blocks.empty() || blocks.back().value("op", "") != "look_at_top") {

@@ -88,6 +88,16 @@ namespace pokebot {
                 spec.kind = LastingKind::NoItems;
             } else if (effect == "damage_bonus") {
                 spec.kind = LastingKind::DamageBonus;
+            } else if (effect == "takes_less") {
+                spec.kind = LastingKind::TakesLess;
+            } else if (effect == "prevent_damage") {
+                spec.kind = LastingKind::PreventDamage;
+            } else if (effect == "deals_less") {
+                spec.kind = LastingKind::DealsLess;
+            } else if (effect == "takes_more") {
+                spec.kind = LastingKind::TakesMore;
+            } else if (effect == "attack_flip") {
+                spec.kind = LastingKind::AttackFlip;
             } else {
                 throw CardDataError("unknown lasting effect '" + effect + "'");
             }
@@ -114,11 +124,26 @@ namespace pokebot {
                 throw CardDataError("lasting effects are \"on\" \"self\", \"defending\" or \"player\", not '" + on + "'");
             }
 
-            const bool on_player = spec.kind == LastingKind::NoItems || spec.kind == LastingKind::DamageBonus;
-            if (on_player != (spec.on == LastingOn::Player)) {
+            const bool only_player = spec.kind == LastingKind::NoItems;
+            const bool may_be_player = only_player || spec.kind == LastingKind::DamageBonus;
+            const bool only_self = spec.kind == LastingKind::TakesLess || spec.kind == LastingKind::PreventDamage ||
+                                   (spec.kind == LastingKind::DamageBonus && spec.on != LastingOn::Player);
+            const bool only_defending = spec.kind == LastingKind::DealsLess || spec.kind == LastingKind::TakesMore || spec.kind == LastingKind::AttackFlip;
+            if ((spec.on == LastingOn::Player ? !may_be_player : only_player) || (only_self && spec.on != LastingOn::Self) ||
+                (only_defending && spec.on != LastingOn::Defending)) {
                 throw CardDataError("'" + effect + "' doesn't go \"on\" \"" + on + "\"");
             }
+            const bool needs_amount = spec.kind == LastingKind::TakesLess || spec.kind == LastingKind::DealsLess || spec.kind == LastingKind::TakesMore ||
+                                      spec.kind == LastingKind::DamageBonus;
+            if (needs_amount && block.value("amount", 0) <= 0) {
+                throw CardDataError("'" + effect + "' needs a positive \"amount\"");
+            }
             spec.only_ex = block.value("only_ex", false);
+            spec.prevent_effects = block.value("prevent_effects", false);
+            spec.from_basic = block.value("from_basic", false);
+            if ((spec.prevent_effects || spec.from_basic) && spec.kind != LastingKind::PreventDamage) {
+                throw CardDataError("\"prevent_effects\" and \"from_basic\" are for 'prevent_damage'");
+            }
             return spec;
         }
 
@@ -974,6 +999,12 @@ namespace pokebot {
                     m.what = Modifies::DamageDealt;
                 } else if (what == "bench_size") {
                     m.what = Modifies::BenchSize;
+                } else if (what == "damage_taken") {
+                    m.what = Modifies::DamageTaken;
+                } else if (what == "prevent_damage") {
+                    m.what = Modifies::PreventDamage;
+                } else if (what == "prevent_effects") {
+                    m.what = Modifies::PreventEffects;
                 } else {
                     throw CardDataError("unknown thing to modify '" + what + "'");
                 }
@@ -1001,10 +1032,14 @@ namespace pokebot {
                 m.filter = parse_filter(item);
                 m.only_if_poisoned = item.value("if_poisoned", false);
                 m.only_with_tera = item.value("if_tera_in_play", false);
+                m.from = item.contains("from") ? parse_filter_fields(item.at("from")) : CardFilter{};
+                m.only_if_active = item.value("if_active", false);
+                m.only_if_benched = item.value("if_benched", false);
                 if (m.what == Modifies::BenchSize && !m.set) {
                     throw CardDataError("'bench_size' needs \"set\"");
                 }
-                if (m.what == Modifies::WeaknessType ? !m.type : (m.add == 0 && !m.set)) {
+                const bool prevents = m.what == Modifies::PreventDamage || m.what == Modifies::PreventEffects;
+                if (!prevents && (m.what == Modifies::WeaknessType ? !m.type : (m.add == 0 && !m.set))) {
                     throw CardDataError("'" + what + "' needs " + (m.what == Modifies::WeaknessType ? "a \"type\"" : "\"add\" or \"set\""));
                 }
                 modifiers.push_back(m);

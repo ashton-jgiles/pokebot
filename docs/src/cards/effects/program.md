@@ -54,7 +54,7 @@ Each block is a JSON object with an `"op"`:
 | `heal_self` | `amount` or `all` | Heal `amount` damage (a multiple of 10, at most 990), or all of it, from this Pokémon | `HealSelf` |
 | `heal_to` | `amount` or `all`, `targets` (1), `up_to`, `each`, `on`, `player` (`"you"`) | Choose that many of your **damaged** Pokémon, or every one with `"each": true`, and heal each. With no damaged Pokémon, nothing happens | `ChooseTargets`, `HealTargets` |
 | `ignore_defender_effects` | — | "This attack's damage isn't affected by any effects on your opponent's Active Pokémon" (Shred): the printed Weakness and Resistance are used and defender-side effects skipped. Must come before a placed `damage` step. Attacks only | `IgnoreDefenderEffects` |
-| `lasting` | `effect`, `until`, `on` (`"self"`), `player`, `amount`, `only_ex` | A [lasting effect](../../engine/actions/lasting.md). `effect`: `"cant_attack"`, `"cant_use_attack"` (this attack), `"cant_retreat"`, `"no_items"`, `"damage_bonus"`. `until`: `"this_turn"`, `"opponents_next_turn"`, `"your_next_turn"`. `on`: `"self"` or `"defending"` for the first three (attacks only), `"player"` (with `player`) for the last two | `AddLasting` |
+| `lasting` | `effect`, `until`, `on` (`"self"`), `player`, `amount`, `only_ex`, `prevent_effects`, `from_basic` | A [lasting effect](../../engine/actions/lasting.md). `effect`: `"cant_attack"`, `"cant_use_attack"` (this attack), `"cant_retreat"`, `"no_items"`, `"damage_bonus"`, `"takes_less"`, `"prevent_damage"`, `"deals_less"`, `"takes_more"`, `"attack_flip"`. `until`: `"this_turn"`, `"opponents_next_turn"`, `"your_next_turn"`. `on`: `"self"` or `"defending"` for the first three (attacks only); `"player"` (with `player`) for `no_items`; `"player"` or `"self"` for `damage_bonus`; `"self"` for `takes_less` and `prevent_damage`; `"defending"` for `deals_less`, `takes_more` and `attack_flip`. `takes_less`, `deals_less`, `takes_more` and `damage_bonus` need a positive `amount`; for `prevent_damage`, an `amount` prevents only damage up to it, `from_basic` only damage from Basic Pokémon, and `prevent_effects` the attacks' effects too | `AddLasting` |
 | `if` | `condition`, `then`, `else` (optional) | Do `then` if the [condition](#conditions) holds when the step runs, otherwise `else` | `JumpUnless`, `then`, `Jump`, `else` |
 
 - Cards moved to a hand, deck or discard pile always go to **their owner's**, even when the effect is
@@ -173,13 +173,15 @@ for as long as the card is in play:
 
 | Field | Meaning |
 |---|---|
-| `modify` | `"max_hp"`, `"retreat_cost"`, `"weakness_type"` (needs `type`) `"damage_dealt"` (attacks by the Pokémon do `add` more to the opponent's Active, before Weakness) or `"bench_size"` (needs `set`: the owner of each Pokémon it applies to gets that many Bench spaces) |
+| `modify` | `"max_hp"`, `"retreat_cost"`, `"weakness_type"` (needs `type`) `"damage_dealt"` (attacks by the Pokémon do `add` more to the opponent's Active, before Weakness), `"bench_size"` (needs `set`: the owner of each Pokémon it applies to gets that many Bench spaces), `"damage_taken"` (the Pokémon takes `add` more from attacks, after Weakness and Resistance; negative for less), `"prevent_damage"` (no damage from the opponent's attacks, from attackers matching `from`) or `"prevent_effects"` (no effects of the opponent's attacks) |
 | `add` / `set` | A change, or a new value. A `set` wins over `add`s ("has no Retreat Cost") |
 | `type` | For `weakness_type`: the new Weakness type. A Pokémon with no printed Weakness gets one, ×2 |
 | `applies_to` | `"holder"` (the default: the Pokémon the Tool is attached to, or the Pokémon with the Ability), `"yours"`, `"opponents"` or `"all"` (everyone's Pokémon in play) |
 | `filter` | Which Pokémon it affects, matched against the Pokémon's top card |
 | `if_poisoned` | Only while that Pokémon is Poisoned |
 | `if_tera_in_play` | For `bench_size`: only for a player with a Tera Pokémon in play (Area Zero Underdepths) |
+| `from` | For `prevent_damage`: only attacks by Pokémon matching this filter (`{"rule_box": true}`: Pokémon ex) |
+| `if_active`, `if_benched` | Only while the Pokémon with the Ability or Tool is Active, or on the Bench |
 
 `compile_passive(json)` compiles a list; mistakes throw `CardDataError`.
 
