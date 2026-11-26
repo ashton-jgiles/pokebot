@@ -12,6 +12,7 @@ Run from the repository root; all paths are relative to it.
 ```bash
 ./build/debug/tools/import/pokebot-import.exe [--refresh] [--offline] <decklist.txt or directory>...
 ./build/debug/tools/import/pokebot-import.exe [--refresh] [--offline] --standard [--list-missing]
+./build/debug/tools/import/pokebot-import.exe [--refresh] [--offline] --check-translations
 ```
 
 A directory stands for every `.txt` decklist in it and its subdirectories, in sorted order (so `data/decks` includes
@@ -24,6 +25,7 @@ A directory stands for every `.txt` decklist in it and its subdirectories, in so
 | `--offline` | Use only cached files; never touch the network |
 | `--standard` | Instead of decklists: [the coverage report](#--standard-the-coverage-report) |
 | `--list-missing` | With `--standard`: list every effect still missing |
+| `--check-translations` | Instead of decklists: [check the translator](#--check-translations) |
 
 Examples:
 
@@ -117,6 +119,30 @@ Problems:
 
 It writes nothing in `generated/`, so the decks' cards are untouched. With `--offline` it uses the
 cached sets only. It always exits with 0 once the report is printed.
+
+## `--check-translations`
+
+Checks the [translator](translate.md) in two ways:
+
+1. **Against what we wrote by hand.** For every attack with text on a card with an effects file, it translates the
+   text and compares the compiled program with the hand-written one, printing `same`, `DIFFERENT` (with both effects
+   lists) or `not read` (with the first sentence it couldn't read).
+2. **On all of Standard.** It translates every distinct Standard attack text, from the
+   [whole sets](tcgdex.md#whole-sets) (downloaded or cached), and prints how many it reads and the 25 sentence shapes,
+   numbers written as `#`, that it most often can't.
+
+```
+Hand-written attacks:
+  same       30C-21 Greninja ex: attack Stealthy Slash
+  ...
+40 hand-written attacks with text: 40 the same, 0 different, 0 not read
+
+Standard attacks: ... of ... distinct texts read (...%)
+The sentences most often not read, by shape:
+    ...
+```
+
+It writes nothing, and exits with 1 if any hand-written attack comes out different.
 
 ## Exit codes
 

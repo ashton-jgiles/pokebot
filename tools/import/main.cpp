@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cctype>
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -18,6 +19,7 @@
 #include "http_client.hpp"
 #include "standard.hpp"
 #include "tcgdex.hpp"
+#include "translate.hpp"
 
 #ifdef _WIN32
 #ifndef NOMINMAX
@@ -34,10 +36,12 @@ namespace {
     void print_usage() {
         std::cerr << "usage: pokebot-import [--refresh] [--offline] <decklist.txt or directory>...\n"
                      "       pokebot-import [--refresh] [--offline] --standard [--list-missing]\n"
+                     "       pokebot-import [--refresh] [--offline] --check-translations\n"
                      "  a directory means every .txt decklist in it and its subdirectories\n"
                      "  --standard      download every card of every set in sets.json and report how many of the\n"
                      "                  Standard-legal ones have all their effects\n"
                      "  --list-missing  with --standard: list every effect still missing\n"
+                     "  --check-translations  translate every hand-written attack and compare it, then every Standard attack\n"
                      "  --refresh  download every card again, ignoring the cache\n"
                      "  --offline  use only cached files\n";
     }
@@ -144,6 +148,107 @@ namespace {
         return 0;
     }
 
+    std::string sentence_shape(const std::string& sentence) {
+        std::string out;
+        bool digits = false;
+        for (const char c : sentence) {
+            if (std::isdigit(static_cast<unsigned char>(c))) {
+                if (!digits) {
+                    out += '#';
+                }
+                digits = true;
+            } else {
+                out += c;
+                digits = false;
+            }
+        }
+        return out;
+    }
+
+    int run_check_translations(pokebot::import::TcgdexClient& tcgdex, const nlohmann::json& corrections, const std::filesystem::path& generated_dir,
+                               const std::filesystem::path& effects_dir) {
+        using namespace pokebot;
+        using namespace pokebot::import;
+        const CardDB db = CardDB::load(generated_dir, effects_dir);
+        std::vector<std::filesystem::path> files;
+        for (const auto& file : std::filesystem::directory_iterator(effects_dir)) {
+            if (file.path().extension() == ".json") {
+                files.push_back(file.path().filename());
+            }
+        }
+        std::sort(files.begin(), files.end());
+        int same = 0;
+        int different = 0;
+        int unread = 0;
+        std::cout << "Hand-written attacks:\n";
+        for (const auto& name : files) {
+            std::ifstream in(generated_dir / name, std::ios::binary);
+            const CardDef card = nlohmann::json::parse(in).get<CardDef>();
+            const CardDef& written = db.at(card.id);
+            for (std::size_t i = 0; i < card.attacks.size(); ++i) {
+                const Attack& attack = card.attacks[i];
+                if (attack.text.empty()) {
+                    continue;
+                }
+                const std::string label = card.id + " " + card.name + ": attack " + attack.name;
+                const Translation translation = translate_attack(attack.text, AttackContext{attack.name, attack.damage_mod});
+                if (!translation.ok) {
+                    ++unread;
+                    std::cout << "  not read   " << label << ": " << translation.unread << '\n';
+                } else if (compile_attack(translation.effects) == written.attacks[i].program) {
+                    ++same;
+                    std::cout << "  same       " << label << '\n';
+                } else {
+                    ++different;
+                    std::cout << "  DIFFERENT  " << label << "\n    translated: " << translation.effects.dump() << "\n    written:    " << written.attacks[i].effects.dump() << '\n';
+                }
+            }
+        }
+        std::cout << same + different + unread << " hand-written attacks with text: " << same << " the same, " << different << " different, " << unread << " not read\n";
+
+        std::map<std::string, int> unread_shapes;
+        std::set<std::string> seen;
+        int texts = 0;
+        int read = 0;
+        for (const std::string& code : tcgdex.set_codes()) {
+            for (const nlohmann::json& tcgdex_card : tcgdex.set_cards(code)) {
+                const std::string id = printing_id(code, tcgdex_card.value("localId", ""));
+                if (!standard_legal(tcgdex_card) || id.empty()) {
+                    continue;
+                }
+                CardDef card;
+                try {
+                    card = convert_card(apply_corrections(tcgdex_card, corrections), id).card;
+                } catch (const std::exception&) {
+                    continue;
+                }
+                for (const Attack& attack : card.attacks) {
+                    if (attack.text.empty() || !seen.insert(attack.name + "|" + std::to_string(static_cast<int>(attack.damage_mod)) + "|" + normalize_text(attack.text)).second) {
+                        continue;
+                    }
+                    ++texts;
+                    const Translation translation = translate_attack(attack.text, AttackContext{attack.name, attack.damage_mod});
+                    if (translation.ok) {
+                        ++read;
+                    } else {
+                        ++unread_shapes[sentence_shape(translation.unread)];
+                    }
+                }
+            }
+        }
+        std::cout << std::fixed << std::setprecision(1) << "\nStandard attacks: " << read << " of " << texts << " distinct texts read (" << percent(static_cast<std::size_t>(read), static_cast<std::size_t>(texts))
+                  << "%)\nThe sentences most often not read, by shape:\n";
+        std::vector<std::pair<int, std::string>> shapes;
+        for (const auto& [shape, count] : unread_shapes) {
+            shapes.emplace_back(count, shape);
+        }
+        std::sort(shapes.begin(), shapes.end(), [](const auto& a, const auto& b) { return a.first != b.first ? a.first > b.first : a.second < b.second; });
+        for (std::size_t i = 0; i < shapes.size() && i < 25; ++i) {
+            std::cout << std::setw(6) << shapes[i].first << "  " << shapes[i].second << '\n';
+        }
+        return different == 0 ? 0 : 1;
+    }
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -164,6 +269,7 @@ int main(int argc, char** argv) {
     std::vector<std::filesystem::path> decklists;
     bool standard = false;
     bool list_missing = false;
+    bool check_translations = false;
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         if (arg == "--refresh") {
@@ -172,6 +278,8 @@ int main(int argc, char** argv) {
             standard = true;
         } else if (arg == "--list-missing") {
             list_missing = true;
+        } else if (arg == "--check-translations") {
+            check_translations = true;
         } else if (arg == "--offline") {
             options.offline = true;
         } else if (arg.starts_with("--")) {
@@ -181,7 +289,8 @@ int main(int argc, char** argv) {
             add_decklists(arg, decklists);
         }
     }
-    if (standard ? !decklists.empty() : (decklists.empty() || list_missing)) {
+    if ((standard || check_translations) ? (!decklists.empty() || (standard && check_translations) || (check_translations && list_missing))
+                                         : (decklists.empty() || list_missing)) {
         print_usage();
         return 2;
     }
@@ -196,6 +305,9 @@ int main(int argc, char** argv) {
         const nlohmann::json corrections = nlohmann::json::parse(corrections_in);
         if (standard) {
             return run_standard(tcgdex, corrections, effects_dir, list_missing);
+        }
+        if (check_translations) {
+            return run_check_translations(tcgdex, corrections, generated_dir, effects_dir);
         }
 
         std::set<std::pair<std::string, int>> seen;

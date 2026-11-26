@@ -88,6 +88,7 @@ legal actions.
 | | [convert.md](tools/import/convert.md) | TCGdex → our card format |
 | | [http_client.md](tools/import/http_client.md) | HTTP requests via curl |
 | | [standard.md](tools/import/standard.md) | Coverage of Standard: distinct cards and which have their effects |
+| | [translate.md](tools/import/translate.md) | Card text to effects: the translator |
 | `tools/sim` | [main.md](tools/sim/main.md) | The `pokebot-sim` command: stress tests, speed, narrated games |
 | `tests` | [README.md](tests/README.md) | Test suite and helpers |
 | `data/cards` | [README.md](data/cards/README.md) | `sets.json`, card JSON format, effects files |

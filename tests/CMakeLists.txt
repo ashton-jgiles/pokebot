@@ -13,6 +13,7 @@ add_executable(pokebot_tests
   test_tcgdex.cpp
   test_convert.cpp
   test_standard.cpp
+  test_translate.cpp
   test_card_db.cpp
   test_deck_validator.cpp
   test_engine_state.cpp

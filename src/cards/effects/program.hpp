@@ -96,6 +96,8 @@ namespace pokebot {
         std::optional<EnergyType> not_type;
         std::optional<bool> tera;
         std::vector<CardFilter> any_of;
+
+        bool operator==(const CardFilter&) const = default;
     };
 
     enum class ConditionKind : std::uint8_t {
@@ -143,6 +145,8 @@ namespace pokebot {
         int value = 0;
         CardFilter filter;
         CustomEffect custom = CustomEffect::RareCandy;
+
+        bool operator==(const Condition&) const = default;
     };
 
     enum class CountKind : std::uint8_t {
@@ -161,6 +165,8 @@ namespace pokebot {
         CountKind kind = CountKind::None;
         Side side = Side::You;
         CardFilter filter;
+
+        bool operator==(const Count&) const = default;
     };
 
     enum class LastingKind : std::uint8_t {
@@ -188,6 +194,8 @@ namespace pokebot {
         Until until = Until::ThisTurn;
         LastingOn on = LastingOn::Self;
         bool only_ex = false;
+
+        bool operator==(const LastingSpec&) const = default;
     };
 
     struct Step {
@@ -208,6 +216,8 @@ namespace pokebot {
         CustomEffect custom = CustomEffect::RareCandy;
         std::uint8_t jump = 0;
         bool reveal = false; // MoveChosen: the opponent sees the cards ("reveal them")
+
+        bool operator==(const Step&) const = default;
     };
 
     using Program = std::vector<Step>;
