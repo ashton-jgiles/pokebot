@@ -31,7 +31,10 @@ must add to it, and a plain one must do neither.
 4. **Sentences are joined** the way card text does: "If heads, …", "If tails, …" (the `else` of a flip), "You may …",
    "If you do, …" (into the "may" before it), "Then, …".
 5. **The damage step goes after** the last block that changes the damage (`set_damage`, `add_damage`,
-   `ignore_defender_effects`); without those it's first, as the compiler puts it.
+   `ignore_defender_effects`, `ignore_weakness`, `ignore_resistance`); without those it's first, as the compiler puts it.
+6. **"If tails, this attack does nothing"** must come just after a flip. Everything after it, with the damage step,
+   goes into an `if` that needs enough heads: 1 for "if tails" after one coin or "if both of them are tails", every coin
+   for "if either of them is tails" or "if any of them are tails".
 
 The parts of a sentence it reads:
 
@@ -40,15 +43,19 @@ The parts of a sentence it reads:
 | How many | "a", "an", "2", "up to 3", "any number of", "any amount of", "all" | `count`, `up_to` |
 | Cards | "Basic {G} Energy card", "{D} Pokémon", "Pokémon ex", "Stage 2 Pokémon", "Evolution Pokémon", "N's Pokémon", "Basic Pokémon with 70 HP or less", "Pokémon that doesn't have a Rule Box", "Supporter card", "Item card", "Pokémon Tool card", "Stadium card", "Trainer card", "card" | a `filter` |
 | Opposing Pokémon | "1 of your opponent's Pokémon", "2 of your opponent's Benched Pokémon" | `targets`, `on` |
-| Counts after "for each" | heads; damage counters on this or that Pokémon; cards in a hand; Prize cards taken; Benched Pokémon (yours, theirs or both); Energy attached to this, the opponent's or both Active Pokémon; cards discarded in this way; cards in a discard pile | `for_each` |
-| Conditions after "If" | heads, both or either of them heads, tails; a Knock Out (by an attack) last turn; a Stadium in play; more Prize cards left; Pokémon sharing a type; the opponent at N or fewer Prize cards; exactly N Prize cards left; this Pokémon with a type of Energy | `condition` |
+| Every Pokémon at once | "each of your opponent's Pokémon", "each of your opponent's Benched Pokémon", "each of your Benched Pokémon" | `each`, `on`, `player` |
+| Counts after "for each" | heads; damage counters on this or that Pokémon; cards in a hand; Prize cards taken; Benched Pokémon (yours, theirs or both); Energy attached to this, the opponent's or both Active Pokémon; cards discarded in this way; cards in a discard pile; damage counters on the opponent's Active Pokémon; your or the opponent's Pokémon in play; Pokémon Tools attached to all of your Pokémon; Energy attached to all of your or the opponent's Pokémon | `for_each` |
+| Conditions after "If" | heads, both or either of them heads, tails; a Knock Out (by an attack) last turn; a Stadium in play; more Prize cards left; Pokémon sharing a type; the opponent at N or fewer Prize cards; exactly N Prize cards left; this Pokémon with a type of Energy, with damage counters or with a Pokémon Tool; the opponent's Active Pokémon a Pokémon ex (or ex or V), an Evolution, a Basic, of a type, with a Special Condition, or with damage counters | `condition` |
 
 The sentences it reads: drawing; discarding or shuffling the hand; searching the deck (revealing, to the hand or the Bench);
 attaching Energy from the deck, the hand or the discard pile; discarding Energy from this Pokémon or any of yours; putting
 Energy attached to this Pokémon into the hand; damage formulas; damage to chosen opposing Pokémon; flipping coins; Special
 Conditions on either Active Pokémon; can't attack, can't use this attack, can't retreat and no Items next turn; switching,
 gusting, Tuck Tail and shuffling this Pokémon into the deck; damage counters, placed or on chosen Pokémon; using a Benched
-Pokémon's attack; and ignoring effects on the defender.
+Pokémon's attack; ignoring effects on the defender, Weakness or Resistance; healing this Pokémon, 1 of your (Benched)
+Pokémon or each of them; damage to itself; damage or damage counters to every Pokémon at once; and discarding an Energy from
+the opponent's Active Pokémon. An Item or Supporter that heals 1 of your Pokémon, or each of them, needs a damaged Pokémon
+(`has_damaged`).
 
 Two shapes follow how our hand-written effects say them, so the programs compare equal:
 

@@ -137,16 +137,41 @@ TEST_CASE("lasting effects, switching, and attacks of other Pokemon", "[translat
     reads_as("This attack's damage isn't affected by any effects on your opponent's Active Pokémon.", DamageMod::None, R"([{"op": "ignore_defender_effects"}, {"op": "damage"}])");
 }
 
+TEST_CASE("healing, damage to itself, \"does nothing\", Weakness and Resistance, each target, conditions and counts", "[translate]") {
+    reads_as("Heal 30 damage from this Pokémon.", DamageMod::None, R"([{"op": "heal_self", "amount": 30}])");
+    reads_as("Heal 20 damage from each of your Benched Pokémon.", DamageMod::None, R"([{"op": "heal_to", "amount": 20, "each": true, "on": "bench"}])");
+    reads_as("This Pokémon also does 30 damage to itself.", DamageMod::None, R"([{"op": "damage_self", "amount": 30}])");
+    reads_as("Flip a coin. If tails, this attack does nothing.", DamageMod::None, R"([{"op": "flip_coins"}, {"op": "if", "condition": {"heads_at_least": 1}, "then": [{"op": "damage"}]}])");
+    reads_as("Flip 2 coins. If either of them is tails, this attack does nothing. Your opponent's Active Pokémon is now Paralyzed.", DamageMod::None,
+             R"([{"op": "flip_coins", "count": 2}, {"op": "if", "condition": {"heads_at_least": 2}, "then": [{"op": "damage"}, {"op": "special_condition", "condition": "paralyzed"}]}])");
+    not_read("If tails, this attack does nothing.");
+    not_read("Flip 2 coins. If tails, this attack does nothing.");
+    reads_as("This attack's damage isn't affected by Weakness or Resistance.", DamageMod::None, R"([{"op": "ignore_weakness"}, {"op": "ignore_resistance"}, {"op": "damage"}])");
+    reads_as("This attack also does 10 damage to each of your Benched Pokémon.", DamageMod::None,
+             R"([{"op": "damage_to", "player": "you", "on": "bench", "each": true, "amount": 10}])");
+    reads_as("This attack does 20 damage to each of your opponent's Pokémon.", DamageMod::None, R"([{"op": "damage_to", "each": true, "amount": 20}])");
+    reads_as("If your opponent's Active Pokémon is a Pokémon ex, this attack does 50 more damage.", DamageMod::Plus,
+             R"([{"op": "if", "condition": {"opponent_active_is": {"rule_box": true}}, "then": [{"op": "add_damage", "amount": 50}]}, {"op": "damage"}])");
+    reads_as("If your opponent's Active Pokémon is Poisoned, this attack does 50 more damage.", DamageMod::Plus,
+             R"([{"op": "if", "condition": {"opponent_active_has": "poisoned"}, "then": [{"op": "add_damage", "amount": 50}]}, {"op": "damage"}])");
+    reads_as("This attack does 20 damage for each of your Pokémon in play.", DamageMod::Times,
+             R"([{"op": "set_damage", "per": 20, "for_each": {"of": "in_play"}}, {"op": "damage"}])");
+    reads_as("This attack does 30 more damage for each damage counter on your opponent's Active Pokémon.", DamageMod::Plus,
+             R"([{"op": "add_damage", "per": 30, "for_each": {"of": "active_damage_counters", "player": "opponent"}}, {"op": "damage"}])");
+    reads_as("Discard an Energy from your opponent's Active Pokémon.", DamageMod::None, R"([{"op": "discard_target_energy", "on": "active"}])");
+    card_reads_as(trainer("item", "Heal 30 damage from 1 of your Pokémon."), R"({"requires": [{"has_damaged": true}], "effects": [{"op": "heal_to", "amount": 30}]})");
+}
+
 TEST_CASE("the translator reads all of a text or none of it", "[translate]") {
     not_read("Draw a card quickly.");
-    not_read("Heal 30 damage from this Pokémon.");
+    not_read("Heal from this Pokémon the same amount of damage you did to your opponent's Active Pokémon.");
     not_read("During your next turn, this Pokémon can't use Another Attack.");
     not_read("This attack does 30 more damage for each heads.", DamageMod::Times);
     not_read("This attack does 30 damage for each heads.", DamageMod::Plus);
     not_read("Draw a card.", DamageMod::Plus);
     not_read("If you do, draw a card.");
-    const auto translation = translate_attack("Draw a card. Heal 30 damage from this Pokémon.", AttackContext{"Test Attack", DamageMod::None});
-    CHECK(translation.unread == "Heal 30 damage from this Pokémon");
+    const auto translation = translate_attack("Draw a card. Discard a random card from your opponent's hand.", AttackContext{"Test Attack", DamageMod::None});
+    CHECK(translation.unread == "Discard a random card from your opponent's hand");
 }
 
 TEST_CASE("Items and Supporters, with what they need to be played", "[translate]") {

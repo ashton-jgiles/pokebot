@@ -256,7 +256,7 @@ attack's cost", and "if you can't discard …, this attack does nothing". **A gu
 | Step | Builds | Status |
 |---|---|---|
 | 3b.3.1 | The engine's vocabulary: `heal_self` and `heal_to`, `damage_self`, `"each": true` targets, `"on": "active"`, `ignore_weakness` and `ignore_resistance`, five conditions and five counts. *Done: all 492 tests pass, and the reference run repeats 158 to 162, 18.4 turns and 140.8 actions a game, with the same endings (88.2 s against 84.4 s, one run each, so not a measured slowdown; speed is checked at sign-off)* | ✅ |
-| 3b.3.2 | The translator's sentences for them, and "if tails, this attack does nothing" | ⬜ |
+| 3b.3.2 | The translator's sentences for them, and "if tails, this attack does nothing". *[Built](tools/import/translate.md#how-it-reads), not yet tested or run* | 🔄 |
 | 3b.3.3 | `--audit --using`, the runs, the audit and the record | ⬜ |
 
 **Its rules (2026-11-25, before any of it was built):**
