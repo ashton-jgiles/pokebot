@@ -121,6 +121,15 @@ namespace {
 
 } // namespace
 
+TEST_CASE("a game's cards say once whether any of them has a damage passive", "[protection]") {
+    const CardDB db = sample_db();
+    CHECK(CardTable(db, kDeck, kDeck).has_damage_passives());
+    const pokebot::Decklist plain = test::deck({{4, 1}, {4, 3}, {52, 5}});
+    CHECK_FALSE(CardTable(db, plain, plain).has_damage_passives());
+    CHECK(CardTable(db, plain, kDeck).has_damage_passives());
+    CHECK(CardTable(db, plain, kDeck).shuffled(7).has_damage_passives());
+}
+
 TEST_CASE("this Pokemon takes less damage during the opponent's next turn, then not", "[protection]") {
     Fixture f;
     f.both_attack(1, 0);

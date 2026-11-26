@@ -173,7 +173,7 @@ translates one. After the Greninja fix, the old decks mustn't change: each step 
 | 3b.2a | **Any deck export imports:** set codes found through TCGdex's series, reprints using their card's effects (`same_as`), and a report for each deck. Decks that aren't playable yet wait in `data/decks/incoming/`, which the sim and the tests don't read. *Done: all 470 tests pass, the four new decks import with 0 failures, 6 printings use a reprint's effects, and the reference run repeats. Results below* | ✅ |
 | 3b.2 | **Translator** for today's vocabulary, checked against the hand-written effects. *Done: the four decks are chosen, and the translator reads 81 of the 88 hand-written texts the same, completes 471 Standard cards with no effects file (844 complete in all, 40.2%), and passed its audit of 50. The design and the substeps are below* | ✅ |
 | 3b.3 | Damage, healing, counts and conditions. *Done: 1,047 of the 2,097 cards complete (49.9%, from 40.2%), the focused audit of 50 found none wrong, and the reference run repeats. The design and the substeps are below* | ✅ |
-| 3b.4 | Lasting effects and damage passives, built in one step: the engine's lasting kinds, damage passives and prevention, the translator's sentences, and the runs. *Built: all 502 tests pass, 81 hand-written texts the same with the same 7 not read, 1,132 of the 2,097 cards complete (54.0%), and the reference run repeats in what's played. The audit with the right words found none of 50 wrong. The run's time is being checked after a speed fix. Results below* | 🔄 |
+| 3b.4 | Lasting effects and damage passives, built in one step: the engine's lasting kinds, damage passives and prevention, the translator's sentences, and the runs. *Built: all 502 tests pass, 81 hand-written texts the same with the same 7 not read, 1,132 of the 2,097 cards complete (54.0%), and the reference run repeats in what's played. The audit with the right words found none of 50 wrong. Timed back to back against 3b.3, the same games took about 6 to 8% longer, and after a speed fix they're level. Results below* | ✅ |
 | 3b.5 | Triggers, Abilities with costs, locks, HP and Retreat Cost | ⬜ |
 | 3b.6 | Hands, decks, Energy, Stadium actions, Special Energy | ⬜ |
 | 3b.7 | The four decks: hand-written and custom cards | ⬜ |
@@ -292,7 +292,18 @@ actions a game; no coverage threshold.
 - **After the fix, all 502 tests pass, and the run repeats again but took 341.6 s,** slow from the first game to the last, with every
   part of the search about three times slower, the or-tree too (0.06 s a game against 0.02), though the fix only made the code do
   less. Single runs on this machine have now taken 84, 88, 100, 229, 134 and 342 s, so they can't show a slowdown. **Next:** the
-  same games from 3b.3's commit and from today's code, built in two folders and run one after the other, twice each.
+  same games from 3b.3's commit and from today's code, built in two folders and run one after the other.
+- **Back to back** (one run each, 3b.3 first, then 3b.4): IS-MCTS, 96 games (`--games 5`), **25.1 s against 27.1 s** (+8%), search
+  1.97 and 1.86 s a game against 2.11 and 2.00 (+7%); the plain engine, 20,000 biased games, **2,981.6 against 2,814.1 games a
+  second** (5.6% slower). Both played exactly the same games, so 3b.4 changes nothing the old decks play. The long single runs
+  were the machine, not the code. The cost is real but small: under M3b's limit of 10%, which counts all of M3b against M10, so
+  3b.5 and 3b.6 have little room left. A way to win it back: decide once, when a game's cards are loaded, whether any of them
+  has a damage passive, and skip the walk when none does.
+- **The speed fix (2026-11-26):** `CardTable::has_damage_passives()`, set when the table is built. Without a damage passive, the damage
+  calculation looks through the passives only when the defender is Active, as before 3b.4, and effects prevention doesn't look
+  at all. *Done: all 503 tests pass. Back to back again, 3b.3 first: IS-MCTS 28.0 s against 26.8 s, search 2.19 and 2.07 s a
+  game against 2.09 and 1.98; the plain engine 2,889.3 against 2,858.0 games a second (1.1% slower). 3b.3's own times moved by
+  up to 12% between the two pairs (25.1 to 28.0 s), so the remaining difference is inside the noise: the cost is won back.*
 
 **How 3b.4 is built:** prevention and reductions are effects on the defender, so `ignore_defender_effects` skips them for an Active
 defender. Effects prevention is checked as each effect happens: a shielded Pokémon can't be chosen for anything but damage, and

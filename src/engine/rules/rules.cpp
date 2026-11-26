@@ -374,6 +374,9 @@ namespace pokebot::rules {
                 return true;
             }
         }
+        if (!game.cards->has_damage_passives()) {
+            return false;
+        }
         bool prevented = false;
         each_modifier(game, [&](const Modifier& m, int owner, const PokemonInPlay* holder) {
             if (m.what == Modifies::PreventEffects && applies(game, m, owner, holder, pokemon)) {
@@ -388,6 +391,9 @@ namespace pokebot::rules {
             if (effect.kind == LastingKind::PreventDamage && effect.prevent_effects && effect.turn == game.turn) {
                 return true;
             }
+        }
+        if (!game.cards->has_damage_passives()) {
+            return false;
         }
         bool any = false;
         each_modifier(game, [&](const Modifier& m, int, const PokemonInPlay*) {
@@ -408,7 +414,9 @@ namespace pokebot::rules {
         }
         const bool active = is_active(game, defender);
         const bool defender_effects = !options.ignore_defender_effects || !active;
-        const ModifierTotals totals = modifier_totals(game, attacker, defender, active, defender_effects);
+        const bool damage_passives = game.cards->has_damage_passives();
+        const ModifierTotals totals =
+            active || damage_passives ? modifier_totals(game, attacker, defender, active, defender_effects && damage_passives) : ModifierTotals{};
         int damage = attacker_side(game, attacker, defender, base + totals.dealt);
         if (active) {
             if (!options.ignore_weakness) {

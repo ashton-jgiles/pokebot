@@ -43,7 +43,12 @@ CardTable(const CardDB& db, const Decklist& deck0, const Decklist& deck1);
 explicit CardTable(const std::array<const CardDef*, kMaxCards>& defs);
 const CardDef& def(CardIndex card) const;
 CardTable shuffled(std::uint64_t seed) const;
+bool has_damage_passives() const;
 ```
+
+`has_damage_passives()` says whether any card in the game has a `damage_taken`, `prevent_damage` or `prevent_effects`
+passive, worked out once when the table is built. The damage pipeline and effects prevention skip looking through the
+Tools and Abilities in play when none does (see [rules](../rules/rules.md#speed)).
 
 Cards are numbered in decklist order. `shuffled(seed)` returns a copy with each player's cards in a
 random order instead (player 0 keeps 0–59, player 1 60–119), so card numbers don't give a deck away.

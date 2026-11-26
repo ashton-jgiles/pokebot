@@ -1,5 +1,6 @@
 #include "engine/game/game_state.hpp"
 
+#include <algorithm>
 #include <stdexcept>
 #include <string>
 
@@ -32,6 +33,20 @@ namespace pokebot {
     CardTable::CardTable(const CardDB& db, const Decklist& deck0, const Decklist& deck1) {
         fill_deck(defs_, 0, db, deck0, 0);
         fill_deck(defs_, kDeckSize, db, deck1, 1);
+        find_damage_passives();
+    }
+
+    void CardTable::find_damage_passives() {
+        const auto damage_passive = [](const std::vector<Modifier>& modifiers) {
+            return std::any_of(modifiers.begin(), modifiers.end(), [](const Modifier& m) {
+                return m.what == Modifies::DamageTaken || m.what == Modifies::PreventDamage || m.what == Modifies::PreventEffects;
+            });
+        };
+        damage_passives_ = std::any_of(defs_.begin(), defs_.end(), [&](const CardDef* def) {
+            return def != nullptr && (damage_passive(def->modifiers) || std::any_of(def->abilities.begin(), def->abilities.end(), [&](const Ability& ability) {
+                                          return damage_passive(ability.modifiers);
+                                      }));
+        });
     }
 
     CardTable CardTable::shuffled(std::uint64_t seed) const {

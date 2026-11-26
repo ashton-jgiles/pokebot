@@ -97,6 +97,11 @@ These are ordinary function calls in their own file. Without inlining across fil
 about 15% of simulator speed, so the release preset turns on link-time optimization
 (`CMAKE_INTERPROCEDURAL_OPTIMIZATION`), which brings it back to the old speed.
 
+`attack_damage` looks through the passives in play once per call, for `damage_dealt`, `damage_taken` and
+`prevent_damage` together, and only when they can matter: `damage_dealt` when the defender is Active, the other two when
+the game's [`CardTable`](../game/game_state.md#cardtable) has a damage passive at all. Effects prevention checks the
+same flag before looking.
+
 ## Tests
 
 [`tests/test_rules.cpp`](../../../../tests/test_rules.cpp), tag `[rules]`: HP and Knock Outs, the
