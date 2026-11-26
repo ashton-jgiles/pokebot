@@ -174,8 +174,8 @@ translates one. After the Greninja fix, the old decks mustn't change: each step 
 | 3b.2 | **Translator** for today's vocabulary, checked against the hand-written effects. *Done: the four decks are chosen, and the translator reads 81 of the 88 hand-written texts the same, completes 471 Standard cards with no effects file (844 complete in all, 40.2%), and passed its audit of 50. The design and the substeps are below* | ✅ |
 | 3b.3 | Damage, healing, counts and conditions. *Done: 1,047 of the 2,097 cards complete (49.9%, from 40.2%), the focused audit of 50 found none wrong, and the reference run repeats. The design and the substeps are below* | ✅ |
 | 3b.4 | Lasting effects and damage passives, built in one step: the engine's lasting kinds, damage passives and prevention, the translator's sentences, and the runs. *Built: all 502 tests pass, 81 hand-written texts the same with the same 7 not read, 1,132 of the 2,097 cards complete (54.0%), and the reference run repeats in what's played. The audit with the right words found none of 50 wrong. Timed back to back against 3b.3, the same games took about 6 to 8% longer, and after a speed fix they're level. Results below* | ✅ |
-| 3b.5 | Triggers, Abilities with costs, locks, HP and Retreat Cost | ⬜ |
-| 3b.6 | Hands, decks, Energy, Stadium actions, Special Energy | ⬜ |
+| 3b.5 | **Ranked vocabulary**, 3b.5 and 3b.6 merged (2026-11-26): the sentences worth the most complete cards first, whatever their kind, until 60% or the list flattens. *The plan is below* | 🔄 |
+| 3b.6 | Merged into 3b.5 | — |
 | 3b.7 | The four decks: hand-written and custom cards | ⬜ |
 | 3b.8 | Audit, stress runs, sign-off | ⬜ |
 
@@ -244,6 +244,22 @@ grammar, against the downloaded sets (distinct cards in each list):
   Their sets aren't in `sets.json`, so the importer can't find them yet.
 - **Variants for later:** other `basic-box` and `dragapult` lists, and `basic-box` lists with Mew ex or Mega Rayquaza ex,
   as [archetype lists](data/archetypes/README.md). Mega Rayquaza ex is a Delta Reign card, whose data isn't trusted yet.
+
+**Why 3b.5 and 3b.6 were merged (2026-11-26):** 3b.5's own vocabulary (triggers, Abilities with costs, locks, HP and
+Retreat Cost) is a long tail. Of Standard's 300 Ability texts, the commonest unread shapes are evolving from the hand (10),
+being damaged by an attack (11, and 2 on Tools), Knocking Out itself (3) and not being Knocked Out (4); the rest are mostly
+one-offs. Read, they might complete 15 to 30 cards, while 127 more are needed for 60%. 3b.6's attack shapes are commoner. But
+the counts so far are of the first sentence each text can't read, not of cards completed, since a card with two unread texts
+gains nothing from one.
+
+| Step | Builds | Status |
+|---|---|---|
+| 3b.5.1 | **The measurement:** `--check-translations` also counts, over cards without an effects file and with exactly one text not read, that text's first unread sentence, so shapes rank by the cards they'd complete. *Built, not yet run* | 🔄 |
+| 3b.5.2 on | Batches from the top of that list, each as 3b.3 was: engine, translator, then audit and runs. The evolving and damaged-by-attack triggers go in the first batch whatever their rank, as they're cheap (the events exist) and open a recurring Ability shape. The one-off Abilities are left to 3b.7, which writes the four decks' cards | ⬜ |
+
+**Its rules (2026-11-26, before any of it was built):** each batch: every hand-written text read loads the same; an audit of 50
+texts using that batch's vocabulary, at most 1 wrong; the reference run repeats, 158 to 162; and timed back to back against
+3b.3's commit (`..\pokebot-base`), within noise. M3b's 60% stays the target; no batch has its own.
 
 **3b.4's design (2026-11-25, before any of it was built):** in the cached Standard sets, lasting damage changes and prevention
 (about 80 texts: less damage next turn 28, prevention next turn about 35, the Defending Pokémon doing less 10, taking more 3, this

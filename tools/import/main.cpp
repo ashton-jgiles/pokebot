@@ -257,6 +257,8 @@ namespace {
         std::cout << same + different + unread << " hand-written texts: " << same << " the same, " << different << " different, " << unread << " not read\n";
 
         std::map<std::string, int> unread_shapes;
+        std::map<std::string, int> blocking_shapes;
+        int one_unread = 0;
         std::map<std::string, std::pair<int, int>> by_kind;
         std::set<std::string> seen;
         int cards = 0;
@@ -296,6 +298,10 @@ namespace {
                     ++by_kind[kind_of(part)].second;
                     ++unread_shapes[sentence_shape(why)];
                 }
+                if (translation.unread.size() == 1 && !std::filesystem::exists(effects_dir / (card.id + ".json"))) {
+                    ++one_unread;
+                    ++blocking_shapes[sentence_shape(translation.unread.front().second)];
+                }
             }
         }
         std::cout << std::fixed << std::setprecision(1) << "\nStandard: " << cards << " distinct cards, " << complete << " with every text read (" << percent(static_cast<std::size_t>(complete), static_cast<std::size_t>(cards))
@@ -304,15 +310,21 @@ namespace {
             std::cout << "  " << std::setw(8) << std::left << kind << std::right << std::setw(6) << counts.first << " of " << std::setw(5) << counts.second << " texts read ("
                       << percent(static_cast<std::size_t>(counts.first), static_cast<std::size_t>(counts.second)) << "%)\n";
         }
+        const auto print_top = [](const std::map<std::string, int>& counts, std::size_t most) {
+            std::vector<std::pair<int, std::string>> shapes;
+            for (const auto& [shape, count] : counts) {
+                shapes.emplace_back(count, shape);
+            }
+            std::sort(shapes.begin(), shapes.end(), [](const auto& a, const auto& b) { return a.first != b.first ? a.first > b.first : a.second < b.second; });
+            for (std::size_t i = 0; i < shapes.size() && i < most; ++i) {
+                std::cout << std::setw(6) << shapes[i].first << "  " << shapes[i].second << '\n';
+            }
+        };
         std::cout << "The sentences most often not read, by shape:\n";
-        std::vector<std::pair<int, std::string>> shapes;
-        for (const auto& [shape, count] : unread_shapes) {
-            shapes.emplace_back(count, shape);
-        }
-        std::sort(shapes.begin(), shapes.end(), [](const auto& a, const auto& b) { return a.first != b.first ? a.first > b.first : a.second < b.second; });
-        for (std::size_t i = 0; i < shapes.size() && i < 30; ++i) {
-            std::cout << std::setw(6) << shapes[i].first << "  " << shapes[i].second << '\n';
-        }
+        print_top(unread_shapes, 30);
+        std::cout << "\n"
+                  << one_unread << " cards without an effects file have exactly one text not read. The sentence that stops each, by shape:\n";
+        print_top(blocking_shapes, 40);
         return different == 0 ? 0 : 1;
     }
 

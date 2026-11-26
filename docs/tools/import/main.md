@@ -143,6 +143,9 @@ Checks the [translator](translate.md) in two ways:
 2. **On all of Standard.** It translates every distinct Standard card, from the [whole sets](tcgdex.md#whole-sets)
    (downloaded or cached), and prints how many have every text read, how many texts of each kind it reads, and the 30
    sentence shapes, numbers written as `#`, that it most often can't.
+3. **What would complete the most cards.** For each card with no effects file and exactly one text not read, it takes
+   that text's first unread sentence, and prints the 40 commonest shapes. Each count is the most cards reading that
+   sentence could complete; fewer if a later sentence of the same text can't be read either.
 
 ```
 Hand-written cards, each attack, Ability and card text:
@@ -154,6 +157,9 @@ Standard: 2097 distinct cards, ... with every text read (...%, counting cards wi
   ability    ... of   ... texts read (...%)
   attack     ...
 The sentences most often not read, by shape:
+    ...
+
+... cards without an effects file have exactly one text not read. The sentence that stops each, by shape:
     ...
 ```
 
