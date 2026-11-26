@@ -2,6 +2,7 @@
 #include <fstream>
 #include <map>
 #include <random>
+#include <set>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -20,6 +21,8 @@ using pokebot::import::link_reprints;
 using pokebot::import::printing_id;
 using pokebot::import::standard_coverage;
 using pokebot::import::StandardCard;
+using pokebot::import::StoredTranslations;
+using pokebot::import::translate_generated;
 
 namespace {
 
@@ -89,13 +92,14 @@ TEST_CASE("reprints with the same rules are one card, whatever their tags and sp
     CHECK(card_signature(coverage.cards[0].card) != card_signature(coverage.cards[1].card));
 }
 
-TEST_CASE("a card is complete when any printing has its effects, and missing ones are listed", "[standard]") {
+TEST_CASE("a card is complete when any printing has its effects or its text is translated, and missing ones are listed", "[standard]") {
     TempDir dir;
     json set = json::array();
     set.push_back(pokemon("001", "Testmon", "Basic", 70, "Draw a card."));
     set.push_back(pokemon("101", "Testmon", "Basic", 70, "Draw a card."));
     set.push_back(pokemon("002", "Plainmon", "Basic", 90, ""));
     set.push_back(pokemon("003", "Drawmon", "Basic", 90, "Draw 2 cards."));
+    set.push_back(pokemon("005", "Oddmon", "Basic", 90, "Draw a card and win the game."));
     json ex = pokemon("004", "Bigmon ex", "Basic", 200, "");
     ex["suffix"] = "ex";
     set.push_back(ex);
@@ -110,7 +114,12 @@ TEST_CASE("a card is complete when any printing has its effects, and missing one
     REQUIRE(named(coverage, "Plainmon"));
     CHECK(named(coverage, "Plainmon")->missing.empty());
     REQUIRE(named(coverage, "Drawmon"));
-    CHECK(named(coverage, "Drawmon")->missing == std::vector<std::string>{"TST-3 Drawmon: attack Hit"});
+    CHECK(named(coverage, "Drawmon")->missing.empty());
+    CHECK(named(coverage, "Drawmon")->translated);
+    CHECK(named(coverage, "Drawmon")->effects_from.empty());
+    CHECK_FALSE(testmon->translated);
+    REQUIRE(named(coverage, "Oddmon"));
+    CHECK(named(coverage, "Oddmon")->missing == std::vector<std::string>{"TST-5 Oddmon: attack Hit"});
     REQUIRE(named(coverage, "Bigmon ex"));
     CHECK(named(coverage, "Bigmon ex")->tera_unchecked);
     CHECK_FALSE(testmon->tera_unchecked);
@@ -173,4 +182,30 @@ TEST_CASE("a printing without its own effects uses those of a reprint with the s
     CHECK(link_reprints(generated.path, effects.path).empty());
     std::ifstream in(generated.path / "OLD-5.json");
     CHECK_FALSE(json::parse(in).contains("same_as"));
+}
+
+TEST_CASE("cards without effects get a stored translation, and lose it once they have their own", "[standard]") {
+    TempDir generated;
+    TempDir effects;
+    const auto card = [](const std::string& id, const std::string& text) {
+        return json{{"id", id}, {"name", "Testmon"}, {"kind", "pokemon"}, {"rules", json::array()}, {"stage", "basic"}, {"hp", 70}, {"types", {"fire"}}, {"weakness", nullptr}, {"resistance", nullptr}, {"retreat", 1}, {"abilities", json::array()}, {"attacks", {{{"name", "Hit"}, {"cost", {"fire"}}, {"damage", 10}, {"damage_mod", "none"}, {"text", text}, {"effects", json::array()}}}}};
+    };
+    std::ofstream(generated.path / "TST-1.json") << card("TST-1", "Draw a card.").dump();
+    std::ofstream(generated.path / "TST-2.json") << card("TST-2", "Draw 2 cards.").dump();
+    std::ofstream(generated.path / "TST-3.json") << card("TST-3", "Draw a card and win the game.").dump();
+    std::ofstream(effects.path / "TST-1.json") << R"({"attacks": {"Hit": {"effects": [{"op": "draw"}, {"op": "draw"}]}}})";
+
+    const StoredTranslations stored = translate_generated(generated.path, effects.path);
+    CHECK(stored.cards == std::set<std::string>{"TST-2"});
+    CHECK(stored.complete == 1);
+    CHECK(stored.problems.empty());
+    const pokebot::CardDB db = pokebot::CardDB::load(generated.path, effects.path);
+    CHECK(db.at("TST-1").attacks[0].effects.size() == 2);
+    CHECK(pokebot::missing_effects(db.at("TST-2")).empty());
+    CHECK_FALSE(pokebot::missing_effects(db.at("TST-3")).empty());
+
+    std::ofstream(effects.path / "TST-2.json") << R"({"attacks": {"Hit": {"effects": [{"op": "draw"}]}}})";
+    CHECK(translate_generated(generated.path, effects.path).cards.empty());
+    std::ifstream in(generated.path / "TST-2.json");
+    CHECK_FALSE(json::parse(in).contains("translation"));
 }

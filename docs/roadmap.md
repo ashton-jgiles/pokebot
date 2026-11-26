@@ -171,7 +171,7 @@ translates one. After the Greninja fix, the old decks mustn't change: each step 
 |---|---|---|
 | 3b.1 | **Data:** corrections to TCGdex's data, the importer's fixes, whole sets imported, reprints matched, the coverage report, the scan document restored and corrected. *[Corrections](data/cards/README.md#correctionsjson) to TCGdex's data and the importer's fixes are built. All 460 tests pass, the re-import changes only Greninja ex (30C 21), and M10's result stands after the fix: 57.8% (56.6% to 59.0%). The bulk import and the [coverage report](tools/import/standard.md) are built: all 466 tests pass, and 373 of the 2,097 distinct cards (17.8%) have all their effects. The [scan document](research/standard-scan.md) is restored and corrected. Reprints in decklists move to 3b.2* | ✅ |
 | 3b.2a | **Any deck export imports:** set codes found through TCGdex's series, reprints using their card's effects (`same_as`), and a report for each deck. Decks that aren't playable yet wait in `data/decks/incoming/`, which the sim and the tests don't read. *Done: all 470 tests pass, the four new decks import with 0 failures, 6 printings use a reprint's effects, and the reference run repeats. Results below* | ✅ |
-| 3b.2 | **Translator** for today's vocabulary, checked against the hand-written effects. *The four decks are chosen (below). The design and the substeps are below* | 🔄 |
+| 3b.2 | **Translator** for today's vocabulary, checked against the hand-written effects. *Done: the four decks are chosen, and the translator reads 81 of the 88 hand-written texts the same, completes 471 Standard cards with no effects file (844 complete in all, 40.2%), and passed its audit of 50. The design and the substeps are below* | ✅ |
 | 3b.3 | Damage, healing, counts and conditions | ⬜ |
 | 3b.4 | Lasting effects and damage passives | ⬜ |
 | 3b.5 | Triggers, Abilities with costs, locks, HP and Retreat Cost | ⬜ |
@@ -197,7 +197,7 @@ weights aren't refitted. Then 320 games of the defaults (`--games 20 --seed 2000
   2.1): basic-box 54.9% (53.3%), dragapult 60.4% (63.7%), ns-zoroark 53.1% (55.1%), its mirror 55.2% (54.6%).
 - **By the deck A plays,** A less B (± about 3.8): dragapult +23.6, ns-zoroark +14.7, basic-box +12.0, mega-greninja +11.8. Each
   is within its error of the sign-off's.
-- **The reference run** (the defaults, `--games 20 --no-check --seed 2000001`): **158 to 162**, 18.4 turns and 140.8 actions a game,
+- **The reference run** (IS-MCTS's defaults on both sides, `--agents ismcts,ismcts --games 20 --no-check --threads 16 --seed 2000001`): **158 to 162**, 18.4 turns and 140.8 actions a game,
   ended by Prize cards 266, no Pokémon left 37, deck-out 17. Later steps must repeat it in everything but the times.
 
 **The first coverage report (2026-11-25):** `pokebot-import --standard`, 23 requests, then the same with `--offline` and 0 requests.
@@ -252,8 +252,8 @@ of their own and no reprint link, so a hand-written file owns its whole card and
 | Step | Builds | Status |
 |---|---|---|
 | 3b.2.1 | Cleaning and splitting text, the parts of sentences, `==` for programs, attack sentences, and `--check-translations`. *Done: all 477 tests pass, all 36 hand-written attacks translate to the same program, and 561 of Standard's 1,448 attack texts are read* | ✅ |
-| 3b.2.2 | Trainers and Abilities: play conditions, once per turn, "you may"; Tools and Stadiums with today's passives; Special Energy that only provides a type. *[Built](tools/import/translate.md#cards-other-than-attacks), not yet tested or run* | 🔄 |
-| 3b.2.3 | The importer writes translations, the coverage report counts them, and an audit command; the runs, the audit and the record | ⬜ |
+| 3b.2.2 | Trainers and Abilities: play conditions, once per turn, "you may"; Tools and Stadiums with today's passives; Special Energy that only provides a type. *[Done](tools/import/translate.md#cards-other-than-attacks): all 480 tests pass, 80 of the 88 hand-written texts are read and all 80 load the same, and 836 of the 2,097 cards have every text read* | ✅ |
+| 3b.2.3 | The importer writes translations, the coverage report counts them, and an audit command; the runs, the audit and the record. *[Built](tools/import/standard.md#translations): all 482 tests pass, 81 of the 88 hand-written texts are read and all 81 load the same, 471 cards are complete by translation, the audit of 50 found none wrong, and the reference run repeats* | ✅ |
 
 **Its rules (2026-11-25, before any of it was built):**
 
@@ -264,6 +264,56 @@ of their own and no reprint link, so a hand-written file owns its whole card and
 - **The old decks repeat** the reference run, 158 to 162.
 - **No threshold for coverage** in this step; the prototype suggests 650 to 850 of the 2,097 cards complete, up from 373. On its own
   it makes about 10 of the four new decks' cards ready.
+
+**What 3b.2.2 measured (2026-11-25):** `pokebot-import --offline --check-translations`.
+
+- **Against the hand-written cards:** 88 texts with an effects file. **80 are read, and all 80 load the same** (programs, requirements,
+  passives, Ability flags, triggers, what Energy provides); none is different. The rule is met.
+- **The 8 not read:** Rare Candy and Transformation Tome (custom code), Crispin ("of different types"), Janine's Secret Art (a
+  choice in one sentence used in the next), Area Zero Underdepths (its Bench rule), Adrena-Brain (moving up to 3 damage counters),
+  Damp (no effect), and **Crushing Hammer, which should have been read**: "If heads, discard an Energy from 1 of your opponent's
+  Pokémon" is today's vocabulary, but no sentence rule was written for it. It's added in 3b.2.3.
+- **On all of Standard:** 2,097 distinct cards, **836 with every text read (39.9%)**, cards with no text included, against 373 complete
+  today. The prototype's estimate was 846. Texts read: attacks 774 of 1,757 (44.1%), Trainers 55 of 164 (33.5%), Stadiums 4 of 31,
+  Special Energy 3 of 17, Tools 3 of 34 (plus one counted apart, under its name "Fluorite", by a bug in the report's sorting: Technical
+  Machine: Fluorite has ": " in its name), Abilities 30 of 300 (10.0%).
+- **The test against the real cards didn't catch three bugs that the made-up cards did** ("only if you discard…", "+50 HP" written as one
+  word, and a noun followed by "with"), because it only fails on texts read differently, not on texts that stop being read. Ultra Ball,
+  Secret Box, Hero's Cape and Surfing Beach were quietly skipped until then. In 3b.2.3 it gets the list of texts not read, so one that
+  stops being read fails it.
+- **The sentences most often not read** need new vocabulary: damage to the attacker (76), healing (43, and 9 and 6 more), a lasting
+  damage change on the attacker (28) or the defender (10), "If tails, this attack does nothing" (22), lasting prevention (20 and 5),
+  gusting the opponent's choice (13), the opponent's Active Pokémon's Energy (12 and 8) and type (12), the opponent's hand (12 and 9),
+  and Abilities that trigger on evolving (10).
+- **The reference run repeats** 158 to 162, so Fairy Zone's tidied filter changed nothing played.
+
+**What 3b.2.3 measured (2026-11-25):**
+
+- **Against the hand-written cards** (`--check-translations`): 88 texts, **81 read and all 81 load the same**, none different.
+  Crushing Hammer now reads; the 7 not read are exactly the ones the test pins.
+- **On all of Standard** (`--standard`): 2,097 distinct cards, **844 complete (40.2%)**, against 373 before translations were
+  stored; **471 of them complete by translation**, with no effects file. One problem: 30C-128 Ultra Ball, which TCGdex gives no
+  text. `--check-translations` counts 838 cards with every text read; the 6 more complete are hand-written cards whose texts it
+  doesn't read, such as Rare Candy. Texts read: attacks 774 of 1,757, Trainers 57 of 164, Tools 3 of 35 (Fluorite now counted
+  among them), Stadiums 4 of 31, Special Energy 3 of 17, Abilities 30 of 300.
+- **The audit** (`--audit 50 --seed 1`): 50 of the 791 translated texts, 49 attacks and 1 Ability. Each was checked by hand
+  against its effects and what the compiler adds (an attack's printed damage is placed first unless a `damage` step is
+  written; "can't use" records the attack that set it). **None was wrong**, within the rule of at most 1. The sample is all
+  short attack texts, since those are most of what's read; Trainers and Abilities get their share of the 200 in M3b's audit.
+- **The four incoming decks** stay incoming: alakazam 14 of 24 cards ready (2 by translation), festival-lead 13 of 27 (2),
+  mega-lucario 16 of 27 (2), mega-venasaur 17 of 25 (3). The rest need 3b.3 to 3b.6's vocabulary and Special Energy written by
+  hand. The four old decks and every archetype list are ready with none by translation, as designed.
+- **The reference run repeats** 158 to 162, 18.4 turns and 140.8 actions a game, ended by Prize cards 266, no Pokémon left 37,
+  deck-out 17, so the stored translations changed nothing the old decks play.
+- **3b.2's rules are met:** every hand-written text read loads the same (81 of 81), the audit of 50 found none wrong, and the
+  reference run repeats.
+
+**How 3b.2.3 was built:** the importer stores each translation in its card's `generated/` file under a `translation` key,
+rather than marking merged effects `translated: true` as the design said, so the card's own data stays as TCGdex gave it
+and a stale translation is easy to take away. `CardDB::load` merges it only when the card has no effects file and no
+`same_as`, as designed. `--standard` counts translated cards as complete, and `pokebot-import --audit N --seed S` prints a
+seeded sample of translated texts. With it: a rule for Crushing Hammer's sentence, the report's sorting of Technical
+Machine: Fluorite, and the real-card test pinned to the 7 texts it's known not to read.
 
 **3b.2.2's one data change:** Lillie's Clefairy ex's Fairy Zone (`JTG-56`) filtered its passive with `"kind": "pokemon"`, which N's
 Castle and Skyliner leave out. A passive only looks at Pokémon in play, so it changes nothing played; it's dropped, as the translator

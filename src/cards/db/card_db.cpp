@@ -70,6 +70,9 @@ namespace pokebot {
                         throw CardDataError("same_as names " + same_as + ", which has no effects file");
                     }
                     card = merge_effects(std::move(card), read_json(linked));
+                } else if (card.contains("translation")) {
+                    const json translation = card.at("translation");
+                    card = merge_effects(std::move(card), translation);
                 }
                 db.add(card.get<CardDef>());
             } catch (const CardDataError& e) {

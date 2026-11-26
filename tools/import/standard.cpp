@@ -9,6 +9,7 @@
 
 #include "cards/db/card_db.hpp"
 #include "convert.hpp"
+#include "translate.hpp"
 
 namespace pokebot::import {
     namespace {
@@ -58,6 +59,13 @@ namespace pokebot::import {
                     break;
                 }
             }
+            if (!effects.is_object()) {
+                json overlay = translate_card(entry.card).overlay;
+                if (!overlay.empty()) {
+                    effects = std::move(overlay);
+                    entry.translated = true;
+                }
+            }
             if (entry.card.rules.ex && !entry.card.rules.mega && !(effects.is_object() && effects.contains("rules"))) {
                 entry.tera_unchecked = true;
             }
@@ -67,7 +75,7 @@ namespace pokebot::import {
                 entry.card = db.at(entry.card.id);
                 entry.missing = missing_effects(entry.card);
             } catch (const std::exception& e) {
-                entry.problems.push_back(std::string("its effects don't load: ") + e.what());
+                entry.problems.push_back(std::string(entry.translated ? "its translation doesn't load: " : "its effects don't load: ") + e.what());
             }
         }
 
@@ -204,6 +212,52 @@ namespace pokebot::import {
             std::ofstream(path, std::ios::binary) << card.dump(2) << '\n';
         }
         return links;
+    }
+
+    StoredTranslations translate_generated(const std::filesystem::path& generated_dir, const std::filesystem::path& effects_dir) {
+        std::vector<std::filesystem::path> files;
+        for (const auto& file : std::filesystem::directory_iterator(generated_dir)) {
+            if (file.path().extension() == ".json") {
+                files.push_back(file.path());
+            }
+        }
+        std::sort(files.begin(), files.end());
+        StoredTranslations out;
+        for (const auto& path : files) {
+            json card;
+            {
+                std::ifstream in(path, std::ios::binary);
+                card = json::parse(in);
+            }
+            json translation;
+            if (!std::filesystem::exists(effects_dir / path.filename()) && card.value("same_as", "").empty()) {
+                json plain = card;
+                plain.erase("translation");
+                const CardDef def = plain.get<CardDef>();
+                const CardTranslation read = translate_card(def);
+                if (!read.overlay.empty()) {
+                    try {
+                        CardDB db;
+                        db.add(merge_effects(plain, read.overlay).get<CardDef>());
+                        translation = read.overlay;
+                        out.cards.insert(def.id);
+                        out.complete += read.unread.empty() ? 1 : 0;
+                    } catch (const std::exception& e) {
+                        out.problems.push_back(def.id + " " + def.name + ": its translation doesn't load: " + e.what());
+                    }
+                }
+            }
+            if (translation.is_null() ? !card.contains("translation") : card.contains("translation") && card.at("translation") == translation) {
+                continue;
+            }
+            if (translation.is_null()) {
+                card.erase("translation");
+            } else {
+                card["translation"] = translation;
+            }
+            std::ofstream(path, std::ios::binary) << card.dump(2) << '\n';
+        }
+        return out;
     }
 
 } // namespace pokebot::import

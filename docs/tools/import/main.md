@@ -13,6 +13,7 @@ Run from the repository root; all paths are relative to it.
 ./build/debug/tools/import/pokebot-import.exe [--refresh] [--offline] <decklist.txt or directory>...
 ./build/debug/tools/import/pokebot-import.exe [--refresh] [--offline] --standard [--list-missing]
 ./build/debug/tools/import/pokebot-import.exe [--refresh] [--offline] --check-translations
+./build/debug/tools/import/pokebot-import.exe [--refresh] [--offline] --audit N [--seed S]
 ```
 
 A directory stands for every `.txt` decklist in it and its subdirectories, in sorted order (so `data/decks` includes
@@ -26,6 +27,8 @@ A directory stands for every `.txt` decklist in it and its subdirectories, in so
 | `--standard` | Instead of decklists: [the coverage report](#--standard-the-coverage-report) |
 | `--list-missing` | With `--standard`: list every effect still missing |
 | `--check-translations` | Instead of decklists: [check the translator](#--check-translations) |
+| `--audit N` | Instead of decklists: [print N translated texts](#--audit-a-sample-of-translations), chosen at random |
+| `--seed S` | With `--audit`: the seed of the choice (default 1) |
 
 Examples:
 
@@ -51,10 +54,13 @@ are processed once):
 
 Then it prints the review notes and a summary, and [links reprints](standard.md#reprints): every card in
 `generated/` without its own effects file gets `same_as` naming a card with the same rules that has one, so an
-older printing such as Ultra Ball (PAF 91) plays with Ultra Ball (MEG 131)'s effects. It loads everything through
+older printing such as Ultra Ball (PAF 91) plays with Ultra Ball (MEG 131)'s effects. Then it
+[stores translations](standard.md#translations): every card in `generated/` with neither an effects file nor `same_as`
+gets what the [translator](translate.md) reads of it. It loads everything through
 [`CardDB::load`](../../src/cards/db/card_db.md), exactly as the engine will. That checks
 that every generated file and every effects file is valid, and counts what still needs effects. Then it
-reports each decklist: how many of its cards are ready, what each one that isn't still needs, older printings
+reports each decklist: how many of its cards are ready and how many of those by translation, which cards are translated,
+what each one that isn't still needs, older printings
 and the card whose effects they use, printings TCGdex doesn't mark Standard-legal, and, for a deck in
 `data/decks/`, a missing archetype folder. Finally it checks each decklist with the [deck validator](../../src/cards/validator/deck_validator.md) and
 prints `legal`, or `ILLEGAL` followed by every problem.
@@ -72,10 +78,12 @@ Needs review:
 
 80 distinct cards, 0 network requests, 0 failures, 0 name mismatches
 2 printings use the effects of a reprint with the same rules
+14 cards without effects have a translation, 9 of them with every text read
 80 cards load cleanly; 0 attacks/abilities/cards still need effects
 
 Decks:
-  data/decks/alakazam.txt: 12 of 24 cards ready
+  data/decks/alakazam.txt: 12 of 24 cards ready, 3 of them by translation
+    translated: MEG-55 Kadabra
     needs effects: MEG-56 Alakazam: attack Mind Ruler
     ...
     older printing: SVI-191 Rare Candy, the same card as MEG-125
@@ -89,7 +97,8 @@ Deck legality:
 
 A card that fails is shown as `FAIL` with the reason, and the import continues with the next card.
 
-What still needs effects is listed under each deck that uses it. A Special Energy's review note
+What still needs effects is listed under each deck that uses it. A translation that doesn't load (which would mean a
+translator bug) is printed under the translations line and not stored. A Special Energy's review note
 is left out once its effects file sets `provides`, and a Tera note once it sets `rules`.
 
 ## `--standard`: the coverage report
@@ -111,13 +120,16 @@ Trainer          ...
 Energy           ...
 All              ...
 Complete: ...% of distinct cards
+Complete by translation, with no effects file: ...
 Pokemon ex whose Tera isn't checked yet: ...
 
 Problems:
   ...
 ```
 
-It writes nothing in `generated/`, so the decks' cards are untouched. With `--offline` it uses the
+A card with no effects file in any printing is checked with what the [translator](translate.md) reads of it, so
+**complete** counts translated cards; the second line says how many of them. It writes nothing in `generated/`, so the
+decks' cards are untouched. With `--offline` it uses the
 cached sets only. It always exits with 0 once the report is printed.
 
 ## `--check-translations`
@@ -146,6 +158,24 @@ The sentences most often not read, by shape:
 
 It writes nothing, and exits with 1 if any hand-written text comes out different.
 
+## `--audit`: a sample of translations
+
+Reads the Standard sets as `--standard` does, collects every translated text of the cards complete or not that no printing
+has an effects file for (each attack, Ability and card text on its own), and prints `N` of them, chosen without repeats
+by the engine's `Rng` seeded with `S`, so the same seed on the same data gives the same sample. Each one is its card and
+part, its text as printed, and the effects it reads as:
+
+```
+Audit: 50 of ... translated texts of Standard cards without an effects file, seed 1
+
+1. SVI-12 Testmon: attack Hit
+   text:    Draw a card.
+   effects: {"effects":[{"op":"draw"}]}
+...
+```
+
+M3b's audits are run with it and checked by hand, each text against its effects. It writes nothing and exits with 0.
+
 ## Exit codes
 
 | Code | Meaning |
@@ -165,7 +195,7 @@ It writes nothing, and exits with 1 if any hand-written text comes out different
 | `data/cards/raw/series/`, `data/cards/raw/set-codes.json` | read + write when a set code isn't in `sets.json` (cache) | no |
 | `data/archetypes/` | checked for a folder for each deck | yes |
 | `data/cards/raw/` | read + write (cache) | no |
-| `data/cards/generated/` | write | no |
+| `data/cards/generated/` | write (cards, `same_as` and `translation`) | no |
 | `data/cards/effects/` | read | yes |
 
 See [`docs/data`](../../data/cards/README.md) for the formats.

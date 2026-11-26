@@ -20,12 +20,13 @@ const Coverage coverage = standard_coverage({{"TWM", tcgdex.set_cards("TWM")}}, 
   a local id that isn't a number (30th Celebration's three Mew, `B`, `G` and `R`) is counted in `unnumbered` and left out.
 - **Complete** means no problems and nothing in [`missing_effects`](../../src/cards/db/card_db.md#missing_effects). The effects
   come from the first of the card's printings that has an [effects file](../../data/cards/README.md#effectsidjson--hand-written-effects),
-  so effects written for one printing count for its reprints.
+  so effects written for one printing count for its reprints. When no printing has one, the effects are what the
+  [translator](translate.md) reads of the card, and `translated` is set.
 - **A problem** is data that keeps the card from being played as printed:
   - the card can't be converted (an unknown stage, an unreadable number);
   - an evolution that doesn't say what it evolves from, or a Trainer with no text (`Conversion::problems`);
   - a Basic that shares its name with an evolution, which is how TCGdex's wrong stages showed up;
-  - effects that don't compile.
+  - effects that don't compile, hand-written or translated.
   [`corrections.json`](../../data/cards/README.md#correctionsjson) is applied first, so a correction makes a problem go away.
 - **Tera not checked:** a non-Mega Pokémon ex whose effects file doesn't set `rules`. It doesn't stop the card counting as
   complete, since TCGdex can't say whether it's Tera.
@@ -34,11 +35,13 @@ const Coverage coverage = standard_coverage({{"TWM", tcgdex.set_cards("TWM")}}, 
 
 | Name | What it is |
 |---|---|
-| `StandardCard` | One distinct card: its `CardDef` (with effects merged), its `printings`, `problems`, `missing` effects, the printing its effects came from (`effects_from`), and `tera_unchecked` |
+| `StandardCard` | One distinct card: its `CardDef` (with effects merged), its `printings`, `problems`, `missing` effects, the printing its effects came from (`effects_from`), `tera_unchecked`, and whether its effects are `translated` |
 | `Coverage` | `printings` read, `unnumbered`, `not_legal` (by set code), and the `cards` in the order first seen |
 | `standard_legal(tcgdex)` | Whether TCGdex marks the printing `legal.standard` |
 | `expand_energy_symbols(name)` | `"Telepathic {P} Energy"` → `"Telepathic Psychic Energy"`, for comparing a decklist's names with TCGdex's |
 | `link_reprints(generated_dir, effects_dir)` | [Links reprints](#reprints) in `generated/` and returns them, printing → card |
+| `StoredTranslations` | The ids of the `cards` given a translation, how many of them are `complete` (every text read), and `problems`: translations that didn't load |
+| `translate_generated(generated_dir, effects_dir)` | [Stores translations](#translations) in `generated/` |
 | `printing_id(set_code, local_id)` | `"TWM"`, `"130"` → `"TWM-130"`; `""` if the local id isn't a positive number |
 | `card_signature(card)` | The text that decides which printings are one card |
 | `standard_coverage(sets, corrections, effects_dir)` | Converts every legal, numbered printing of the sets (pairs of set code and TCGdex card list), groups them, and checks each card |
@@ -53,9 +56,21 @@ none any more. [`CardDB::load`](../../src/cards/db/card_db.md) then uses that ca
 so fixing an effects file fixes every printing. A card with its own effects file keeps it. Running it again changes
 nothing.
 
+## Translations
+
+`translate_generated` runs after `link_reprints`. For each card in `generated/` with neither its own effects file nor
+`same_as`, it [translates](translate.md) the card and, if anything is read, writes it as `"translation"`: an overlay in
+the effects file's format. [`CardDB::load`](../../src/cards/db/card_db.md) merges it only for a card with neither, so a
+hand-written file or a reprint's always wins, and the old decks, whose every card has one, can't change. A card that is
+only partly read keeps what was read and is still listed as missing the rest. A translation that doesn't load is left
+out and reported. A card that has gained an effects file or `same_as`, or whose text no longer reads, loses its
+translation, and a file is only rewritten when its translation changes, so running it again changes nothing.
+
 ## Tests
 
 [`tests/test_standard.cpp`](../../../tests/test_standard.cpp), tag `[standard]`, with made-up cards and a temporary effects folder:
 printing ids; reprints grouped whatever their tags and spacing, and printings that aren't legal or numbered left out; effects
 from another printing, missing effects listed, and Tera not checked; and missing or contradictory data found, then fixed by
-corrections; Energy symbols in names; and reprints linked, used by `CardDB::load`, and unlinked when the effects file goes.
+corrections; Energy symbols in names; reprints linked, used by `CardDB::load`, and unlinked when the effects file goes;
+translated cards counted complete; and translations stored, loaded, left out when not read, and taken away once the card
+has its own effects file.

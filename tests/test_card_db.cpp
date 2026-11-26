@@ -109,3 +109,27 @@ TEST_CASE("a card's same_as uses another card's effects file, unless it has its 
     std::error_code ignored;
     std::filesystem::remove_all(root, ignored);
 }
+
+TEST_CASE("a card's stored translation is used only when it has no effects file", "[card_db]") {
+    std::random_device rd;
+    const auto root = std::filesystem::temp_directory_path() / ("pokebot-translation-" + std::to_string(rd()));
+    const auto generated = root / "generated";
+    const auto effects = root / "effects";
+    std::filesystem::create_directories(generated);
+    std::filesystem::create_directories(effects);
+    json translated = sample_pokemon();
+    translated["id"] = "TRN-1";
+    translated["translation"] = json::parse(R"({"attacks": {"Zap": {"effects": [{"op": "draw"}]}}})");
+    json written = translated;
+    written["id"] = "OWN-1";
+    std::ofstream(generated / "TRN-1.json") << translated.dump();
+    std::ofstream(generated / "OWN-1.json") << written.dump();
+    std::ofstream(effects / "OWN-1.json") << R"({"attacks": {"Zap": {"effects": [{"op": "draw"}, {"op": "draw"}]}}})";
+    {
+        const CardDB db = CardDB::load(generated, effects);
+        CHECK(db.at("TRN-1").attacks[0].effects.size() == 1);
+        CHECK(db.at("OWN-1").attacks[0].effects.size() == 2);
+    }
+    std::error_code ignored;
+    std::filesystem::remove_all(root, ignored);
+}

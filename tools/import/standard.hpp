@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <map>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -19,6 +20,7 @@ namespace pokebot::import {
         std::vector<std::string> missing;
         std::string effects_from;
         bool tera_unchecked = false;
+        bool translated = false;
     };
 
     struct Coverage {
@@ -40,5 +42,13 @@ namespace pokebot::import {
                                const std::filesystem::path& effects_dir);
 
     std::map<std::string, std::string> link_reprints(const std::filesystem::path& generated_dir, const std::filesystem::path& effects_dir);
+
+    struct StoredTranslations {
+        std::set<std::string> cards;
+        int complete = 0;
+        std::vector<std::string> problems;
+    };
+
+    StoredTranslations translate_generated(const std::filesystem::path& generated_dir, const std::filesystem::path& effects_dir);
 
 } // namespace pokebot::import

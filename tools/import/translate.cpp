@@ -886,6 +886,21 @@ namespace pokebot::import {
                     if (!energy) {
                         return std::nullopt;
                     }
+                    const bool bench = w.take("from 1 of your opponent's Benched Pokémon");
+                    if (bench || w.take("from 1 of your opponent's Pokémon")) {
+                        if (q->up_to || q->all) {
+                            return std::nullopt;
+                        }
+                        json target = {{"op", "discard_target_energy"}};
+                        if (bench) {
+                            target["on"] = "bench";
+                        }
+                        if (q->count != 1) {
+                            target["count"] = q->count;
+                        }
+                        set_filter(target, *energy);
+                        return one(target);
+                    }
                     json block = {{"op", "move_attached_energy"}, {"count", q->count}, {"to", "discard"}};
                     if (w.take("from your Pokémon")) {
                         block["from"] = "your_pokemon";

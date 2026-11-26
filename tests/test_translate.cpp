@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -166,6 +167,8 @@ TEST_CASE("Items and Supporters, with what they need to be played", "[translate]
     card_reads_as(trainer("item", "Choose up to 2 of your Benched {F} Pokémon and attach a Basic Energy card from your discard pile to each of them."),
                   R"({"requires": [{"discard_has": {"kind": "energy", "basic": true}}, {"bench_has": {"type": "fighting"}}],
                       "effects": [{"op": "attach_to", "on": "bench", "targets": 2, "up_to_targets": true, "target": {"type": "fighting"}, "filter": {"kind": "energy", "basic": true}}]})");
+    card_reads_as(trainer("item", "Flip a coin. If heads, discard an Energy from 1 of your opponent's Pokémon."),
+                  R"({"effects": [{"op": "flip_coins"}, {"op": "if", "condition": {"heads_at_least": 1}, "then": [{"op": "discard_target_energy"}]}]})");
 }
 
 TEST_CASE("Abilities: once per turn, costs, triggers and passives", "[translate]") {
@@ -194,19 +197,23 @@ TEST_CASE("Tools, Stadiums and Special Energy", "[translate]") {
     CHECK_FALSE(translate_card(json::parse(trainer("item", "Draw a card and win the game.")).get<pokebot::CardDef>()).unread.empty());
 }
 
-TEST_CASE("every hand-written card text the translator reads compiles to the same effects", "[translate]") {
+TEST_CASE("every hand-written card text the translator reads loads the same, and it reads all but the known ones", "[translate]") {
     const std::filesystem::path root = POKEBOT_SOURCE_DIR;
     if (!std::filesystem::exists(root / "data/cards/generated")) {
         SKIP("no generated card data; run pokebot-import first");
     }
     const pokebot::CardDB db = pokebot::CardDB::load(root / "data/cards/generated", root / "data/cards/effects");
     std::string different;
+    std::set<std::string> unread;
     int read = 0;
     for (const auto& file : std::filesystem::directory_iterator(root / "data/cards/effects")) {
         std::ifstream in(root / "data/cards/generated" / file.path().filename(), std::ios::binary);
         const pokebot::CardDef card = json::parse(in).get<pokebot::CardDef>();
         const auto translation = translate_card(card);
         read += translation.parts - static_cast<int>(translation.unread.size());
+        for (const auto& [part, why] : translation.unread) {
+            unread.insert(part);
+        }
         pokebot::CardDB translated;
         translated.add(pokebot::merge_effects(json(card), translation.overlay).get<pokebot::CardDef>());
         for (const std::string& part : translation_differences(db.at(card.id), translated.at(card.id), translation.overlay)) {
@@ -216,4 +223,6 @@ TEST_CASE("every hand-written card text the translator reads compiles to the sam
     INFO("different:" << different);
     CHECK(different.empty());
     CHECK(read > 0);
+    CHECK(unread == std::set<std::string>{"ASC-39 Psyduck: ability Damp", "CRI-83 Transformation Tome", "MEG-125 Rare Candy", "SCR-131 Area Zero Underdepths",
+                                          "SCR-133 Crispin", "SFA-59 Janine's Secret Art", "TWM-95 Munkidori: ability Adrena-Brain"});
 }

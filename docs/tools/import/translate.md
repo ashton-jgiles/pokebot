@@ -76,7 +76,8 @@ bottom of their deck, switching your Active Pokémon (with or without a type on 
 any <name>,") with your Active one, from the discard pile into the hand (a list joined by "or", or "in any combination of"),
 moving an Energy between your Pokémon, searching for a list of cards (one search each) or for one of several (one search),
 searching cards onto the top of the deck, looking at the top cards, a damage bonus for this turn, attaching to each chosen
-Pokémon, discarding a Stadium, and "the new Active Pokémon is now …". "If …, … instead" replaces the sentence before with an
+Pokémon, discarding a Stadium, discarding an Energy from 1 of the opponent's (Benched) Pokémon, and "the new Active
+Pokémon is now …". "If …, … instead" replaces the sentence before with an
 `if` whose `else` is that sentence.
 
 **What a card needs to be played** comes from its effects, as our hand-written files say it, so a card that would do nothing
@@ -115,7 +116,9 @@ passive only ever looks at Pokémon in play.
 
 `pokebot-import --check-translations` (see [the command](main.md#--check-translations)) translates every text of every
 hand-written card and compares what loads, then reports how much of Standard it reads and the sentences it most often
-can't. Programs compare with `==` on [`Step`](../../src/cards/effects/program.md#steps-what-the-engine-runs).
+can't. The importer [stores what it reads](standard.md#translations) for cards without effects, and
+`pokebot-import --audit` ([the command](main.md#--audit-a-sample-of-translations)) prints a random sample of those
+texts to check by hand. Programs compare with `==` on [`Step`](../../src/cards/effects/program.md#steps-what-the-engine-runs).
 
 ## Tests
 
@@ -123,4 +126,5 @@ can't. Programs compare with `==` on [`Step`](../../src/cards/effects/program.md
 wording: cleaning and splitting; damage formulas, flips and conditions; damage to chosen Pokémon and damage counters;
 cards from the deck, the discard pile and Energy; lasting effects, switching and other Pokémon's attacks; texts it
 mustn't read; Items and Supporters with their requirements; Abilities; Tools, Stadiums and Special Energy; and, on the real
-cards, every hand-written text it reads loading the same as the hand-written one.
+cards, every hand-written text it reads loading the same as the hand-written one, and exactly the known texts left
+unread, so a text that stops being read fails it.

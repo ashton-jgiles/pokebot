@@ -1,14 +1,19 @@
 #include <algorithm>
 #include <cctype>
+#include <charconv>
+#include <cstdint>
 #include <exception>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <map>
+#include <optional>
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <string_view>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -16,6 +21,7 @@
 #include "cards/validator/deck_validator.hpp"
 #include "convert.hpp"
 #include "core/decklist.hpp"
+#include "engine/shared/rng.hpp"
 #include "http_client.hpp"
 #include "standard.hpp"
 #include "tcgdex.hpp"
@@ -37,11 +43,14 @@ namespace {
         std::cerr << "usage: pokebot-import [--refresh] [--offline] <decklist.txt or directory>...\n"
                      "       pokebot-import [--refresh] [--offline] --standard [--list-missing]\n"
                      "       pokebot-import [--refresh] [--offline] --check-translations\n"
+                     "       pokebot-import [--refresh] [--offline] --audit N [--seed S]\n"
                      "  a directory means every .txt decklist in it and its subdirectories\n"
                      "  --standard      download every card of every set in sets.json and report how many of the\n"
                      "                  Standard-legal ones have all their effects\n"
                      "  --list-missing  with --standard: list every effect still missing\n"
                      "  --check-translations  translate every hand-written card text and compare it, then all of Standard\n"
+                     "  --audit N  print N translated texts of Standard cards without an effects file, chosen at random\n"
+                     "  --seed S   with --audit: the seed of the choice (default 1)\n"
                      "  --refresh  download every card again, ignoring the cache\n"
                      "  --offline  use only cached files\n";
     }
@@ -75,6 +84,25 @@ namespace {
         }
     }
 
+    template <typename T>
+    std::optional<T> read_number(std::string_view text) {
+        T value{};
+        const auto [end, error] = std::from_chars(text.data(), text.data() + text.size(), value);
+        if (error != std::errc() || end != text.data() + text.size()) {
+            return std::nullopt;
+        }
+        return value;
+    }
+
+    std::vector<std::pair<std::string, nlohmann::json>> read_standard_sets(pokebot::import::TcgdexClient& tcgdex) {
+        std::vector<std::pair<std::string, nlohmann::json>> sets;
+        for (const std::string& code : tcgdex.set_codes()) {
+            sets.emplace_back(code, tcgdex.set_cards(code));
+            std::cout << "  " << code << "  " << tcgdex.set_id(code) << "  " << sets.back().second.size() << " cards\n";
+        }
+        return sets;
+    }
+
     double percent(std::size_t part, std::size_t whole) {
         return whole == 0 ? 0.0 : 100.0 * static_cast<double>(part) / static_cast<double>(whole);
     }
@@ -82,11 +110,7 @@ namespace {
     int run_standard(pokebot::import::TcgdexClient& tcgdex, const nlohmann::json& corrections, const std::filesystem::path& effects_dir, bool list_missing) {
         using namespace pokebot;
         using namespace pokebot::import;
-        std::vector<std::pair<std::string, nlohmann::json>> sets;
-        for (const std::string& code : tcgdex.set_codes()) {
-            sets.emplace_back(code, tcgdex.set_cards(code));
-            std::cout << "  " << code << "  " << tcgdex.set_id(code) << "  " << sets.back().second.size() << " cards\n";
-        }
+        const auto sets = read_standard_sets(tcgdex);
         const Coverage coverage = standard_coverage(sets, corrections, effects_dir);
 
         std::cout << '\n'
@@ -124,6 +148,13 @@ namespace {
         std::cout << std::setw(10) << std::left << "All" << std::right << std::setw(10) << all[0] << std::setw(10) << all[1] << std::setw(10) << all[2]
                   << std::setw(8) << coverage.cards.size() << '\n';
         std::cout << std::fixed << std::setprecision(1) << "Complete: " << percent(all[0], coverage.cards.size()) << "% of distinct cards\n";
+        std::size_t by_translation = 0;
+        for (const StandardCard& entry : coverage.cards) {
+            if (entry.translated && column(entry) == 0) {
+                ++by_translation;
+            }
+        }
+        std::cout << "Complete by translation, with no effects file: " << by_translation << '\n';
 
         std::size_t tera = 0;
         for (const StandardCard& entry : coverage.cards) {
@@ -247,9 +278,9 @@ namespace {
                 const CardTranslation translation = translate_card(card);
                 complete += translation.unread.empty() ? 1 : 0;
                 const auto kind_of = [&](const std::string& part) {
-                    const std::size_t colon = part.find(": ");
-                    if (colon != std::string::npos) {
-                        return part.substr(colon + 2, part.find(' ', colon + 2) - colon - 2);
+                    if (const std::string prefix = card.id + " " + card.name + ": "; part.starts_with(prefix)) {
+                        const std::string rest = part.substr(prefix.size());
+                        return rest.substr(0, rest.find(' '));
                     }
                     return std::string(card.kind == CardKind::Energy ? "energy" : card.trainer_kind == TrainerKind::Stadium ? "stadium"
                                                                               : card.trainer_kind == TrainerKind::Tool      ? "tool"
@@ -283,6 +314,59 @@ namespace {
         return different == 0 ? 0 : 1;
     }
 
+    struct AuditItem {
+        std::string part;
+        std::string text;
+        nlohmann::json effects;
+    };
+
+    std::vector<AuditItem> audit_items(const pokebot::CardDef& card, const nlohmann::json& overlay) {
+        std::vector<AuditItem> out;
+        const std::string label = card.id + " " + card.name;
+        for (const pokebot::Attack& attack : card.attacks) {
+            if (overlay.contains("attacks") && overlay.at("attacks").contains(attack.name)) {
+                out.push_back({label + ": attack " + attack.name, attack.text, overlay.at("attacks").at(attack.name)});
+            }
+        }
+        for (const pokebot::Ability& ability : card.abilities) {
+            if (overlay.contains("abilities") && overlay.at("abilities").contains(ability.name)) {
+                out.push_back({label + ": ability " + ability.name, ability.text, overlay.at("abilities").at(ability.name)});
+            }
+        }
+        nlohmann::json own = overlay;
+        own.erase("attacks");
+        own.erase("abilities");
+        if (!own.empty()) {
+            out.push_back({label, card.text, own});
+        }
+        return out;
+    }
+
+    int run_audit(pokebot::import::TcgdexClient& tcgdex, const nlohmann::json& corrections, const std::filesystem::path& effects_dir, int count, std::uint64_t seed) {
+        using namespace pokebot;
+        using namespace pokebot::import;
+        const Coverage coverage = standard_coverage(read_standard_sets(tcgdex), corrections, effects_dir);
+        std::vector<AuditItem> items;
+        for (const StandardCard& entry : coverage.cards) {
+            if (entry.translated && entry.problems.empty()) {
+                for (AuditItem& item : audit_items(entry.card, translate_card(entry.card).overlay)) {
+                    items.push_back(std::move(item));
+                }
+            }
+        }
+        Rng rng(seed);
+        const std::size_t sample = std::min(items.size(), static_cast<std::size_t>(count));
+        for (std::size_t i = 0; i < sample; ++i) {
+            std::swap(items[i], items[i + rng.below(static_cast<std::uint32_t>(items.size() - i))]);
+        }
+        std::cout << "\nAudit: " << sample << " of " << items.size() << " translated texts of Standard cards without an effects file, seed " << seed << '\n';
+        for (std::size_t i = 0; i < sample; ++i) {
+            std::cout << '\n'
+                      << i + 1 << ". " << items[i].part << "\n   text:    " << items[i].text << "\n   effects: " << items[i].effects.dump() << '\n';
+        }
+        return 0;
+    }
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -304,6 +388,8 @@ int main(int argc, char** argv) {
     bool standard = false;
     bool list_missing = false;
     bool check_translations = false;
+    std::optional<int> audit;
+    std::optional<std::uint64_t> seed;
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         if (arg == "--refresh") {
@@ -314,6 +400,18 @@ int main(int argc, char** argv) {
             list_missing = true;
         } else if (arg == "--check-translations") {
             check_translations = true;
+        } else if (arg == "--audit" && i + 1 < argc) {
+            audit = read_number<int>(argv[++i]);
+            if (!audit || *audit < 1) {
+                print_usage();
+                return 2;
+            }
+        } else if (arg == "--seed" && i + 1 < argc) {
+            seed = read_number<std::uint64_t>(argv[++i]);
+            if (!seed) {
+                print_usage();
+                return 2;
+            }
         } else if (arg == "--offline") {
             options.offline = true;
         } else if (arg.starts_with("--")) {
@@ -323,8 +421,8 @@ int main(int argc, char** argv) {
             add_decklists(arg, decklists);
         }
     }
-    if ((standard || check_translations) ? (!decklists.empty() || (standard && check_translations) || (check_translations && list_missing))
-                                         : (decklists.empty() || list_missing)) {
+    const int modes = (standard ? 1 : 0) + (check_translations ? 1 : 0) + (audit ? 1 : 0);
+    if (modes > 1 || (modes == 0) == decklists.empty() || (list_missing && !standard) || (seed && !audit)) {
         print_usage();
         return 2;
     }
@@ -342,6 +440,9 @@ int main(int argc, char** argv) {
         }
         if (check_translations) {
             return run_check_translations(tcgdex, corrections, generated_dir, effects_dir);
+        }
+        if (audit) {
+            return run_audit(tcgdex, corrections, effects_dir, *audit, seed.value_or(1));
         }
 
         std::set<std::pair<std::string, int>> seen;
@@ -411,6 +512,11 @@ int main(int argc, char** argv) {
 
         const auto links = link_reprints(generated_dir, effects_dir);
         std::cout << links.size() << " printings use the effects of a reprint with the same rules\n";
+        const StoredTranslations stored = translate_generated(generated_dir, effects_dir);
+        std::cout << stored.cards.size() << " cards without effects have a translation, " << stored.complete << " of them with every text read\n";
+        for (const std::string& problem : stored.problems) {
+            std::cout << "  " << problem << '\n';
+        }
 
         // Load everything back exactly as the engine will, merging effects files.
         const CardDB db = CardDB::load(generated_dir, effects_dir);
@@ -426,6 +532,7 @@ int main(int argc, char** argv) {
                 }
             }
             std::size_t ready = 0;
+            std::size_t translated = 0;
             std::vector<std::string> lines;
             for (const std::string& id : ids) {
                 const CardDef* card = db.find(id);
@@ -437,6 +544,12 @@ int main(int argc, char** argv) {
                 if (card_missing.empty()) {
                     ++ready;
                 }
+                if (stored.cards.contains(id)) {
+                    if (card_missing.empty()) {
+                        ++translated;
+                    }
+                    lines.push_back("translated: " + id + " " + card->name);
+                }
                 for (const auto& item : card_missing) {
                     lines.push_back("needs effects: " + item);
                 }
@@ -446,7 +559,7 @@ int main(int argc, char** argv) {
                                                         : "TCGdex doesn't mark this printing Standard-legal: " + id + " " + card->name);
                 }
             }
-            std::cout << "  " << path.string() << ": " << ready << " of " << ids.size() << " cards ready\n";
+            std::cout << "  " << path.string() << ": " << ready << " of " << ids.size() << " cards ready, " << translated << " of them by translation\n";
             for (const auto& line : lines) {
                 std::cout << "    " << line << '\n';
             }
