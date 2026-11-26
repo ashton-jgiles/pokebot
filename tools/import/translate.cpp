@@ -2308,7 +2308,7 @@ namespace pokebot::import {
                     return sentence;
                 }
                 if (read->size() == 1 && read->at(0).value("op", "") == "shuffle_deck") {
-                    if (json* may = last_may(blocks); may && uses(may->at("effects"), "search_deck")) {
+                    if (json* may = last_may(blocks); may && (uses(may->at("effects"), "search_deck") || uses(may->at("effects"), "attach_spread"))) {
                         may->at("effects").push_back(read->at(0));
                         continue;
                     }

@@ -174,7 +174,7 @@ translates one. After the Greninja fix, the old decks mustn't change: each step 
 | 3b.2 | **Translator** for today's vocabulary, checked against the hand-written effects. *Done: the four decks are chosen, and the translator reads 81 of the 88 hand-written texts the same, completes 471 Standard cards with no effects file (844 complete in all, 40.2%), and passed its audit of 50. The design and the substeps are below* | ✅ |
 | 3b.3 | Damage, healing, counts and conditions. *Done: 1,047 of the 2,097 cards complete (49.9%, from 40.2%), the focused audit of 50 found none wrong, and the reference run repeats. The design and the substeps are below* | ✅ |
 | 3b.4 | Lasting effects and damage passives, built in one step: the engine's lasting kinds, damage passives and prevention, the translator's sentences, and the runs. *Built: all 502 tests pass, 81 hand-written texts the same with the same 7 not read, 1,132 of the 2,097 cards complete (54.0%), and the reference run repeats in what's played. The audit with the right words found none of 50 wrong. Timed back to back against 3b.3, the same games took about 6 to 8% longer, and after a speed fix they're level. Results below* | ✅ |
-| 3b.5 | **Ranked vocabulary**, 3b.5 and 3b.6 merged (2026-11-26): the sentences worth the most complete cards first, whatever their kind, until 60% or the list flattens. *The plan is below* | 🔄 |
+| 3b.5 | **Ranked vocabulary**, 3b.5 and 3b.6 merged (2026-11-26): the sentences worth the most complete cards first, whatever their kind, until 60% or the list flattens. *Done: 1,276 of 2,097 cards complete (60.8%) after three batches. The plan and results are below* | ✅ |
 | 3b.6 | Merged into 3b.5 | — |
 | 3b.7 | The four decks: hand-written and custom cards | ⬜ |
 | 3b.8 | Audit, stress runs, sign-off | ⬜ |
@@ -256,12 +256,32 @@ gains nothing from one.
 |---|---|---|
 | 3b.5.1 | **The measurement:** `--check-translations` also counts, over cards without an effects file and with exactly one text not read, that text's first unread sentence, so shapes rank by the cards they'd complete. *Done: 883 cards without an effects file have exactly one text not read, and the list is flat: the top shape stops 13 cards, the 40th 2* | ✅ |
 | 3b.5.2 | **The first batch**, built in one step: the gust the opponent chooses and damage to the new Active, drawing up to a hand size, discarding the opponent's Tool before damage, random cards from their hand and the top of a deck, a condition on damaged Benched Pokémon, "this Pokémon can't retreat" next turn, healing the Active, and the triggers on evolving and on being damaged by an attack. At most about 80 cards by the list, perhaps 50 to 70. *Built: all 511 tests pass, 81 hand-written texts the same with the same 7 not read, 1,214 of the 2,097 cards complete (57.9%, 82 more), and the reference run repeats. The audit, with the right words, found 1 of 50 wrong, and its rule is fixed. The speed check wasn't run* | ✅ |
-| 3b.5.3 | **The second batch**, in one step: typed Energy counts and coins for each Energy, Pokémon with a named attack, "−" damage per counter, "you may do N more damage", "discard a card from your hand, if you do", no damage counters, Pokémon on the Bench, extra Energy beyond the cost, for each heads an Energy, Special Energy and Tera as nouns, Energy attached in any way you like, and the first turn. At most about 55 cards by the list. *Built, not yet tested or run* | 🔄 |
+| 3b.5.3 | **The second batch**, in one step: typed Energy counts and coins for each Energy, Pokémon with a named attack, "−" damage per counter, "you may do N more damage", "discard a card from your hand, if you do", no damage counters, Pokémon on the Bench, extra Energy beyond the cost, for each heads an Energy, Special Energy and Tera as nouns, Energy attached in any way you like, and the first turn. At most about 55 cards by the list. *Done: all 516 tests pass, 81 hand-written texts the same with the same 7 not read, 1,276 of the 2,097 cards complete (60.8%), so M3b's 60% is reached, the audit of 50 found none wrong, and the reference run repeats* | ✅ |
 | 3b.5.4 on | Batches from the top of that list, each as 3b.3 was: engine, translator, then audit and runs. The evolving and damaged-by-attack triggers go in the first batch whatever their rank, as they're cheap (the events exist) and open a recurring Ability shape. The one-off Abilities are left to 3b.7, which writes the four decks' cards | ⬜ |
 
 **Its rules (2026-11-26, before any of it was built):** each batch: every hand-written text read loads the same; an audit of 50
 texts using that batch's vocabulary, at most 1 wrong; the reference run repeats, 158 to 162; and timed back to back against
 3b.3's commit (`..\pokebot-base`), within noise. M3b's 60% stays the target; no batch has its own.
+
+**What 3b.5.3 measured (2026-11-26):**
+
+- **On all of Standard:** **1,276 of 2,097 cards complete (60.8%)**, against 1,214, so **62 more**, above the list's 55. **M3b's coverage
+  rule (at least 60%, 1,259) is met.** 903 complete by translation. Texts read: attacks 1,278 of 1,757 (72.7%), Abilities 75 of 300,
+  Trainers 68 of 164.
+- **The incoming decks:** mega-lucario 19 of 27 cards ready (Aura Jab now reads), mega-venasaur 22 of 25; alakazam 15 of 24 and
+  festival-lead 14 of 27 unchanged.
+- **The audit** (`--audit 50 --seed 5 --using of:self_energy,has_attack,extra_energy_at_least,first_turn,special,attach_spread,`
+  `self_damaged:false`): 50 of the 53 texts using this batch's vocabulary. Each was checked by hand; **none was wrong**. It had typed
+  Energy counts 20, Energy in any way you like 12, the first turn 4, extra Energy 4, the Round attack 4, Special Energy 4, no
+  damage counters 2. **Two approximations it showed:**
+  - Marnie's Grimmsnarl ex's "you may search … Then, shuffle your deck" shuffled even when you said no. **Fixed:** the shuffle goes
+    inside the `may` after `attach_spread` too, as it already did after a search, and a test pins it.
+  - Enhanced Hammer ("discard a Special Energy from 1 of your opponent's Pokémon") offers any of their Pokémon with Energy, so one
+    without Special Energy can be chosen and nothing happens. It doesn't stop a play the rules allow; it's left as a known
+    approximation.
+- **The reference run repeats** 158 to 162, 18.4 turns and 140.8 actions a game, in 95.3 s.
+- **The ranked list now:** 778 cards with exactly one text not read; the top shape stops 12 ("your opponent reveals their hand"),
+  then 7, 6, 5 and 4s.
 
 **What 3b.5.2 measured (2026-11-26):**
 
