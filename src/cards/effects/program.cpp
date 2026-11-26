@@ -1,6 +1,7 @@
 #include "cards/effects/program.hpp"
 
 #include <algorithm>
+#include <limits>
 
 #include "cards/card/card.hpp"
 
@@ -12,6 +13,7 @@ namespace pokebot {
 
         constexpr int kMaxCount = 60;
         constexpr std::size_t kMaxSteps = 255;
+        constexpr std::int16_t kHealAll = std::numeric_limits<std::int16_t>::max();
 
         std::uint8_t count_of(const json& block, int fallback) {
             const int count = block.value("count", fallback);
@@ -63,7 +65,10 @@ namespace pokebot {
             if (on == "bench") {
                 return Zone::Bench;
             }
-            throw CardDataError("\"on\" is \"any\" or \"bench\", not '" + on + "'");
+            if (on == "active") {
+                return Zone::Active;
+            }
+            throw CardDataError("\"on\" is \"any\", \"bench\" or \"active\", not '" + on + "'");
         }
 
         Side opponent_unless_said(const json& block) {
@@ -239,6 +244,16 @@ namespace pokebot {
                 count.kind = CountKind::DamageCountersOnSelf;
             } else if (of == "target_damage_counters") {
                 count.kind = CountKind::TargetDamageCounters;
+            } else if (of == "active_damage_counters") {
+                count.kind = CountKind::ActiveDamageCounters;
+            } else if (of == "in_play") {
+                count.kind = CountKind::InPlay;
+            } else if (of == "tools_in_play") {
+                count.kind = CountKind::ToolsInPlay;
+            } else if (of == "energy_in_play") {
+                count.kind = CountKind::EnergyInPlay;
+            } else if (of == "self_energy") {
+                count.kind = CountKind::SelfEnergy;
             } else {
                 throw CardDataError("unknown thing to count '" + of + "'");
             }
@@ -315,6 +330,18 @@ namespace pokebot {
             } else if (key == "self_energy_at_least") {
                 condition.kind = ConditionKind::SelfEnergyAtLeast;
                 condition.value = value.get<int>();
+            } else if (key == "opponent_active_is") {
+                condition.kind = ConditionKind::OpponentActiveIs;
+                condition.filter = parse_filter_fields(value);
+            } else if (key == "opponent_active_damaged") {
+                condition.kind = ConditionKind::OpponentActiveDamaged;
+            } else if (key == "opponent_active_has") {
+                condition.kind = ConditionKind::OpponentActiveHas;
+                condition.special = special_condition_of(value.get<std::string>());
+            } else if (key == "self_damaged") {
+                condition.kind = ConditionKind::SelfDamaged;
+            } else if (key == "self_has_tool") {
+                condition.kind = ConditionKind::SelfHasTool;
             } else {
                 throw CardDataError("unknown condition '" + key + "'");
             }
@@ -414,17 +441,26 @@ namespace pokebot {
                 add(step);
             }
 
-            void choose_targets(const json& block, bool needs_energy) {
+            void choose_targets(const json& block, bool needs_energy, Side unless_said = Side::Opponent, bool needs_damage = false) {
                 Step choose;
                 choose.op = Op::ChooseTargets;
-                choose.side = opponent_unless_said(block);
+                choose.side = block.contains("player") ? side_of(block) : unless_said;
                 if (choose.side == Side::Each) {
                     throw CardDataError("targets belong to \"you\" or \"opponent\"");
                 }
                 choose.from = where_on(block);
+                choose.needs_energy = needs_energy;
+                choose.needs_damage = needs_damage;
+                if (block.value("each", false) || choose.from == Zone::Active) {
+                    if (block.contains("targets") || block.contains("up_to")) {
+                        throw CardDataError("\"each\" and \"on\": \"active\" take every matching Pokemon, with no \"targets\" or \"up_to\"");
+                    }
+                    choose.each = true;
+                    add(choose);
+                    return;
+                }
                 choose.max = static_cast<std::uint8_t>(block.value("targets", 1));
                 choose.min = block.value("up_to", false) ? 0 : choose.max;
-                choose.needs_energy = needs_energy;
                 if (choose.max < 1 || choose.max > 6) {
                     throw CardDataError("targets must be 1 to 6");
                 }
@@ -435,6 +471,24 @@ namespace pokebot {
                 if (!attack_) {
                     throw CardDataError("only attacks can use \"" + op + "\"");
                 }
+            }
+
+            static std::int16_t damage_amount(const json& block, const std::string& op, int most) {
+                const int amount = block.at("amount").get<int>();
+                if (amount <= 0 || amount % 10 != 0 || amount > most) {
+                    throw CardDataError(op + "'s \"amount\" is a multiple of 10 from 10 to " + std::to_string(most) + ", not " + std::to_string(amount));
+                }
+                return static_cast<std::int16_t>(amount);
+            }
+
+            static std::int16_t heal_amount(const json& block, const std::string& op) {
+                if (!block.value("all", false)) {
+                    return damage_amount(block, op, 990);
+                }
+                if (block.contains("amount")) {
+                    throw CardDataError(op + " heals \"all\" or an \"amount\", not both");
+                }
+                return kHealAll;
             }
 
             // Choose your Pokemon, then for each one, choose Energy from `from` and attach it.
@@ -700,6 +754,29 @@ namespace pokebot {
                 } else if (op == "ignore_defender_effects") {
                     attack_only(op);
                     add(Op::IgnoreDefenderEffects);
+                } else if (op == "ignore_weakness") {
+                    attack_only(op);
+                    add(Op::IgnoreWeakness);
+                } else if (op == "ignore_resistance") {
+                    attack_only(op);
+                    add(Op::IgnoreResistance);
+                } else if (op == "damage_self") {
+                    attack_only(op);
+                    Step put;
+                    put.op = Op::CountersOnSelf;
+                    put.max = static_cast<std::uint8_t>(damage_amount(block, op, 600) / 10);
+                    add(put);
+                } else if (op == "heal_self") {
+                    Step heal;
+                    heal.op = Op::HealSelf;
+                    heal.amount = heal_amount(block, op);
+                    add(heal);
+                } else if (op == "heal_to") {
+                    choose_targets(block, false, Side::You, true);
+                    Step heal;
+                    heal.op = Op::HealTargets;
+                    heal.amount = heal_amount(block, op);
+                    add(heal);
                 } else if (op == "lasting") {
                     Step step;
                     step.op = Op::AddLasting;
@@ -748,7 +825,8 @@ namespace pokebot {
                 Compiler compiler(attack);
                 const bool placed = uses_op(effects, "damage");
                 if (attack && !placed &&
-                    (uses_op(effects, "set_damage") || uses_op(effects, "add_damage") || uses_op(effects, "ignore_defender_effects"))) {
+                    (uses_op(effects, "set_damage") || uses_op(effects, "add_damage") || uses_op(effects, "ignore_defender_effects") ||
+                     uses_op(effects, "ignore_weakness") || uses_op(effects, "ignore_resistance"))) {
                     throw CardDataError("an attack that changes its damage must place a \"damage\" step");
                 }
                 if (attack && !placed) {
@@ -1042,6 +1120,14 @@ namespace pokebot {
                 return "choose where to move it";
             case Op::Custom:
                 return "custom";
+            case Op::HealSelf:
+                return "heal this Pokemon";
+            case Op::HealTargets:
+                return "heal targets";
+            case Op::IgnoreWeakness:
+                return "ignore Weakness";
+            case Op::IgnoreResistance:
+                return "ignore Resistance";
         }
         return "unknown op";
     }

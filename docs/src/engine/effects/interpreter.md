@@ -20,6 +20,7 @@ player's choice, it pushes a decision and stops; the answer resumes it.
 | `targets` | Ids of the Pokémon chosen by the last `ChooseTargets` |
 | `target_index` | Which target an `EachTarget` … `NextTarget` loop is on |
 | `attached_to_active` | Whether this effect attached Energy to its player's Active Pokémon |
+| `ignore_defender`, `ignore_weakness`, `ignore_resistance` | Whether this attack's damage skips effects on the defender, Weakness or Resistance |
 | `chosen_attack` | The attack a copy attack chose |
 | `value` | The latest result: heads flipped, or cards moved by the last `MoveChosen` or `HandToDeckBottom`. Counts (`"heads"`, `"moved"`) and conditions (`heads_at_least`, `moved_at_least`) read it |
 

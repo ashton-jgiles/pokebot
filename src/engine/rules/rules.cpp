@@ -322,17 +322,21 @@ namespace pokebot::rules {
         return game.def(defender.top()).rules.tera && !is_active(game, defender);
     }
 
-    int attack_damage(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, int base, bool ignore_defender_effects) {
+    int attack_damage(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, int base, DamageOptions options) {
         if (base <= 0 || damage_prevented(game, attacker, defender)) {
             return 0;
         }
         int damage = base;
         damage = attacker_side(game, attacker, defender, damage);
         if (is_active(game, defender)) {
-            damage = apply_weakness(game, attacker, defender, damage, ignore_defender_effects);
-            damage = apply_resistance(game, attacker, defender, damage, ignore_defender_effects);
+            if (!options.ignore_weakness) {
+                damage = apply_weakness(game, attacker, defender, damage, options.ignore_defender_effects);
+            }
+            if (!options.ignore_resistance) {
+                damage = apply_resistance(game, attacker, defender, damage, options.ignore_defender_effects);
+            }
         }
-        if (!ignore_defender_effects) {
+        if (!options.ignore_defender_effects) {
             damage = defender_side(game, attacker, defender, damage);
         }
         return std::max(damage, 0);

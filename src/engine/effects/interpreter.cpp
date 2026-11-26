@@ -75,6 +75,8 @@ namespace pokebot {
                         const PokemonInPlay* chosen = run.chosen_pokemon == kNoCard ? nullptr : find_pokemon(game, run.chosen_pokemon);
                         return chosen != nullptr ? &chosen->energy : nullptr;
                     }
+                    case Zone::Active:
+                        return nullptr;
                 }
                 return nullptr;
             }
@@ -262,10 +264,10 @@ namespace pokebot {
                 const PlayerState& p = game.player(player_on(step.side, run.who.player));
                 for (const Slot slot : in_play_slots(p)) {
                     const PokemonInPlay& pokemon = pokemon_at(p, slot);
-                    if (slot == kActiveSlot && step.from == Zone::Bench) {
+                    if ((slot == kActiveSlot && step.from == Zone::Bench) || (slot != kActiveSlot && step.from == Zone::Active)) {
                         continue;
                     }
-                    if (run.targets.contains(pokemon.id()) || (step.needs_energy && pokemon.energy.empty()) ||
+                    if (run.targets.contains(pokemon.id()) || (step.needs_energy && pokemon.energy.empty()) || (step.needs_damage && pokemon.damage_counters == 0) ||
                         !matches(step.filter, game.def(pokemon.top()))) {
                         continue;
                     }
@@ -314,6 +316,31 @@ namespace pokebot {
                 return run;
             }
 
+            rules::DamageOptions damage_options(const EffectRun& run) {
+                return rules::DamageOptions{run.ignore_defender, run.ignore_weakness, run.ignore_resistance};
+            }
+
+            void heal(PokemonInPlay& pokemon, int amount) {
+                const int healed = std::min<int>(amount / 10, pokemon.damage_counters);
+                pokemon.damage_counters = static_cast<std::uint16_t>(pokemon.damage_counters - healed);
+            }
+
+            bool has_special_condition(const SpecialConditions& special, SpecialCondition condition) {
+                switch (condition) {
+                    case SpecialCondition::Asleep:
+                        return special.asleep;
+                    case SpecialCondition::Burned:
+                        return special.burned;
+                    case SpecialCondition::Confused:
+                        return special.confused;
+                    case SpecialCondition::Paralyzed:
+                        return special.paralyzed;
+                    case SpecialCondition::Poisoned:
+                        return special.poison > 0;
+                }
+                return false;
+            }
+
             void damage_targets(GameState& game, const EffectRun& run, const Step& step) {
                 const PokemonInPlay* attacker = find_pokemon(game, run.who.self);
                 if (attacker == nullptr) {
@@ -325,7 +352,7 @@ namespace pokebot {
                         continue;
                     }
                     const int base = step.amount + step.per * count_value(game, run, step.count, target);
-                    const int damage = rules::attack_damage(game, *attacker, *target, base);
+                    const int damage = rules::attack_damage(game, *attacker, *target, base, damage_options(run));
                     target->damage_counters = static_cast<std::uint16_t>(target->damage_counters + damage / 10);
                     if (damage > 0) {
                         raise(game, Event{EventKind::DamagedByAttack, static_cast<std::uint8_t>(owner_of(id)), id, run.who.self});
@@ -462,6 +489,33 @@ namespace pokebot {
                         }
                         case CountKind::TargetDamageCounters:
                             return target != nullptr ? target->damage_counters : 0;
+                        case CountKind::ActiveDamageCounters:
+                            total += p.active ? p.active->damage_counters : 0;
+                            break;
+                        case CountKind::InPlay:
+                            for (const Slot slot : in_play_slots(p)) {
+                                total += matches(count.filter, game.def(pokemon_at(p, slot).top())) ? 1 : 0;
+                            }
+                            break;
+                        case CountKind::ToolsInPlay:
+                            for (const Slot slot : in_play_slots(p)) {
+                                total += pokemon_at(p, slot).tool != kNoCard ? 1 : 0;
+                            }
+                            break;
+                        case CountKind::EnergyInPlay:
+                            for (const Slot slot : in_play_slots(p)) {
+                                for (const CardIndex card : pokemon_at(p, slot).energy) {
+                                    total += matches(count.filter, game.def(card)) ? 1 : 0;
+                                }
+                            }
+                            break;
+                        case CountKind::SelfEnergy: {
+                            const PokemonInPlay* self = find_pokemon(game, run.who.self);
+                            if (self == nullptr) {
+                                return 0;
+                            }
+                            return static_cast<int>(std::count_if(self->energy.begin(), self->energy.end(), [&](CardIndex card) { return matches(count.filter, game.def(card)); }));
+                        }
                     }
                 }
                 return total;
@@ -514,7 +568,7 @@ namespace pokebot {
                 PlayerState& p = game.player(run.who.player);
                 switch (step.op) {
                     case Op::Damage:
-                        deal_attack_damage(game, run.who, run.damage, run.ignore_defender);
+                        deal_attack_damage(game, run.who, run.damage, damage_options(run));
                         break;
                     case Op::Draw: {
                         int drawn = 0;
@@ -618,7 +672,15 @@ namespace pokebot {
                     case Op::ChooseTargets: {
                         run.targets.clear();
                         run.target_index = 0;
-                        const std::size_t max = std::min<std::size_t>(step.max, targetable(game, run, step).size());
+                        const auto slots = targetable(game, run, step);
+                        if (step.each) {
+                            const PlayerState& owner = game.player(player_on(step.side, run.who.player));
+                            for (const Slot slot : slots) {
+                                run.targets.push_back(pokemon_at(owner, slot).id());
+                            }
+                            break;
+                        }
+                        const std::size_t max = std::min<std::size_t>(step.max, slots.size());
                         if (max == 0) {
                             break;
                         }
@@ -722,6 +784,24 @@ namespace pokebot {
                         return false;
                     case Op::IgnoreDefenderEffects:
                         run.ignore_defender = true;
+                        break;
+                    case Op::IgnoreWeakness:
+                        run.ignore_weakness = true;
+                        break;
+                    case Op::IgnoreResistance:
+                        run.ignore_resistance = true;
+                        break;
+                    case Op::HealSelf:
+                        if (PokemonInPlay* self = find_pokemon(game, run.who.self)) {
+                            heal(*self, step.amount);
+                        }
+                        break;
+                    case Op::HealTargets:
+                        for (const CardIndex id : run.targets) {
+                            if (PokemonInPlay* target = find_pokemon(game, id)) {
+                                heal(*target, step.amount);
+                            }
+                        }
                         break;
                     case Op::AddLasting:
                         add_lasting(game, run, step);
@@ -876,6 +956,20 @@ namespace pokebot {
                 case ConditionKind::SelfEnergyAtLeast: {
                     const PokemonInPlay* self = run != nullptr ? find_pokemon(game, run->who.self) : nullptr;
                     return self != nullptr && static_cast<int>(self->energy.size()) >= condition.value;
+                }
+                case ConditionKind::OpponentActiveIs:
+                    return opponent.active && matches(condition.filter, game.def(opponent.active->top()));
+                case ConditionKind::OpponentActiveDamaged:
+                    return opponent.active && opponent.active->damage_counters > 0;
+                case ConditionKind::OpponentActiveHas:
+                    return opponent.active && has_special_condition(opponent.active->special, condition.special);
+                case ConditionKind::SelfDamaged: {
+                    const PokemonInPlay* self = run != nullptr ? find_pokemon(game, run->who.self) : nullptr;
+                    return self != nullptr && self->damage_counters > 0;
+                }
+                case ConditionKind::SelfHasTool: {
+                    const PokemonInPlay* self = run != nullptr ? find_pokemon(game, run->who.self) : nullptr;
+                    return self != nullptr && self->tool != kNoCard;
                 }
             }
             return false;

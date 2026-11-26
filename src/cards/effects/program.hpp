@@ -24,6 +24,7 @@ namespace pokebot {
         InPlay,       // the Active Pokemon and the Bench
         TargetEnergy, // Energy attached to the target being worked on (the first, or the current one in a loop)
         ChosenEnergy, // Energy attached to the chosen Pokemon (chosen_pokemon)
+        Active,
     };
 
     enum class Side : std::uint8_t {
@@ -72,6 +73,10 @@ namespace pokebot {
         NextTarget,        // the end of the loop: go back to `jump` for the next target
         ChooseDestination, // the player chooses another of their Pokemon (chosen_pokemon)
         Custom,            // a one-of-a-kind card's own C++ (engine/effects/custom.cpp)
+        HealSelf,
+        HealTargets,
+        IgnoreWeakness,
+        IgnoreResistance,
     };
 
     enum class StageFilter : std::uint8_t {
@@ -125,6 +130,11 @@ namespace pokebot {
         YourEnergyHas,          // an Energy attached to one of your Pokemon matches `filter`
         AttachedToActive,       // this effect attached Energy to your Active Pokemon
         Custom,                 // a one-of-a-kind card's own requirement (`custom`)
+        OpponentActiveIs,
+        OpponentActiveDamaged,
+        OpponentActiveHas,
+        SelfDamaged,
+        SelfHasTool,
     };
 
     // The one-of-a-kind cards with their own C++.
@@ -145,6 +155,7 @@ namespace pokebot {
         int value = 0;
         CardFilter filter;
         CustomEffect custom = CustomEffect::RareCandy;
+        SpecialCondition special = SpecialCondition::Poisoned;
 
         bool operator==(const Condition&) const = default;
     };
@@ -159,6 +170,11 @@ namespace pokebot {
         ActiveEnergy,
         DamageCountersOnSelf,
         TargetDamageCounters,
+        ActiveDamageCounters,
+        InPlay,
+        ToolsInPlay,
+        EnergyInPlay,
+        SelfEnergy,
     };
 
     struct Count {
@@ -212,6 +228,8 @@ namespace pokebot {
         std::int16_t per = 0;
         Count count;
         bool needs_energy = false;
+        bool needs_damage = false;
+        bool each = false;
         LastingSpec lasting;
         CustomEffect custom = CustomEffect::RareCandy;
         std::uint8_t jump = 0;

@@ -172,7 +172,7 @@ translates one. After the Greninja fix, the old decks mustn't change: each step 
 | 3b.1 | **Data:** corrections to TCGdex's data, the importer's fixes, whole sets imported, reprints matched, the coverage report, the scan document restored and corrected. *[Corrections](data/cards/README.md#correctionsjson) to TCGdex's data and the importer's fixes are built. All 460 tests pass, the re-import changes only Greninja ex (30C 21), and M10's result stands after the fix: 57.8% (56.6% to 59.0%). The bulk import and the [coverage report](tools/import/standard.md) are built: all 466 tests pass, and 373 of the 2,097 distinct cards (17.8%) have all their effects. The [scan document](research/standard-scan.md) is restored and corrected. Reprints in decklists move to 3b.2* | ✅ |
 | 3b.2a | **Any deck export imports:** set codes found through TCGdex's series, reprints using their card's effects (`same_as`), and a report for each deck. Decks that aren't playable yet wait in `data/decks/incoming/`, which the sim and the tests don't read. *Done: all 470 tests pass, the four new decks import with 0 failures, 6 printings use a reprint's effects, and the reference run repeats. Results below* | ✅ |
 | 3b.2 | **Translator** for today's vocabulary, checked against the hand-written effects. *Done: the four decks are chosen, and the translator reads 81 of the 88 hand-written texts the same, completes 471 Standard cards with no effects file (844 complete in all, 40.2%), and passed its audit of 50. The design and the substeps are below* | ✅ |
-| 3b.3 | Damage, healing, counts and conditions | ⬜ |
+| 3b.3 | Damage, healing, counts and conditions. *The design and the substeps are below* | 🔄 |
 | 3b.4 | Lasting effects and damage passives | ⬜ |
 | 3b.5 | Triggers, Abilities with costs, locks, HP and Retreat Cost | ⬜ |
 | 3b.6 | Hands, decks, Energy, Stadium actions, Special Energy | ⬜ |
@@ -244,6 +244,34 @@ grammar, against the downloaded sets (distinct cards in each list):
   Their sets aren't in `sets.json`, so the importer can't find them yet.
 - **Variants for later:** other `basic-box` and `dragapult` lists, and `basic-box` lists with Mew ex or Mega Rayquaza ex,
   as [archetype lists](data/archetypes/README.md). Mega Rayquaza ex is a Delta Reign card, whose data isn't trusted yet.
+
+**3b.3's design (2026-11-25, before any of it was built):** the vocabulary most often missing, counted in the cached Standard sets
+(2,108 cards, 2,316 texts): healing (about 100 texts), damage to the attacker itself (83), "if tails, this attack does nothing" (44),
+conditions on the opponent's Active Pokémon (60) and on the attacker (67, some already read), counts (about 40 not yet expressible),
+Weakness or Resistance ignored (25), damage to each of several Pokémon (15), and discarding an Energy from the opponent's Active
+Pokémon (28). Left for later: healing "the same amount of damage you did", counts of one Energy type, "extra Energy beyond this
+attack's cost", and "if you can't discard …, this attack does nothing". **A guess, to be measured:** these shapes are in about
+300 texts, but many of them have another sentence 3b.3 doesn't read, so perhaps 100 to 250 more cards become complete.
+
+| Step | Builds | Status |
+|---|---|---|
+| 3b.3.1 | The engine's vocabulary: `heal_self` and `heal_to`, `damage_self`, `"each": true` targets, `"on": "active"`, `ignore_weakness` and `ignore_resistance`, five conditions and five counts. *Done: all 492 tests pass, and the reference run repeats 158 to 162, 18.4 turns and 140.8 actions a game, with the same endings (88.2 s against 84.4 s, one run each, so not a measured slowdown; speed is checked at sign-off)* | ✅ |
+| 3b.3.2 | The translator's sentences for them, and "if tails, this attack does nothing" | ⬜ |
+| 3b.3.3 | `--audit --using`, the runs, the audit and the record | ⬜ |
+
+**Its rules (2026-11-25, before any of it was built):**
+
+- every hand-written text the translator reads must load the same; a text leaves the pinned list of texts not read only if it's
+  then read and loads the same;
+- an audit of 50 texts whose effects use the new vocabulary (`--seed 2`, with `--using`): at most 1 wrong, and each wrong one's rule
+  is fixed;
+- the reference run repeats, 158 to 162, 18.4 turns and 140.8 actions a game;
+- no coverage threshold; the gain is reported against the guess above.
+
+**How 3b.3.1 is built:** damage to itself is damage counters on the attacker, which is exact while nothing reduces damage; 3b.4's
+damage passives revisit it. `heal_to` offers only damaged Pokémon. `"each"` and `"on": "active"` choose every matching Pokémon with no
+decision, so a run's targets now hold up to 9 (a Bench of 8 and the Active). The new flags are hashed so that a run without them
+hashes as before.
 
 **3b.2's design (2026-11-25, before any of it was built):** a [translator](tools/import/translate.md) in the importer, strict: it
 reads all of a text or none of it. Its effects go into `generated/`, marked `translated: true`, only for cards with no effects file

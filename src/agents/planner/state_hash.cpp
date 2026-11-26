@@ -113,7 +113,8 @@ namespace pokebot {
                     add(run.chosen_attack);
                     add(run.target_index);
                     add(run.attached_to_active);
-                    add(run.ignore_defender);
+                    add(static_cast<std::uint64_t>(run.ignore_defender) | (static_cast<std::uint64_t>(run.ignore_weakness) << 1U) |
+                        (static_cast<std::uint64_t>(run.ignore_resistance) << 2U));
                 }
 
                 void add(const LastingEffect& effect) {

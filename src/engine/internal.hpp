@@ -57,7 +57,7 @@ namespace pokebot::detail {
     void add_attack_actions(const GameState& game, std::vector<Action>& out);
     void apply_attack(GameState& game, const Action& action);
     void perform_attack(GameState& game, const EffectContext& who, AttackRef attack);
-    void deal_attack_damage(GameState& game, const EffectContext& who, int base, bool ignore_defender = false);
+    void deal_attack_damage(GameState& game, const EffectContext& who, int base, rules::DamageOptions options = {});
     void finish_attack(GameState& game, const EffectContext& who);
     void handle_knockouts(GameState& game, bool after_attack = false);
     void add_promote_actions(const GameState& game, std::vector<Action>& out);

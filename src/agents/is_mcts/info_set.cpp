@@ -121,7 +121,8 @@ namespace pokebot {
                 attack(r.chosen_attack);
                 add(r.target_index);
                 add(r.attached_to_active);
-                add(r.ignore_defender);
+                add(static_cast<std::uint64_t>(r.ignore_defender) | (static_cast<std::uint64_t>(r.ignore_weakness) << 1U) |
+                    (static_cast<std::uint64_t>(r.ignore_resistance) << 2U));
             }
 
         private:

@@ -185,13 +185,15 @@ namespace pokebot {
         std::uint8_t pc = 0;
         FixedVector<CardIndex, kDeckSize> chosen;
         CardIndex chosen_pokemon = kNoCard;
-        std::int16_t damage = 0;           // the attack's damage so far
-        std::int16_t value = 0;            // heads flipped, or cards just moved
-        FixedVector<CardIndex, 6> targets; // ids of the Pokemon chosen as targets
+        std::int16_t damage = 0;                           // the attack's damage so far
+        std::int16_t value = 0;                            // heads flipped, or cards just moved
+        FixedVector<CardIndex, kMaxBenchSize + 1> targets; // ids of the Pokemon chosen as targets
         AttackRef chosen_attack;
         std::uint8_t target_index = 0;   // which target a loop over the targets is on
         bool attached_to_active = false; // this effect attached Energy to its player's Active Pokemon
         bool ignore_defender = false;    // the attack isn't affected by effects on the Defending Pokemon
+        bool ignore_weakness = false;
+        bool ignore_resistance = false;
 
         bool operator==(const EffectRun&) const = default;
     };

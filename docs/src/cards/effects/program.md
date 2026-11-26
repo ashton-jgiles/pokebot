@@ -30,17 +30,17 @@ Each block is a JSON object with an `"op"`:
 | `flip_coins` | `count` (1) | Flip coins; the number of heads can be counted (`"heads"`) or tested (`heads_at_least`) | `FlipCoins` |
 | `flip_until_tails` | — | Flip until tails; the number of heads is kept the same way | `FlipUntilTails` |
 | `hand_to_deck_bottom` | `player` | Shuffle that player's hand and put it on the bottom of their deck (Special Red Card) | `HandToDeckBottom` |
-| `damage_to` | `targets` (1), `on` (`"any"`), `player` (`"opponent"`), `up_to`, `amount`, `per`, `for_each` | Choose that many different Pokémon (`"on": "bench"` for the Bench only) and do `amount` + `per` × the count to each. Weakness and Resistance apply only to an Active target; a Benched Tera Pokémon takes none. Attacks only | `ChooseTargets`, `DamageTargets` |
+| `damage_to` | `targets` (1), `on` (`"any"`), `player` (`"opponent"`), `up_to`, `each`, `amount`, `per`, `for_each` | Choose that many different Pokémon (`"on": "bench"` for the Bench only), or with `"each": true` take every one with no choice, and do `amount` + `per` × the count to each. Weakness and Resistance apply only to an Active target; a Benched Tera Pokémon takes none. Attacks only | `ChooseTargets`, `DamageTargets` |
 | `place_counters` | `count` (1), `on` (`"any"`), `player` (`"opponent"`) | Put damage counters on that player's Pokémon "in any way you like", one choice per counter. Counters aren't damage, so Tera doesn't stop them | `PlaceCounters` |
 | `discard_all_attached_energy` | — | Discard every Energy attached to this Pokémon | `DiscardAllEnergy` |
 | `return_self_to_hand` | — | Put this Pokémon and everything attached to it into your hand (Tuck Tail). If it was Active, you choose a new one after the attack | `ReturnSelfToHand` |
-| `discard_target_energy` | `count` (1), `on`, `player` (`"opponent"`), `filter` | Choose 1 Pokémon that has Energy, then discard `count` of its Energy (Crushing Hammer) | `ChooseTargets`, `ChooseCards`, `MoveChosen` |
+| `discard_target_energy` | `count` (1), `on`, `player` (`"opponent"`), `filter` | Choose 1 Pokémon that has Energy, then discard `count` of its Energy (Crushing Hammer). With `"on": "active"` the Active Pokémon is taken, with no choice | `ChooseTargets`, `ChooseCards`, `MoveChosen` |
 | `use_attack` | `filter` | Choose an attack of one of your matching Benched Pokémon and use it as this attack (Night Joker). Copy attacks can't be copied. Attacks only | `ChooseAttack`, `UseChosenAttack` |
 | `search_to_top` | `count` (1), `filter`, `reveal` (`false`) | Search your deck for up to `count` cards, shuffle, then put them on top; the last one chosen is the top card (Ciphermaniac's Codebreaking) | `ChooseCards`, `ShuffleDeck`, `MoveChosen` |
 | `special_condition` | `condition`, `player` (`"opponent"`), `count` (1) | Give that player's Active Pokémon a [Special Condition](../../engine/actions/conditions.md): `"asleep"`, `"burned"`, `"confused"`, `"paralyzed"` or `"poisoned"`. **Defaults to the opponent**, since cards almost always say "your opponent's Active Pokémon is now …". `count` is the Poison damage counters per Checkup | `ApplySpecialCondition` |
 | `switch_self` | — | Switch this Pokémon with 1 of your Benched Pokémon | `ChooseBenched`, `SwitchWithChosen` |
 | `switch_active` | `player` (`"you"` or `"opponent"`), `filter` | Switch that player's Active with 1 of their Benched Pokémon that matches `filter`, chosen by you (Switch, Boss's Orders, Subjugating Chains) | `ChooseBenched`, `SwitchWithChosen` |
-| `counters_to` | `count` (1), `targets` (1), `on`, `player` (`"opponent"`) | Put `count` damage counters on each chosen Pokémon (Mortal Shuriken) | `ChooseTargets`, `CountersOnTargets` |
+| `counters_to` | `count` (1), `targets` (1), `on`, `player` (`"opponent"`), `each` | Put `count` damage counters on each chosen Pokémon (Mortal Shuriken), or on every one with `"each": true` | `ChooseTargets`, `CountersOnTargets` |
 | `move_counters` | `count` (1), `on`, `player` (`"opponent"`) | Choose one of your damaged Pokémon, then one of that player's, and move up to `count` damage counters (as many as it has, up to `count`) | `ChooseCounterSource`, `ChooseTargets`, `MoveCounters` |
 | `look_at_top` | `count` (1), `take` (1), `to` (`"hand"`), `filter` | Look at the top `count` cards, take `take` of them, and put the rest on the bottom in the same order (Recon Directive) | `ChooseCards`, `MoveChosen`, `RestToBottom` |
 | `attach_from_hand` | `count` (1), `filter` | Attach that many matching cards from your hand to this Pokémon (Teal Dance) | `ChooseCards`, `MoveChosen` |
@@ -49,6 +49,10 @@ Each block is a JSON object with an `"op"`:
 | `discard_stadium` | — | Discard the Stadium in play, to its owner's discard pile (Snow Sink) | `DiscardStadium` |
 | `switch_to_active` | — | This Benched Pokémon switches with your Active Pokémon (Rapid Vernier) | `SwitchToActive` |
 | `may` | `effects` (a list) | "You may …": ask first, and skip the list on no | `AskYesNo`, then the list |
+| `ignore_weakness`, `ignore_resistance` | — | "This attack's damage isn't affected by Weakness" (or Resistance): that stage of the [damage pipeline](../../engine/rules/rules.md#the-damage-pipeline) is skipped, for the `damage` step and `damage_to`. Must come before a placed `damage` step. Attacks only | `IgnoreWeakness`, `IgnoreResistance` |
+| `damage_self` | `amount` | "This Pokémon also does `amount` damage to itself": `amount` ÷ 10 damage counters on the attacker, with no Weakness or Resistance. A multiple of 10, at most 600. Attacks only | `CountersOnSelf` |
+| `heal_self` | `amount` or `all` | Heal `amount` damage (a multiple of 10, at most 990), or all of it, from this Pokémon | `HealSelf` |
+| `heal_to` | `amount` or `all`, `targets` (1), `up_to`, `each`, `on`, `player` (`"you"`) | Choose that many of your **damaged** Pokémon, or every one with `"each": true`, and heal each. With no damaged Pokémon, nothing happens | `ChooseTargets`, `HealTargets` |
 | `ignore_defender_effects` | — | "This attack's damage isn't affected by any effects on your opponent's Active Pokémon" (Shred): the printed Weakness and Resistance are used and defender-side effects skipped. Must come before a placed `damage` step. Attacks only | `IgnoreDefenderEffects` |
 | `lasting` | `effect`, `until`, `on` (`"self"`), `player`, `amount`, `only_ex` | A [lasting effect](../../engine/actions/lasting.md). `effect`: `"cant_attack"`, `"cant_use_attack"` (this attack), `"cant_retreat"`, `"no_items"`, `"damage_bonus"`. `until`: `"this_turn"`, `"opponents_next_turn"`, `"your_next_turn"`. `on`: `"self"` or `"defending"` for the first three (attacks only), `"player"` (with `player`) for the last two | `AddLasting` |
 | `if` | `condition`, `then`, `else` (optional) | Do `then` if the [condition](#conditions) holds when the step runs, otherwise `else` | `JumpUnless`, `then`, `Jump`, `else` |
@@ -59,6 +63,8 @@ Each block is a JSON object with an `"op"`:
   Pokémon in play, and no more are chosen than the Bench has room for.
 - `player` can be `"you"` (the default), `"opponent"` or `"each"` (you first, then your opponent).
 - `count` must be 0 to 60.
+- `on` can be `"any"` (the default: the Active Pokémon and the Bench), `"bench"` or `"active"`. `"active"` and `"each": true` take
+  every matching Pokémon without a choice, so they can't have `targets` or `up_to`.
 - Fewer cards are chosen when fewer match; with none, the choice is skipped.
 
 **Damage comes first** unless the list places a `damage` block itself, since most attack text
@@ -84,6 +90,11 @@ applied afterwards, in the [damage pipeline](../../engine/rules/rules.md#the-dam
 | `"active_energy"` | Energy cards attached to the Active Pokémon |
 | `"damage_counters"` | Damage counters on this Pokémon |
 | `"target_damage_counters"` | Damage counters on the target being damaged (only in `damage_to`) |
+| `"active_damage_counters"` | Damage counters on that player's Active Pokémon |
+| `"in_play"` | That player's Pokémon in play matching `filter` |
+| `"tools_in_play"` | Pokémon Tools attached to that player's Pokémon |
+| `"energy_in_play"` | Energy cards attached to that player's Pokémon, matching `filter` |
+| `"self_energy"` | Energy cards attached to this Pokémon, matching `filter` |
 | `"heads"`, `"moved"` | The heads from the last flip, or the cards moved by the last choice (both read the same working number) |
 
 ```json
@@ -140,6 +151,11 @@ Each is an object with one key, from the point of view of the player the card be
 | `{"in_play_has": filter}` | One of your Pokémon in play matches |
 | `{"your_energy_has": filter}` | An Energy attached to one of your Pokémon matches |
 | `{"attached_to_active": true}` | This effect attached Energy to your Active Pokémon (only inside an effect) |
+| `{"opponent_active_is": filter}` | Your opponent's Active Pokémon matches (`{"rule_box": true}` for a Pokémon ex) |
+| `{"opponent_active_damaged": true}` | Your opponent's Active Pokémon has damage counters |
+| `{"opponent_active_has": condition}` | Your opponent's Active Pokémon has that Special Condition (`"poisoned"`, …) |
+| `{"self_damaged": true}` | This Pokémon has damage counters (only inside an effect) |
+| `{"self_has_tool": true}` | This Pokémon has a Pokémon Tool attached (only inside an effect) |
 | `{"custom": name}` | A [one-of-a-kind card](../../engine/effects/custom.md)'s own check (`rare_candy`, `transformation_tome`) |
 
 Anything the compiler doesn't recognise (an unknown op, filter field or destination, a bad count,
@@ -187,7 +203,7 @@ for as long as the card is in play:
 | `FlipCoins` | `max` | Flips `max` coins; the heads become the working value |
 | `FlipUntilTails` | — | Flips until tails; the heads become the working value |
 | `HandToDeckBottom` | `side` | As named; the number of cards moved becomes the working value |
-| `ChooseTargets` | `side`, `from` (`Bench` or `InPlay`), `min`, `max`, `needs_energy` | The player chooses different Pokémon on that side |
+| `ChooseTargets` | `side`, `from` (`Bench`, `InPlay` or `Active`), `min`, `max`, `needs_energy`, `needs_damage`, `each` | The player chooses different Pokémon on that side (only ones with Energy, or with damage counters, if asked); with `each`, every one is taken with no choice |
 | `DamageTargets` | `amount`, `per`, `count` | Damage to each target through the damage pipeline |
 | `PlaceCounters` | `side`, `from`, `max` | One choice per counter |
 | `DiscardAllEnergy`, `ReturnSelfToHand` | — | As named, for "this Pokémon" |
@@ -195,6 +211,9 @@ for as long as the card is in play:
 | `UseChosenAttack` | — | Runs the chosen attack's program, then carries on |
 | `AddLasting` | `lasting`, `side`, `amount` | Adds a lasting effect |
 | `IgnoreDefenderEffects` | — | Sets the run's `ignore_defender` flag for its `Damage` step |
+| `IgnoreWeakness`, `IgnoreResistance` | — | Set the run's `ignore_weakness` or `ignore_resistance` flag, for `Damage` and `DamageTargets` |
+| `HealSelf` | `amount` | Removes `amount` ÷ 10 damage counters from "this Pokémon", as many as it has |
+| `HealTargets` | `amount` | The same, from each target |
 | `CountersOnTargets` | `max` | `max` damage counters on each target |
 | `ShuffleSelfIntoDeck` | — | As named |
 | `RestToBottom` | `amount` | The top `amount` cards that weren't taken go to the bottom |

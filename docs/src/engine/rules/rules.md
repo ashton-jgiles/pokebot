@@ -66,8 +66,9 @@ The attacker-side stage adds lasting damage bonuses (Black Belt's Training) and 
 `damage_dealt` bonuses (Binding Mochi) when the defender is Active. The defender-side stage does
 nothing yet. An attack with no damage does none.
 
-`attack_damage(…, ignore_defender_effects)` is for Shred: it uses the defender's **printed**
-Weakness and Resistance and skips the defender-side stage.
+`attack_damage(…, options)` takes `DamageOptions`. `ignore_defender_effects` is for Shred: it uses the defender's
+**printed** Weakness and Resistance and skips the defender-side stage. `ignore_weakness` and `ignore_resistance` skip
+that stage ("this attack's damage isn't affected by Weakness or Resistance").
 
 ## Always-on effects
 

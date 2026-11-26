@@ -58,8 +58,8 @@ Runs the effect program of the attack `attack` names, with `who.self` as the att
 check or pay a cost. Copy attacks work the same way inside the interpreter (see
 [copy attacks](../effects/interpreter.md#copy-attacks)).
 
-`deal_attack_damage(game, who, base)` is the `Damage` step: `base` damage (the attack's working
-damage) to the opponent's Active, through the damage pipeline, with `who.self` as the attacker,
+`deal_attack_damage(game, who, base, options)` is the `Damage` step: `base` damage (the attack's working
+damage) to the opponent's Active, through the damage pipeline with the run's `DamageOptions`, with `who.self` as the attacker,
 raising `DamagedByAttack` when it's above 0.
 
 ## Knock Outs: `handle_knockouts(game, after_attack)`

@@ -195,6 +195,49 @@ TEST_CASE("filters match Trainer kind, stage, Rule Box, HP and any of several", 
     CHECK_FALSE(matches(pokemon_or_energy, item));
 }
 
+TEST_CASE("healing, damage to itself, every target, the Active, and Weakness or Resistance ignored", "[effects]") {
+    const auto heal = pokebot::compile_trainer(json::parse(R"([{"op": "heal_to", "amount": 30}, {"op": "heal_self", "all": true}])"));
+    REQUIRE(ops(heal) == std::vector<Op>{Op::ChooseTargets, Op::HealTargets, Op::HealSelf});
+    CHECK(heal[0].side == pokebot::Side::You);
+    CHECK(heal[0].needs_damage);
+    CHECK(heal[1].amount == 30);
+    CHECK(heal[2].amount > 990);
+    const auto each = compile_attack(json::parse(R"([{"op": "damage_to", "each": true, "on": "bench", "amount": 20}, {"op": "damage_self", "amount": 30}])"));
+    REQUIRE(ops(each) == std::vector<Op>{Op::Damage, Op::ChooseTargets, Op::DamageTargets, Op::CountersOnSelf});
+    CHECK(each[1].each);
+    CHECK(each[1].from == Zone::Bench);
+    CHECK(each[3].max == 3);
+    const auto active = compile_attack(json::parse(R"([{"op": "discard_target_energy", "on": "active"}])"));
+    CHECK(active[1].from == Zone::Active);
+    CHECK(active[1].each);
+    CHECK(ops(compile_attack(json::parse(R"([{"op": "ignore_weakness"}, {"op": "ignore_resistance"}, {"op": "damage"}])"))) ==
+          std::vector<Op>{Op::IgnoreWeakness, Op::IgnoreResistance, Op::Damage});
+    CHECK_THROWS_AS(compile_attack(json::parse(R"([{"op": "ignore_resistance"}])")), CardDataError);
+    CHECK_THROWS_AS(compile_attack(json::parse(R"([{"op": "heal_self", "amount": 25}])")), CardDataError);
+    CHECK_THROWS_AS(compile_attack(json::parse(R"([{"op": "heal_self", "amount": 30, "all": true}])")), CardDataError);
+    CHECK_THROWS_AS(compile_attack(json::parse(R"([{"op": "damage_to", "each": true, "targets": 2, "amount": 20}])")), CardDataError);
+    CHECK_THROWS_AS(pokebot::compile_trainer(json::parse(R"([{"op": "damage_self", "amount": 30}])")), CardDataError);
+    CHECK_THROWS_AS(compile_attack(json::parse(R"([{"op": "damage_to", "on": "moon", "amount": 20}])")), CardDataError);
+}
+
+TEST_CASE("conditions and counts about the opponent's Active Pokemon and this Pokemon", "[effects]") {
+    const auto conditions = pokebot::compile_conditions(json::parse(R"([{"opponent_active_is": {"rule_box": true}}, {"opponent_active_damaged": true},
+                                                                        {"opponent_active_has": "poisoned"}, {"self_damaged": true}, {"self_has_tool": true}])"));
+    REQUIRE(conditions.size() == 5);
+    CHECK(conditions[0].kind == pokebot::ConditionKind::OpponentActiveIs);
+    CHECK(conditions[0].filter.rule_box == true);
+    CHECK(conditions[1].kind == pokebot::ConditionKind::OpponentActiveDamaged);
+    CHECK(conditions[2].kind == pokebot::ConditionKind::OpponentActiveHas);
+    CHECK(conditions[2].special == pokebot::SpecialCondition::Poisoned);
+    CHECK(conditions[3].kind == pokebot::ConditionKind::SelfDamaged);
+    CHECK(conditions[4].kind == pokebot::ConditionKind::SelfHasTool);
+    CHECK_THROWS_AS(pokebot::compile_conditions(json::parse(R"([{"opponent_active_has": "sleepy"}])")), CardDataError);
+    for (const char* of : {"active_damage_counters", "in_play", "tools_in_play", "energy_in_play", "self_energy"}) {
+        const json effects = {{{"op", "set_damage"}, {"per", 10}, {"for_each", {{"of", of}}}}, {{"op", "damage"}}};
+        CHECK(compile_attack(effects)[0].count.kind != pokebot::CountKind::None);
+    }
+}
+
 TEST_CASE("special_condition targets the opponent unless told otherwise", "[effects]") {
     const auto program = compile_attack(json::parse(
         R"([{"op": "special_condition", "condition": "asleep"}, {"op": "special_condition", "condition": "poisoned", "count": 4, "player": "you"}])"));
