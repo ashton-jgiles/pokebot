@@ -204,7 +204,10 @@ namespace pokebot {
             void use_ability(GameState& game, std::uint8_t player, const Action& action) {
                 const PokemonInPlay& pokemon = pokemon_at(game.player(player), action.target);
                 const EffectContext who{player, pokemon.id(), pokemon.top()};
-                game.flags.abilities_used.push_back(AbilityUse{pokemon.id(), pokemon.top(), action.amount});
+                const Ability& ability = game.def(pokemon.top()).abilities[action.amount];
+                if (ability.once_per_turn || ability.one_per_name) {
+                    game.flags.abilities_used.push_back(AbilityUse{pokemon.id(), pokemon.top(), action.amount});
+                }
                 start_effect(game, who, ProgramRef{pokemon.top(), ProgramKind::Ability, action.amount}, AfterEffect::FinishAbility);
             }
 

@@ -4,6 +4,7 @@
 
 #include "engine/engine.hpp"
 #include "engine/invariants/invariants.hpp"
+#include "engine/knowledge/knowledge.hpp"
 #include "support/test_cards.hpp"
 #include "support/test_game.hpp"
 
@@ -173,10 +174,16 @@ namespace {
                 }
             }
             for (std::size_t i = 0; i < p.prizes.size(); ++i) {
-                if (game.def(p.prizes[i]).id == id) {
-                    const pokebot::CardIndex card = p.prizes[i];
-                    p.prizes[i] = p.deck.pop_back();
-                    return card;
+                if (game.def(p.prizes[i]).id != id) {
+                    continue;
+                }
+                for (std::size_t d = p.deck.size(); d-- > 0;) {
+                    if (!pokebot::knows_where(game, 0, p.deck[d]) && !pokebot::knows_where(game, 1, p.deck[d])) {
+                        const pokebot::CardIndex card = p.prizes[i];
+                        p.prizes[i] = p.deck[d];
+                        p.deck.erase_at(d);
+                        return card;
+                    }
                 }
             }
             FAIL("no " << id << " left to take");

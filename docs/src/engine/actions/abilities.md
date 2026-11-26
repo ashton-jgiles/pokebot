@@ -22,6 +22,8 @@ An Ability is offered when all of these hold:
 
 Uses are recorded in `TurnFlags::abilities_used` as `AbilityUse{pokemon, card, index}` (the
 Pokémon's id, the card the Ability is printed on, and which Ability). The list resets every turn.
+Only Abilities limited to once per turn or one per name are recorded: one usable "as often as you
+like" (`"once_per_turn": false`) leaves nothing to check, and recording it would fill the list.
 Evolving gives the Pokémon a new card, so an evolved Pokémon's Ability is fresh.
 
 ## Using one

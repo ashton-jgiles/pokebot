@@ -44,7 +44,9 @@ namespace pokebot {
                         !ability_allowed(game, event.player, *pokemon, i)) {
                         continue;
                     }
-                    game.flags.abilities_used.push_back(AbilityUse{id, top, static_cast<std::uint8_t>(i)});
+                    if (abilities[i].once_per_turn || abilities[i].one_per_name) {
+                        game.flags.abilities_used.push_back(AbilityUse{id, top, static_cast<std::uint8_t>(i)});
+                    }
                     queue_effect(game, EffectContext{event.player, id, top}, ProgramRef{top, ProgramKind::Ability, static_cast<std::uint8_t>(i)},
                                  AfterEffect::FinishAbility);
                 }

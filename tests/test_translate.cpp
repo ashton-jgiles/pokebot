@@ -235,7 +235,7 @@ TEST_CASE("typed Energy counts, minus damage, optional bonuses, Bench conditions
     reads_as("Search your deck for up to 2 Basic Energy cards and attach them to your Benched Pokémon in any way you like. Then, shuffle your deck.", DamageMod::None,
              R"([{"op": "attach_spread", "from": "deck", "shuffle": false, "count": 2, "up_to": true, "on": "bench", "filter": {"kind": "energy", "basic": true}}, {"op": "shuffle_deck"}])");
     reads_as("You may search your deck for up to 2 Basic Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck.", DamageMod::None,
-             R"([{"op": "may", "effects": [{"op": "attach_spread", "from": "deck", "shuffle": false, "count": 2, "up_to": true, "filter": {"kind": "energy", "basic": true}}, {"op": "shuffle_deck"}]}])");
+             R"([{"op": "attach_spread", "from": "deck", "shuffle": false, "count": 2, "up_to": true, "filter": {"kind": "energy", "basic": true}}, {"op": "shuffle_deck"}])");
     const auto first = translate_attack("If you go first, you can use this attack during your first turn. Draw 2 cards.", AttackContext{"Test Attack", DamageMod::None});
     REQUIRE(first.ok);
     CHECK(first.first_turn);
