@@ -4,6 +4,7 @@
 #include <array>
 #include <cctype>
 #include <charconv>
+#include <exception>
 #include <functional>
 #include <optional>
 #include <string_view>
@@ -14,9 +15,11 @@ namespace pokebot::import {
 
         using nlohmann::json;
 
-        constexpr std::array<std::string_view, 2> kReminders = {
+        constexpr std::array<std::string_view, 3> kReminders = {
             "(Don't apply Weakness and Resistance for Benched Pokémon.)",
             "(Pokémon ex, Pokémon V, etc. have Rule Boxes.)",
+            "(Apply Weakness as \xC3\x97"
+            "2.)",
         };
 
         constexpr std::array<std::pair<std::string_view, std::string_view>, 11> kTypes = {{
@@ -162,6 +165,23 @@ namespace pokebot::import {
                 return out;
             }
 
+            Words replaced(std::string_view from, std::string_view to) const {
+                std::vector<std::string> tokens = tokens_;
+                for (std::string& token : tokens) {
+                    if (same_word(token, from)) {
+                        token = std::string(to);
+                    }
+                }
+                return Words(std::move(tokens));
+            }
+
+            std::optional<std::string> token() {
+                if (done()) {
+                    return std::nullopt;
+                }
+                return tokens_[at_++];
+            }
+
             Words slice(std::size_t from, std::size_t to) const {
                 return Words(std::vector<std::string>(tokens_.begin() + static_cast<std::ptrdiff_t>(from), tokens_.begin() + static_cast<std::ptrdiff_t>(to)));
             }
@@ -225,8 +245,17 @@ namespace pokebot::import {
             bool basic = false;
             std::string stage;
             std::optional<std::string> type;
+            std::optional<std::string> not_type;
             std::string prefix;
             for (;;) {
+                if (!w.done() && w.tokens()[w.mark()].starts_with("non-{")) {
+                    Words symbol({w.tokens()[w.mark()].substr(4)});
+                    if (const auto t = symbol.energy_type(); t && symbol.done()) {
+                        not_type = *t;
+                        w.reset(w.mark() + 1);
+                        continue;
+                    }
+                }
                 if (w.take("Basic")) {
                     basic = true;
                 } else if (w.take("Stage 1")) {
@@ -245,7 +274,7 @@ namespace pokebot::import {
             }
             if (w.take("Energy")) {
                 card_word(w);
-                if (!stage.empty() || !prefix.empty()) {
+                if (!stage.empty() || !prefix.empty() || not_type) {
                     return fail();
                 }
                 filter["kind"] = "energy";
@@ -271,18 +300,22 @@ namespace pokebot::import {
                 if (type) {
                     filter["type"] = *type;
                 }
+                if (not_type) {
+                    filter["not_type"] = *not_type;
+                }
                 if (!prefix.empty()) {
                     filter["name_prefix"] = prefix;
                 }
                 if (w.take("ex")) {
                     filter["rule_box"] = true;
                 }
-                if (w.take("with")) {
+                if (const std::size_t before_with = w.mark(); w.take("with")) {
                     const auto hp = w.number();
-                    if (!hp || !w.take("HP or less")) {
-                        return fail();
+                    if (hp && w.take("HP or less")) {
+                        filter["max_hp"] = *hp;
+                    } else {
+                        w.reset(before_with);
                     }
-                    filter["max_hp"] = *hp;
                 }
                 if (w.take("that doesn't have a Rule Box") || w.take("that don't have a Rule Box")) {
                     if (filter.contains("rule_box")) {
@@ -292,7 +325,7 @@ namespace pokebot::import {
                 }
                 return filter;
             }
-            if (basic || !stage.empty() || type || !prefix.empty()) {
+            if (basic || !stage.empty() || type || not_type || !prefix.empty()) {
                 return fail();
             }
             if (w.take("Trainer")) {
@@ -402,6 +435,15 @@ namespace pokebot::import {
             if (w.take("any of your Pokémon were Knocked Out during your opponent's last turn")) {
                 return json{{"knocked_out_last_turn", true}};
             }
+            if (w.take("you attached Energy to a Pokémon in this way") || w.take("they put any cards on the bottom of their deck in this way")) {
+                return json{{"moved_at_least", 1}};
+            }
+            if (w.take("you drew any cards in this way")) {
+                return json{{"drew_at_least", 1}};
+            }
+            if (w.take("you have any Tera Pokémon in play")) {
+                return json{{"in_play_has", {{"tera", true}}}};
+            }
             if (w.take("a Stadium is in play")) {
                 return json{{"stadium_in_play", true}};
             }
@@ -496,6 +538,181 @@ namespace pokebot::import {
                 return &last.at("then").back();
             }
             return nullptr;
+        }
+
+        struct CardList {
+            Quantity quantity;
+            std::vector<json> filters;
+            bool any = false;
+        };
+
+        std::optional<CardList> card_list(Words& w) {
+            const std::size_t start = w.mark();
+            const auto fail = [&]() -> std::optional<CardList> {
+                w.reset(start);
+                return std::nullopt;
+            };
+            const auto q = quantity(w);
+            if (!q) {
+                return fail();
+            }
+            CardList list{*q, {}, false};
+            if (w.take("in any combination of")) {
+                const auto first = card_noun(w);
+                if (!first) {
+                    return fail();
+                }
+                list.filters.push_back(*first);
+                while (w.take("and") || w.take("or")) {
+                    const auto next = card_noun(w);
+                    if (!next) {
+                        return fail();
+                    }
+                    list.filters.push_back(*next);
+                }
+                if (list.filters.size() < 2) {
+                    return fail();
+                }
+                list.any = true;
+                return list;
+            }
+            const auto first = card_noun(w);
+            if (!first) {
+                return fail();
+            }
+            list.filters.push_back(*first);
+            for (;;) {
+                const std::size_t at = w.mark();
+                if (w.take("or")) {
+                    if (!w.take("a")) {
+                        w.take("an");
+                    }
+                    if (const auto next = card_noun(w)) {
+                        list.filters.push_back(*next);
+                        list.any = true;
+                        continue;
+                    }
+                }
+                w.reset(at);
+                break;
+            }
+            if (list.any) {
+                return list;
+            }
+            for (;;) {
+                const std::size_t at = w.mark();
+                if (w.take(", and") || w.take("and") || w.take(",")) {
+                    if (w.take("a") || w.take("an")) {
+                        if (const auto next = card_noun(w)) {
+                            list.filters.push_back(*next);
+                            continue;
+                        }
+                    }
+                }
+                w.reset(at);
+                break;
+            }
+            return list;
+        }
+
+        json list_filter(const CardList& list) {
+            if (list.filters.size() == 1) {
+                return list.filters.front();
+            }
+            json any = json::array();
+            for (const json& filter : list.filters) {
+                any.push_back(filter);
+            }
+            return json{{"any_of", any}};
+        }
+
+        std::optional<std::pair<json, json>> discard_cost(Words& w) {
+            const std::size_t start = w.mark();
+            const auto fail = [&]() -> std::optional<std::pair<json, json>> {
+                w.reset(start);
+                return std::nullopt;
+            };
+            if (!w.take("discard")) {
+                return fail();
+            }
+            int count = 1;
+            if (!w.take("another")) {
+                const auto q = quantity(w);
+                if (!q || q->up_to || q->all) {
+                    return fail();
+                }
+                count = q->count;
+                w.take("other");
+            }
+            const auto noun = card_noun(w);
+            if (!noun || !w.take("from your hand") || (!noun->empty() && count != 1)) {
+                return fail();
+            }
+            json block = {{"op", "discard_from_hand"}, {"count", count}};
+            set_filter(block, *noun);
+            json requirement = noun->empty() ? json{{"hand_besides", count}} : json{{"hand_has", *noun}};
+            return std::pair{requirement, block};
+        }
+
+        std::optional<std::vector<std::string>> energy_units(Words& w) {
+            const auto token = w.token();
+            if (!token) {
+                return std::nullopt;
+            }
+            std::vector<std::string> units;
+            for (std::size_t at = 0; at < token->size(); at += 3) {
+                Words symbol({token->substr(at, 3)});
+                const auto type = symbol.energy_type();
+                if (!type) {
+                    return std::nullopt;
+                }
+                units.push_back(*type);
+            }
+            if (units.empty()) {
+                return std::nullopt;
+            }
+            return units;
+        }
+
+        void add_requirement(json& requirements, const json& condition) {
+            if (std::find(requirements.begin(), requirements.end(), condition) == requirements.end()) {
+                requirements.push_back(condition);
+            }
+        }
+
+        void implied_requirements(const json& blocks, json& requirements) {
+            for (const json& block : blocks) {
+                const std::string op = block.value("op", "");
+                const json filter = block.value("filter", json::object());
+                if (op == "may") {
+                    implied_requirements(block.at("effects"), requirements);
+                } else if (op == "from_discard") {
+                    add_requirement(requirements, {{"discard_has", filter}});
+                } else if (op == "attach_to" && block.value("from", "discard") == "discard") {
+                    add_requirement(requirements, {{"discard_has", filter}});
+                    const json target = block.value("target", json::object());
+                    if (block.value("on", "any") == "bench") {
+                        add_requirement(requirements, target.empty() ? json{{"has_benched", true}} : json{{"bench_has", target}});
+                    } else if (!target.empty()) {
+                        add_requirement(requirements, {{"in_play_has", target}});
+                    }
+                } else if (op == "switch_active") {
+                    if (block.value("player", "you") == "opponent") {
+                        add_requirement(requirements, {{"opponent_has_benched", true}});
+                    } else {
+                        add_requirement(requirements, filter.empty() ? json{{"has_benched", true}} : json{{"bench_has", filter}});
+                    }
+                } else if (op == "move_energy") {
+                    add_requirement(requirements, {{"your_energy_has", filter}});
+                    add_requirement(requirements, {{"has_benched", true}});
+                } else if (op == "search_deck" && block.value("to", "hand") == "bench") {
+                    add_requirement(requirements, {{"bench_not_full", true}});
+                } else if (op == "attach_from_hand") {
+                    add_requirement(requirements, {{"hand_has", filter}});
+                } else if (op == "discard_stadium") {
+                    add_requirement(requirements, {{"stadium_in_play", true}});
+                }
+            }
         }
 
         class AttackReader {
@@ -943,7 +1160,510 @@ namespace pokebot::import {
                     }
                     return one({{"op", "may"}, {"effects", *body}});
                 });
+                add_card_rules(out);
                 return out;
+            }
+
+            void add_card_rules(std::vector<Rule>& out) {
+                out.emplace_back([](Words& w) -> std::optional<json> {
+                    if (w.take("you draw a card")) {
+                        return one({{"op", "draw"}, {"count", 1}});
+                    }
+                    std::string player;
+                    if (w.take("you draw")) {
+                        player = "you";
+                    } else if (w.take("your opponent draws") || w.take("they draw")) {
+                        player = "opponent";
+                    } else if (w.take("each player draws")) {
+                        player = "each";
+                    } else {
+                        return std::nullopt;
+                    }
+                    const auto n = w.number();
+                    if (!n || !(w.take("cards") || (*n == 1 && w.take("card")))) {
+                        return std::nullopt;
+                    }
+                    json block = {{"op", "draw"}, {"count", *n}};
+                    if (player != "you") {
+                        block["player"] = player;
+                    }
+                    return one(block);
+                });
+                out.emplace_back([](Words& w) -> std::optional<json> {
+                    if (!w.take("each player shuffles their hand into their deck")) {
+                        return std::nullopt;
+                    }
+                    json blocks = one({{"op", "shuffle_hand_into_deck"}, {"player", "each"}});
+                    if (w.take("and draws")) {
+                        const auto n = w.number();
+                        if (!n || !w.take("cards")) {
+                            return std::nullopt;
+                        }
+                        blocks.push_back({{"op", "draw"}, {"count", *n}, {"player", "each"}});
+                    }
+                    return blocks;
+                });
+                out.emplace_back([](Words& w) -> std::optional<json> {
+                    if (w.take("your opponent shuffles their hand and puts it on the bottom of their deck")) {
+                        return one({{"op", "hand_to_deck_bottom"}, {"player", "opponent"}});
+                    }
+                    if (w.take("switch your Active Pokémon with 1 of your Benched Pokémon")) {
+                        return one({{"op", "switch_active"}});
+                    }
+                    if (w.take("switch it with your Active Pokémon")) {
+                        return one({{"op", "switch_to_active"}});
+                    }
+                    if (w.take("discard a Stadium in play")) {
+                        return one({{"op", "discard_stadium"}});
+                    }
+                    if (w.take("during your opponent's next turn , that Pokémon can't retreat")) {
+                        return one({{"op", "lasting"}, {"effect", "cant_retreat"}, {"on", "defending"}, {"until", "opponents_next_turn"}});
+                    }
+                    if (w.take("move any amount of Energy from your other Pokémon to this Pokémon")) {
+                        return one({{"op", "move_attached_energy"}, {"from", "your_pokemon"}, {"count", kAll}, {"up_to", true}, {"to", "self"}});
+                    }
+                    if (w.take("put the other card on the bottom of your deck") || w.take("put the other cards on the bottom of your deck") ||
+                        w.take("put the other cards on the bottom of your deck in any order")) {
+                        return one({{"op", "_rest"}});
+                    }
+                    return std::nullopt;
+                });
+                out.emplace_back([](Words& w) -> std::optional<json> {
+                    if (!w.take("the new Active Pokémon is now")) {
+                        return std::nullopt;
+                    }
+                    const auto condition = special_condition(w);
+                    if (!condition) {
+                        return std::nullopt;
+                    }
+                    return one({{"op", "special_condition"}, {"condition", *condition}, {"player", "you"}});
+                });
+                out.emplace_back([](Words& w) -> std::optional<json> {
+                    if (!w.take("switch")) {
+                        return std::nullopt;
+                    }
+                    if (w.take("your Active")) {
+                        const auto active = card_noun(w);
+                        if (!active || active->value("kind", "") != "pokemon" || !w.take("with 1 of your Benched")) {
+                            return std::nullopt;
+                        }
+                        const auto benched = card_noun(w);
+                        if (!benched || *benched != *active) {
+                            return std::nullopt;
+                        }
+                        return json::array({{{"op", "_requires"}, {"condition", {{"active_is", *active}}}}, {{"op", "switch_active"}, {"filter", *active}}});
+                    }
+                    if (!w.take("1 of your Benched")) {
+                        return std::nullopt;
+                    }
+                    auto benched = card_noun(w);
+                    if (!benched || benched->value("kind", "") != "pokemon") {
+                        return std::nullopt;
+                    }
+                    if (w.take(", except any")) {
+                        std::string name;
+                        while (!w.done() && w.tokens()[w.mark()] != ",") {
+                            name += (name.empty() ? "" : " ") + *w.token();
+                        }
+                        if (name.empty() || !w.take(",")) {
+                            return std::nullopt;
+                        }
+                        (*benched)["not_name"] = name;
+                    }
+                    if (!w.take("with your Active Pokémon")) {
+                        return std::nullopt;
+                    }
+                    return one({{"op", "switch_active"}, {"filter", *benched}});
+                });
+                out.emplace_back([](Words& w) -> std::optional<json> {
+                    if (!w.take("put")) {
+                        return std::nullopt;
+                    }
+                    const auto list = card_list(w);
+                    if (!list || list->quantity.all || (list->filters.size() > 1 && !list->any) || !w.take("from your discard pile into your hand")) {
+                        return std::nullopt;
+                    }
+                    json block = {{"op", "from_discard"}, {"count", list->quantity.count}};
+                    if (list->quantity.up_to) {
+                        block["up_to"] = true;
+                    }
+                    set_filter(block, list_filter(*list));
+                    return one(block);
+                });
+                out.emplace_back([](Words& w) -> std::optional<json> {
+                    if (!w.take("move")) {
+                        return std::nullopt;
+                    }
+                    const auto q = quantity(w);
+                    const auto energy = q && q->count == 1 && !q->up_to ? energy_noun(w, false) : std::nullopt;
+                    if (!energy || !w.take("from 1 of your Pokémon to another of your Pokémon")) {
+                        return std::nullopt;
+                    }
+                    json block = {{"op", "move_energy"}};
+                    set_filter(block, *energy);
+                    return one(block);
+                });
+                out.emplace_back([](Words& w) -> std::optional<json> {
+                    if (!w.take("search your deck for")) {
+                        return std::nullopt;
+                    }
+                    const std::size_t start = w.mark();
+                    if (const auto n = w.number(); n && w.take("cards , shuffle your deck , then put those cards on top of it in any order")) {
+                        return one({{"op", "search_to_top"}, {"count", *n}});
+                    }
+                    w.reset(start);
+                    const auto list = card_list(w);
+                    if (!list || list->filters.size() < 2 || list->quantity.all) {
+                        return std::nullopt;
+                    }
+                    bool reveal = false;
+                    if (w.take(", reveal it , and put it") || w.take(", reveal them , and put them")) {
+                        reveal = true;
+                    } else if (!w.take("and put it") && !w.take("and put them")) {
+                        return std::nullopt;
+                    }
+                    if (!w.take("into your hand")) {
+                        return std::nullopt;
+                    }
+                    json blocks = json::array();
+                    if (list->any) {
+                        json block = {{"op", "search_deck"}, {"count", list->quantity.count}, {"shuffle", false}, {"filter", list_filter(*list)}};
+                        if (reveal) {
+                            block["reveal"] = true;
+                        }
+                        blocks.push_back(block);
+                        return blocks;
+                    }
+                    if (list->quantity.count != 1 || list->quantity.up_to) {
+                        return std::nullopt;
+                    }
+                    for (const json& filter : list->filters) {
+                        json block = {{"op", "search_deck"}, {"count", 1}, {"shuffle", false}};
+                        set_filter(block, filter);
+                        if (reveal) {
+                            block["reveal"] = true;
+                        }
+                        blocks.push_back(block);
+                    }
+                    return blocks;
+                });
+                out.emplace_back([](Words& w) -> std::optional<json> {
+                    if (!w.take("look at the top")) {
+                        return std::nullopt;
+                    }
+                    const auto look = w.number();
+                    if (!look || !w.take("cards of your deck and put")) {
+                        return std::nullopt;
+                    }
+                    const auto take = w.number();
+                    if (!take || *take >= *look || !w.take("of them into your hand")) {
+                        return std::nullopt;
+                    }
+                    return one({{"op", "look_at_top"}, {"count", *look}, {"take", *take}});
+                });
+                out.emplace_back([](Words& w) -> std::optional<json> {
+                    if (!w.take("during this turn , attacks used by your Pokémon do")) {
+                        return std::nullopt;
+                    }
+                    const auto n = w.number();
+                    if (!n || !w.take("more damage to your opponent's Active Pokémon")) {
+                        return std::nullopt;
+                    }
+                    const bool ex = w.take("ex");
+                    if (!w.take("( before applying Weakness and Resistance )")) {
+                        return std::nullopt;
+                    }
+                    json block = {{"op", "lasting"}, {"effect", "damage_bonus"}, {"on", "player"}, {"amount", *n}, {"until", "this_turn"}};
+                    if (ex) {
+                        block["only_ex"] = true;
+                    }
+                    return one(block);
+                });
+                out.emplace_back([](Words& w) -> std::optional<json> {
+                    if (!w.take("choose up to")) {
+                        return std::nullopt;
+                    }
+                    const auto n = w.number();
+                    if (!n || *n < 1 || *n > 6 || !w.take("of your")) {
+                        return std::nullopt;
+                    }
+                    const bool bench = w.take("Benched");
+                    const auto target = card_noun(w);
+                    if (!target || target->value("kind", "") != "pokemon" || !w.take("and attach")) {
+                        return std::nullopt;
+                    }
+                    const auto q = quantity(w);
+                    const auto energy = q && !q->up_to && !q->all ? energy_noun(w, false) : std::nullopt;
+                    if (!energy || !w.take("from your discard pile to each of them")) {
+                        return std::nullopt;
+                    }
+                    json block = {{"op", "attach_to"}, {"targets", *n}, {"up_to_targets", true}, {"count", q->count}};
+                    if (bench) {
+                        block["on"] = "bench";
+                    }
+                    if (const json t = without_kind(*target); !t.empty()) {
+                        block["target"] = t;
+                    }
+                    set_filter(block, *energy);
+                    return one(block);
+                });
+                out.emplace_back([this](Words& w) -> std::optional<json> {
+                    if (!w.take("you can use this card only if")) {
+                        return std::nullopt;
+                    }
+                    const std::size_t at = w.mark();
+                    if (w.take("you")) {
+                        if (const auto cost = discard_cost(w)) {
+                            return json::array({{{"op", "_requires"}, {"condition", cost->first}}, cost->second});
+                        }
+                    }
+                    w.reset(at);
+                    const auto condition = condition_phrase(w);
+                    if (!condition) {
+                        return std::nullopt;
+                    }
+                    return one({{"op", "_requires"}, {"condition", *condition}});
+                });
+                out.emplace_back([](Words& w) -> std::optional<json> {
+                    if (!w.take("you must")) {
+                        return std::nullopt;
+                    }
+                    const auto cost = discard_cost(w);
+                    if (!cost || !w.take("in order to use this Ability")) {
+                        return std::nullopt;
+                    }
+                    return json::array({{{"op", "_requires"}, {"condition", cost->first}}, cost->second});
+                });
+                out.emplace_back([this](Words& w) -> std::optional<json> {
+                    if (w.take("as often as you like during your turn , you may use this Ability")) {
+                        return one({{"op", "_ability"}, {"once_per_turn", false}});
+                    }
+                    if (!w.take("once during your turn ,")) {
+                        return std::nullopt;
+                    }
+                    json flags = {{"op", "_ability"}};
+                    if (w.take("when you play this Pokémon from your hand onto your Bench ,")) {
+                        flags["trigger"] = "played_to_bench";
+                    } else if (w.take("if this Pokémon is in the Active Spot ,")) {
+                        flags["active_only"] = true;
+                    } else if (w.take("if")) {
+                        const auto condition = condition_phrase(w);
+                        if (!condition || !w.take(",")) {
+                            return std::nullopt;
+                        }
+                        flags["requires"] = json::array({*condition});
+                    }
+                    if (!w.take("you may")) {
+                        return std::nullopt;
+                    }
+                    if (w.take("use this Ability")) {
+                        if (flags.contains("trigger")) {
+                            flags["wrap"] = true;
+                        }
+                        return one(flags);
+                    }
+                    if (flags.contains("trigger")) {
+                        return std::nullopt;
+                    }
+                    const std::size_t at = w.mark();
+                    if (const auto cost = discard_cost(w); cost && w.take("in order to use this Ability")) {
+                        return json::array({flags, {{"op", "_requires"}, {"condition", cost->first}}, cost->second});
+                    }
+                    w.reset(at);
+                    auto body = rest_as_sentence(w);
+                    if (!body) {
+                        return std::nullopt;
+                    }
+                    body->insert(body->begin(), flags);
+                    return body;
+                });
+                out.emplace_back([this](Words& w) -> std::optional<json> {
+                    if (!w.take("when you play this Pokémon from your hand onto your Bench during your turn , you may")) {
+                        return std::nullopt;
+                    }
+                    auto body = rest_as_sentence(w);
+                    if (!body) {
+                        return std::nullopt;
+                    }
+                    return json::array({{{"op", "_ability"}, {"trigger", "played_to_bench"}}, {{"op", "may"}, {"effects", *body}}});
+                });
+                out.emplace_back([this](Words& w) -> std::optional<json> {
+                    if (!w.take("you can't use more than 1")) {
+                        return std::nullopt;
+                    }
+                    if (w.take("Ability that has")) {
+                        auto quoted = w.token();
+                        if (!quoted || quoted->size() < 3 || quoted->front() != '"' || quoted->back() != '"' || !w.take("in its name each turn")) {
+                            return std::nullopt;
+                        }
+                        const std::string part = quoted->substr(1, quoted->size() - 2);
+                        if (context_.name.find(part) == std::string::npos) {
+                            return std::nullopt;
+                        }
+                        return one({{"op", "_ability"}, {"one_per_name", true}});
+                    }
+                    const auto& tokens = w.tokens();
+                    if (tokens.size() < w.mark() + 3) {
+                        return std::nullopt;
+                    }
+                    const std::size_t name_end = tokens.size() - 3;
+                    std::string name;
+                    for (std::size_t i = w.mark(); i < name_end; ++i) {
+                        name += (name.empty() ? "" : " ") + tokens[i];
+                    }
+                    w.reset(name_end);
+                    if (name != context_.name || !w.take("Ability each turn")) {
+                        return std::nullopt;
+                    }
+                    return one({{"op", "_ability"}, {"one_per_name", true}});
+                });
+                out.emplace_back([this](Words& w) -> std::optional<json> {
+                    if (!w.take("once during each player's turn , that player may")) {
+                        return std::nullopt;
+                    }
+                    const Words rest = w.slice(w.mark(), w.tokens().size()).replaced("their", "your").replaced("they", "you");
+                    auto body = sentence(rest);
+                    if (!body) {
+                        return std::nullopt;
+                    }
+                    w.reset(w.tokens().size());
+                    return body;
+                });
+                out.emplace_back([](Words& w) -> std::optional<json> {
+                    if (!w.take("whenever any player puts")) {
+                        return std::nullopt;
+                    }
+                    const auto q = quantity(w);
+                    const auto noun = q && q->count == 1 && !q->up_to ? card_noun(w) : std::nullopt;
+                    if (!noun || noun->value("kind", "") != "pokemon" || !w.take("onto their Bench during their turn , place")) {
+                        return std::nullopt;
+                    }
+                    const auto n = w.number();
+                    if (!n || !w.take("damage counters on that Pokémon")) {
+                        return std::nullopt;
+                    }
+                    return json::array({{{"op", "_trigger"}, {"trigger", "put_on_bench"}},
+                                        {{"op", "if"}, {"condition", {{"self_is", *noun}}}, {"then", json::array({{{"op", "counters_on_self"}, {"count", *n}}})}}});
+                });
+                out.emplace_back([](Words& w) -> std::optional<json> {
+                    if (w.take("the Pokémon this card is attached to gets")) {
+                        const auto plus = w.token();
+                        if (!plus || plus->size() < 2 || plus->front() != '+') {
+                            return std::nullopt;
+                        }
+                        Words digits({plus->substr(1)});
+                        const auto n = digits.number();
+                        if (!n || !w.take("HP")) {
+                            return std::nullopt;
+                        }
+                        return one({{"op", "_passive"}, {"modifier", {{"modify", "max_hp"}, {"add", *n}}}});
+                    }
+                    if (w.take("the Retreat Cost of the Pokémon this card is attached to is")) {
+                        const auto units = energy_units(w);
+                        if (!units || !w.take("less") || std::any_of(units->begin(), units->end(), [](const std::string& u) { return u != "colorless"; })) {
+                            return std::nullopt;
+                        }
+                        return one({{"op", "_passive"}, {"modifier", {{"modify", "retreat_cost"}, {"add", -static_cast<int>(units->size())}}}});
+                    }
+                    if (w.take("the Pokémon this card is attached to has no Retreat Cost")) {
+                        return one({{"op", "_passive"}, {"modifier", {{"modify", "retreat_cost"}, {"set", 0}}}});
+                    }
+                    if (!w.take("attacks used by the")) {
+                        return std::nullopt;
+                    }
+                    const bool poisoned = w.take("Poisoned");
+                    if (!w.take("Pokémon this card is attached to do")) {
+                        return std::nullopt;
+                    }
+                    const auto n = w.number();
+                    if (!n || !w.take("more damage to your opponent's Active Pokémon ( before applying Weakness and Resistance )")) {
+                        return std::nullopt;
+                    }
+                    json modifier = {{"modify", "damage_dealt"}, {"add", *n}};
+                    if (poisoned) {
+                        modifier["if_poisoned"] = true;
+                    }
+                    return one({{"op", "_passive"}, {"modifier", modifier}});
+                });
+                out.emplace_back([](Words& w) -> std::optional<json> {
+                    std::string applies_to = "all";
+                    if (w.take("your")) {
+                        applies_to = "yours";
+                    }
+                    const auto noun = card_noun(w);
+                    if (!noun || noun->value("kind", "") != "pokemon" || !w.take("in play")) {
+                        return std::nullopt;
+                    }
+                    if (applies_to == "all" && !w.take("( both yours and your opponent's )")) {
+                        return std::nullopt;
+                    }
+                    if (!w.take("have no Retreat Cost")) {
+                        return std::nullopt;
+                    }
+                    json modifier = {{"modify", "retreat_cost"}, {"set", 0}, {"applies_to", applies_to}};
+                    if (const json filter = without_kind(*noun); !filter.empty()) {
+                        modifier["filter"] = filter;
+                    }
+                    return one({{"op", "_passive"}, {"modifier", modifier}});
+                });
+                out.emplace_back([](Words& w) -> std::optional<json> {
+                    if (!w.take("the Weakness of each of your opponent's")) {
+                        return std::nullopt;
+                    }
+                    const auto noun = card_noun(w);
+                    if (!noun || noun->value("kind", "") != "pokemon" || !w.take("in play is now")) {
+                        return std::nullopt;
+                    }
+                    const auto type = w.energy_type();
+                    if (!type) {
+                        return std::nullopt;
+                    }
+                    json modifier = {{"modify", "weakness_type"}, {"type", *type}, {"applies_to", "opponents"}};
+                    if (const json filter = without_kind(*noun); !filter.empty()) {
+                        modifier["filter"] = filter;
+                    }
+                    return one({{"op", "_passive"}, {"modifier", modifier}});
+                });
+                out.emplace_back([](Words& w) -> std::optional<json> {
+                    if (w.take("as long as this card is attached to a Pokémon , it provides")) {
+                        const auto units = energy_units(w);
+                        if (!units || !w.take("Energy")) {
+                            return std::nullopt;
+                        }
+                        return one({{"op", "_provides"}, {"provides", *units}});
+                    }
+                    if (w.take("if this card is attached to 1 of your Pokémon , discard it at the end of your turn")) {
+                        return one({{"op", "_discard_at_end_of_turn"}});
+                    }
+                    if (!w.take("if this card is attached to")) {
+                        return std::nullopt;
+                    }
+                    const auto q = quantity(w);
+                    const auto holder = q && q->count == 1 ? card_noun(w) : std::nullopt;
+                    if (!holder || holder->value("kind", "") != "pokemon" || !w.take(",")) {
+                        return std::nullopt;
+                    }
+                    json provides;
+                    if (w.take("this card provides every type of Energy but provides only")) {
+                        const auto n = w.number();
+                        if (!n || *n < 1 || *n > 4 || !w.take("Energy at a time")) {
+                            return std::nullopt;
+                        }
+                        provides = json::array();
+                        for (int i = 0; i < *n; ++i) {
+                            provides.push_back("any");
+                        }
+                    } else if (w.take("it provides")) {
+                        const auto units = energy_units(w);
+                        if (!units || !w.take("Energy instead")) {
+                            return std::nullopt;
+                        }
+                        provides = *units;
+                    } else {
+                        return std::nullopt;
+                    }
+                    return one({{"op", "_provides_when"}, {"entry", {{"holder", without_kind(*holder)}, {"provides", provides}}}});
+                });
             }
 
             const AttackContext& context_;
@@ -966,6 +1686,11 @@ namespace pokebot::import {
             }
             if (text.compare(i, 3, "\xE2\x80\x99") == 0) {
                 out += '\'';
+                i += 2;
+                continue;
+            }
+            if (text.compare(i, 3, "\xE2\x80\x9C") == 0 || text.compare(i, 3, "\xE2\x80\x9D") == 0) {
+                out += '"';
                 i += 2;
                 continue;
             }
@@ -1019,35 +1744,82 @@ namespace pokebot::import {
         return out;
     }
 
+    namespace {
+
+        std::optional<std::string> read_sentences(const std::string& text, AttackReader& reader, json& blocks) {
+            for (const std::string& sentence : split_sentences(normalize_text(text))) {
+                Words words(tokenize(sentence));
+                if (words.take("if you do ,")) {
+                    auto then = reader.sentence(words.slice(words.mark(), words.tokens().size()));
+                    if (!then) {
+                        return sentence;
+                    }
+                    if (json* may = last_may(blocks)) {
+                        may->at("effects").insert(may->at("effects").end(), then->begin(), then->end());
+                        continue;
+                    }
+                    if (!blocks.empty() && blocks.back().value("op", "") == "switch_active") {
+                        blocks.insert(blocks.end(), then->begin(), then->end());
+                        continue;
+                    }
+                    return sentence;
+                }
+                words.reset(0);
+                const auto& tokens = words.tokens();
+                if (!tokens.empty() && same_word(tokens.back(), "instead") && words.take("if")) {
+                    const auto condition = condition_phrase(words);
+                    auto then = condition && words.take(",") ? reader.sentence(words.slice(words.mark(), tokens.size() - 1)) : std::nullopt;
+                    if (then && !blocks.empty() && !blocks.back().value("op", "").starts_with("_")) {
+                        json otherwise = json::array({blocks.back()});
+                        blocks.back() = {{"op", "if"}, {"condition", *condition}, {"then", *then}, {"else", otherwise}};
+                        continue;
+                    }
+                }
+                words.reset(0);
+                auto read = reader.sentence(std::move(words));
+                if (!read) {
+                    return sentence;
+                }
+                if (read->size() == 1 && read->at(0).value("op", "") == "shuffle_deck") {
+                    if (json* may = last_may(blocks); may && uses(may->at("effects"), "search_deck")) {
+                        may->at("effects").push_back(read->at(0));
+                        continue;
+                    }
+                }
+                if (read->size() == 1 && read->at(0).value("op", "") == "_rest") {
+                    if (blocks.empty() || blocks.back().value("op", "") != "look_at_top") {
+                        return sentence;
+                    }
+                    continue;
+                }
+                blocks.insert(blocks.end(), read->begin(), read->end());
+            }
+            return std::nullopt;
+        }
+
+        bool any_card_block(const json& blocks) {
+            return std::any_of(blocks.begin(), blocks.end(), [](const json& block) { return block.value("op", "").starts_with("_"); });
+        }
+
+        Translation not_read(std::string why) {
+            Translation out;
+            out.unread = std::move(why);
+            return out;
+        }
+
+    } // namespace
+
     Translation translate_attack(const std::string& text, const AttackContext& context) {
         Translation out;
         AttackReader reader(context);
         json blocks = json::array();
-        for (const std::string& sentence : split_sentences(normalize_text(text))) {
-            Words words(tokenize(sentence));
-            if (words.take("if you do ,")) {
-                json* may = last_may(blocks);
-                auto then = may ? reader.sentence(words.slice(words.mark(), words.tokens().size())) : std::nullopt;
-                if (!then) {
-                    out.unread = sentence;
-                    return out;
-                }
-                may->at("effects").insert(may->at("effects").end(), then->begin(), then->end());
-                continue;
-            }
-            words.reset(0);
-            auto read = reader.sentence(std::move(words));
-            if (!read) {
-                out.unread = sentence;
-                return out;
-            }
-            if (read->size() == 1 && read->at(0).value("op", "") == "shuffle_deck") {
-                if (json* may = last_may(blocks); may && uses(may->at("effects"), "search_deck")) {
-                    may->at("effects").push_back(read->at(0));
-                    continue;
-                }
-            }
-            blocks.insert(blocks.end(), read->begin(), read->end());
+        if (const auto unread = read_sentences(text, reader, blocks)) {
+            out.unread = *unread;
+            return out;
+        }
+        if (any_card_block(blocks)) {
+            out.unread = "a card's rule in an attack";
+            return out;
         }
 
         std::size_t last_change = blocks.size();
@@ -1070,6 +1842,180 @@ namespace pokebot::import {
         }
         out.ok = true;
         out.effects = std::move(blocks);
+        return out;
+    }
+
+    Translation translate_text(const std::string& text, TextPart part, const std::string& name) {
+        const AttackContext context{name, DamageMod::None};
+        AttackReader reader(context);
+        json blocks = json::array();
+        if (const auto unread = read_sentences(text, reader, blocks)) {
+            return not_read(*unread);
+        }
+        json effects = json::array();
+        json requirements = json::array();
+        json passive = json::array();
+        json fields = json::object();
+        bool wrap = false;
+        for (json& block : blocks) {
+            const std::string op = block.value("op", "");
+            if (!op.starts_with("_")) {
+                effects.push_back(std::move(block));
+                continue;
+            }
+            if (op == "_requires" && part != TextPart::Tool && part != TextPart::SpecialEnergy) {
+                add_requirement(requirements, block.at("condition"));
+            } else if (op == "_ability" && part == TextPart::Ability) {
+                for (const auto& [key, value] : block.items()) {
+                    if (key == "requires") {
+                        for (const json& condition : value) {
+                            add_requirement(requirements, condition);
+                        }
+                    } else if (key == "wrap") {
+                        wrap = true;
+                    } else if (key != "op") {
+                        fields[key] = value;
+                    }
+                }
+            } else if (op == "_passive" && (part == TextPart::Tool || part == TextPart::Stadium || part == TextPart::Ability)) {
+                passive.push_back(block.at("modifier"));
+            } else if (op == "_trigger" && part == TextPart::Stadium) {
+                fields["trigger"] = block.at("trigger");
+            } else if (op == "_provides" && part == TextPart::SpecialEnergy) {
+                fields["provides"] = block.at("provides");
+            } else if (op == "_provides_when" && part == TextPart::SpecialEnergy) {
+                if (!fields.contains("provides_when")) {
+                    fields["provides_when"] = json::array();
+                }
+                fields["provides_when"].push_back(block.at("entry"));
+            } else if (op == "_discard_at_end_of_turn" && part == TextPart::SpecialEnergy) {
+                fields["discard_at_end_of_turn"] = true;
+            } else {
+                return not_read("a rule that doesn't belong on this kind of card");
+            }
+        }
+        if (wrap && !effects.empty()) {
+            effects = json::array({{{"op", "may"}, {"effects", effects}}});
+        }
+        if (part == TextPart::SpecialEnergy || part == TextPart::Tool) {
+            if (!effects.empty() || !requirements.empty() || (part == TextPart::Tool && passive.empty()) || (part == TextPart::SpecialEnergy && !fields.contains("provides"))) {
+                return not_read("effects this kind of card can't have");
+            }
+        } else if (effects.empty() && passive.empty()) {
+            return not_read("no effect");
+        }
+        if (!effects.empty()) {
+            implied_requirements(effects, requirements);
+            fields["effects"] = effects;
+        }
+        if (!requirements.empty()) {
+            fields["requires"] = requirements;
+        }
+        if (!passive.empty()) {
+            fields["passive"] = passive;
+        }
+        try {
+            compile_trainer(fields.value("effects", json::array()));
+            compile_conditions(fields.value("requires", json::array()));
+            compile_passive(fields.value("passive", json::array()));
+            compile_provides_when(fields.value("provides_when", json::array()));
+            trigger_from_string(fields.value("trigger", "none"));
+        } catch (const std::exception& e) {
+            return not_read(std::string("doesn't compile: ") + e.what());
+        }
+        Translation out;
+        out.ok = true;
+        out.effects = std::move(fields);
+        return out;
+    }
+
+    CardTranslation translate_card(const CardDef& card) {
+        CardTranslation out;
+        const auto label = [&](const std::string& part) {
+            return card.id + " " + card.name + (part.empty() ? "" : ": " + part);
+        };
+        for (const Attack& attack : card.attacks) {
+            if (attack.text.empty()) {
+                continue;
+            }
+            ++out.parts;
+            const Translation t = translate_attack(attack.text, AttackContext{attack.name, attack.damage_mod});
+            if (t.ok) {
+                out.overlay["attacks"][attack.name] = {{"effects", t.effects}};
+            } else {
+                out.unread.emplace_back(label("attack " + attack.name), t.unread);
+            }
+        }
+        for (const Ability& ability : card.abilities) {
+            if (ability.text.empty()) {
+                continue;
+            }
+            ++out.parts;
+            const Translation t = translate_text(ability.text, TextPart::Ability, ability.name);
+            if (t.ok) {
+                out.overlay["abilities"][ability.name] = t.effects;
+            } else {
+                out.unread.emplace_back(label("ability " + ability.name), t.unread);
+            }
+        }
+        if (!card.text.empty()) {
+            std::optional<TextPart> part;
+            if (card.kind == CardKind::Trainer) {
+                part = card.trainer_kind == TrainerKind::Stadium ? TextPart::Stadium : card.trainer_kind == TrainerKind::Tool ? TextPart::Tool
+                                                                                                                              : TextPart::Trainer;
+            } else if (card.kind == CardKind::Energy && card.energy_kind == EnergyKind::Special) {
+                part = TextPart::SpecialEnergy;
+            }
+            ++out.parts;
+            const Translation t = part ? translate_text(card.text, *part, card.name) : not_read("text on a kind of card the translator doesn't read");
+            if (t.ok) {
+                for (const auto& [key, value] : t.effects.items()) {
+                    out.overlay[key] = value;
+                }
+            } else {
+                out.unread.emplace_back(label(""), t.unread);
+            }
+        }
+        return out;
+    }
+
+    std::vector<std::string> translation_differences(const CardDef& written, const CardDef& translated, const json& overlay) {
+        std::vector<std::string> out;
+        const auto same_conditions = [](const std::vector<Condition>& a, const std::vector<Condition>& b) {
+            if (a.size() != b.size()) {
+                return false;
+            }
+            return std::all_of(a.begin(), a.end(), [&](const Condition& c) { return std::find(b.begin(), b.end(), c) != b.end(); });
+        };
+        const std::string label = written.id + " " + written.name;
+        if (overlay.contains("attacks")) {
+            for (const auto& [name, unused] : overlay.at("attacks").items()) {
+                for (std::size_t i = 0; i < written.attacks.size() && i < translated.attacks.size(); ++i) {
+                    if (written.attacks[i].name == name && written.attacks[i].program != translated.attacks[i].program) {
+                        out.push_back(label + ": attack " + name);
+                    }
+                }
+            }
+        }
+        if (overlay.contains("abilities")) {
+            for (const auto& [name, unused] : overlay.at("abilities").items()) {
+                for (std::size_t i = 0; i < written.abilities.size() && i < translated.abilities.size(); ++i) {
+                    const Ability& a = written.abilities[i];
+                    const Ability& b = translated.abilities[i];
+                    if (a.name == name && (a.program != b.program || !same_conditions(a.conditions, b.conditions) || a.modifiers != b.modifiers ||
+                                           a.once_per_turn != b.once_per_turn || a.one_per_name != b.one_per_name || a.active_only != b.active_only ||
+                                           a.trigger != b.trigger)) {
+                        out.push_back(label + ": ability " + name);
+                    }
+                }
+            }
+        }
+        const bool card_part = std::any_of(overlay.items().begin(), overlay.items().end(), [](const auto& item) { return item.key() != "attacks" && item.key() != "abilities"; });
+        if (card_part && (written.program != translated.program || !same_conditions(written.conditions, translated.conditions) || written.modifiers != translated.modifiers ||
+                          written.trigger != translated.trigger || written.provides != translated.provides || written.conditional_provides != translated.conditional_provides ||
+                          written.discard_at_end_of_turn != translated.discard_at_end_of_turn)) {
+            out.push_back(label);
+        }
         return out;
     }
 

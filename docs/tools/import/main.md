@@ -124,25 +124,27 @@ cached sets only. It always exits with 0 once the report is printed.
 
 Checks the [translator](translate.md) in two ways:
 
-1. **Against what we wrote by hand.** For every attack with text on a card with an effects file, it translates the
-   text and compares the compiled program with the hand-written one, printing `same`, `DIFFERENT` (with both effects
-   lists) or `not read` (with the first sentence it couldn't read).
-2. **On all of Standard.** It translates every distinct Standard attack text, from the
-   [whole sets](tcgdex.md#whole-sets) (downloaded or cached), and prints how many it reads and the 25 sentence shapes,
-   numbers written as `#`, that it most often can't.
+1. **Against what we wrote by hand.** For every card with an effects file, it translates every attack, Ability and card
+   text, loads the card with what it read, and compares it with the hand-written card, part by part: `same`,
+   `DIFFERENT` (with what it translated) or `not read` (with the first sentence it couldn't read).
+2. **On all of Standard.** It translates every distinct Standard card, from the [whole sets](tcgdex.md#whole-sets)
+   (downloaded or cached), and prints how many have every text read, how many texts of each kind it reads, and the 30
+   sentence shapes, numbers written as `#`, that it most often can't.
 
 ```
-Hand-written attacks:
+Hand-written cards, each attack, Ability and card text:
   same       30C-21 Greninja ex: attack Stealthy Slash
   ...
-40 hand-written attacks with text: 40 the same, 0 different, 0 not read
+... hand-written texts: ... the same, 0 different, ... not read
 
-Standard attacks: ... of ... distinct texts read (...%)
+Standard: 2097 distinct cards, ... with every text read (...%, counting cards with no text)
+  ability    ... of   ... texts read (...%)
+  attack     ...
 The sentences most often not read, by shape:
     ...
 ```
 
-It writes nothing, and exits with 1 if any hand-written attack comes out different.
+It writes nothing, and exits with 1 if any hand-written text comes out different.
 
 ## Exit codes
 

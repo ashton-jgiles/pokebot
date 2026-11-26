@@ -251,8 +251,8 @@ of their own and no reprint link, so a hand-written file owns its whole card and
 
 | Step | Builds | Status |
 |---|---|---|
-| 3b.2.1 | Cleaning and splitting text, the parts of sentences, `==` for programs, attack sentences, and `--check-translations` | 🔄 |
-| 3b.2.2 | Trainers and Abilities: play conditions, once per turn, "you may"; Tools and Stadiums with today's passives; Special Energy that only provides a type | ⬜ |
+| 3b.2.1 | Cleaning and splitting text, the parts of sentences, `==` for programs, attack sentences, and `--check-translations`. *Done: all 477 tests pass, all 36 hand-written attacks translate to the same program, and 561 of Standard's 1,448 attack texts are read* | ✅ |
+| 3b.2.2 | Trainers and Abilities: play conditions, once per turn, "you may"; Tools and Stadiums with today's passives; Special Energy that only provides a type. *[Built](tools/import/translate.md#cards-other-than-attacks), not yet tested or run* | 🔄 |
 | 3b.2.3 | The importer writes translations, the coverage report counts them, and an audit command; the runs, the audit and the record | ⬜ |
 
 **Its rules (2026-11-25, before any of it was built):**
@@ -265,9 +265,40 @@ of their own and no reprint link, so a hand-written file owns its whole card and
 - **No threshold for coverage** in this step; the prototype suggests 650 to 850 of the 2,097 cards complete, up from 373. On its own
   it makes about 10 of the four new decks' cards ready.
 
+**3b.2.2's one data change:** Lillie's Clefairy ex's Fairy Zone (`JTG-56`) filtered its passive with `"kind": "pokemon"`, which N's
+Castle and Skyliner leave out. A passive only looks at Pokémon in play, so it changes nothing played; it's dropped, as the translator
+writes it.
+
 **3b.2.1's one data change:** Raging Bolt ex's Bellowing Thunder (`TEF-123`) filtered "Basic Energy from your Pokémon" with
 `"kind": "energy"`, which Mega Greninja ex's file leaves out for attached Energy. Everything attached there is Energy, so it changes
 nothing played; it's dropped so both files say it the same way, the way the translator does.
+
+**What 3b.2.1 measured (2026-11-25):** `pokebot-import --offline --check-translations`.
+
+- **Against the hand-written effects:** all 36 attacks with text are read, and all 36 compile to the same program as their
+  effects files. None is different and none is unread. That's every hand-written attack, so the rule is met.
+- **On all of Standard:** 561 of the 1,448 distinct attack texts are read (38.7%). The prototype estimated about a third of
+  attack texts with today's vocabulary.
+- **The reference run repeats** 158 to 162, so Bellowing Thunder's tidied filter changed nothing played. All 477 tests pass. Two
+  test names first failed with "No tests ran": CTest on Windows passes a test's name as a filter in another encoding, so names
+  with "é" match nothing. They're spelled "Pokemon", as the other tests are.
+- **The sentences most often not read** need vocabulary the engine doesn't have yet:
+
+| Texts | Sentence | Needs |
+|---|---|---|
+| 50 | This Pokémon also does # damage to itself | damage to the attacker |
+| 30 | Heal # damage from this Pokémon | healing |
+| 25 | During your opponent's next turn, this Pokémon takes # less damage from attacks | a lasting damage change on the attacker |
+| 12 | If heads, during your opponent's next turn, prevent all damage from and effects of attacks done to this Pokémon | lasting prevention |
+| 12 | If your opponent's Active Pokémon is a Pokémon ex, this attack does # more damage | a condition on the defender |
+| 11 | Your opponent reveals their hand | the opponent's hand |
+| 9 + 7 | Discard the top # card(s) of your opponent's deck | milling |
+| 9 | During your opponent's next turn, attacks used by the Defending Pokémon do # less damage | a lasting damage change on the defender |
+| 8 | If tails, this attack does nothing | ending the attack |
+| 8 | If your opponent's Active Pokémon already has any damage counters on it, this attack does # more damage | a condition on the defender |
+
+  Two of the commoner ones need only grammar, the vocabulary being there: "Discard a Stadium in play" (5) and "During your opponent's
+  next turn, that Pokémon can't retreat" (5). They go into 3b.2.2.
 
 **What 3b.2a measured (2026-11-25):** `pokebot-import data/decks/incoming`, 75 requests, 82 new cards, 0 failures, 0 name mismatches,
 all four decks legal.

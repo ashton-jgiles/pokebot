@@ -41,7 +41,7 @@ namespace {
                      "  --standard      download every card of every set in sets.json and report how many of the\n"
                      "                  Standard-legal ones have all their effects\n"
                      "  --list-missing  with --standard: list every effect still missing\n"
-                     "  --check-translations  translate every hand-written attack and compare it, then every Standard attack\n"
+                     "  --check-translations  translate every hand-written card text and compare it, then all of Standard\n"
                      "  --refresh  download every card again, ignoring the cache\n"
                      "  --offline  use only cached files\n";
     }
@@ -165,6 +165,25 @@ namespace {
         return out;
     }
 
+    std::vector<std::string> translated_parts(const pokebot::CardDef& card, const nlohmann::json& overlay) {
+        std::vector<std::string> out;
+        const std::string label = card.id + " " + card.name;
+        for (const char* list : {"attacks", "abilities"}) {
+            if (overlay.contains(list)) {
+                for (const auto& [name, fields] : overlay.at(list).items()) {
+                    out.push_back(label + ": " + (std::string(list) == "attacks" ? "attack " : "ability ") + name);
+                }
+            }
+        }
+        for (const auto& [key, value] : overlay.items()) {
+            if (key != "attacks" && key != "abilities") {
+                out.push_back(label);
+                break;
+            }
+        }
+        return out;
+    }
+
     int run_check_translations(pokebot::import::TcgdexClient& tcgdex, const nlohmann::json& corrections, const std::filesystem::path& generated_dir,
                                const std::filesystem::path& effects_dir) {
         using namespace pokebot;
@@ -180,36 +199,35 @@ namespace {
         int same = 0;
         int different = 0;
         int unread = 0;
-        std::cout << "Hand-written attacks:\n";
+        std::cout << "Hand-written cards, each attack, Ability and card text:\n";
         for (const auto& name : files) {
             std::ifstream in(generated_dir / name, std::ios::binary);
             const CardDef card = nlohmann::json::parse(in).get<CardDef>();
-            const CardDef& written = db.at(card.id);
-            for (std::size_t i = 0; i < card.attacks.size(); ++i) {
-                const Attack& attack = card.attacks[i];
-                if (attack.text.empty()) {
-                    continue;
-                }
-                const std::string label = card.id + " " + card.name + ": attack " + attack.name;
-                const Translation translation = translate_attack(attack.text, AttackContext{attack.name, attack.damage_mod});
-                if (!translation.ok) {
-                    ++unread;
-                    std::cout << "  not read   " << label << ": " << translation.unread << '\n';
-                } else if (compile_attack(translation.effects) == written.attacks[i].program) {
-                    ++same;
-                    std::cout << "  same       " << label << '\n';
-                } else {
+            const CardTranslation translation = translate_card(card);
+            CardDB translated_db;
+            translated_db.add(merge_effects(nlohmann::json(card), translation.overlay).get<CardDef>());
+            const auto differences = translation_differences(db.at(card.id), translated_db.at(card.id), translation.overlay);
+            for (const std::string& part : translated_parts(card, translation.overlay)) {
+                if (std::find(differences.begin(), differences.end(), part) != differences.end()) {
                     ++different;
-                    std::cout << "  DIFFERENT  " << label << "\n    translated: " << translation.effects.dump() << "\n    written:    " << written.attacks[i].effects.dump() << '\n';
+                    std::cout << "  DIFFERENT  " << part << "\n    translated: " << translation.overlay.dump() << '\n';
+                } else {
+                    ++same;
+                    std::cout << "  same       " << part << '\n';
                 }
             }
+            for (const auto& [part, why] : translation.unread) {
+                ++unread;
+                std::cout << "  not read   " << part << ": " << why << '\n';
+            }
         }
-        std::cout << same + different + unread << " hand-written attacks with text: " << same << " the same, " << different << " different, " << unread << " not read\n";
+        std::cout << same + different + unread << " hand-written texts: " << same << " the same, " << different << " different, " << unread << " not read\n";
 
         std::map<std::string, int> unread_shapes;
+        std::map<std::string, std::pair<int, int>> by_kind;
         std::set<std::string> seen;
-        int texts = 0;
-        int read = 0;
+        int cards = 0;
+        int complete = 0;
         for (const std::string& code : tcgdex.set_codes()) {
             for (const nlohmann::json& tcgdex_card : tcgdex.set_cards(code)) {
                 const std::string id = printing_id(code, tcgdex_card.value("localId", ""));
@@ -222,28 +240,44 @@ namespace {
                 } catch (const std::exception&) {
                     continue;
                 }
-                for (const Attack& attack : card.attacks) {
-                    if (attack.text.empty() || !seen.insert(attack.name + "|" + std::to_string(static_cast<int>(attack.damage_mod)) + "|" + normalize_text(attack.text)).second) {
-                        continue;
+                if (!seen.insert(card_signature(card)).second) {
+                    continue;
+                }
+                ++cards;
+                const CardTranslation translation = translate_card(card);
+                complete += translation.unread.empty() ? 1 : 0;
+                const auto kind_of = [&](const std::string& part) {
+                    const std::size_t colon = part.find(": ");
+                    if (colon != std::string::npos) {
+                        return part.substr(colon + 2, part.find(' ', colon + 2) - colon - 2);
                     }
-                    ++texts;
-                    const Translation translation = translate_attack(attack.text, AttackContext{attack.name, attack.damage_mod});
-                    if (translation.ok) {
-                        ++read;
-                    } else {
-                        ++unread_shapes[sentence_shape(translation.unread)];
-                    }
+                    return std::string(card.kind == CardKind::Energy ? "energy" : card.trainer_kind == TrainerKind::Stadium ? "stadium"
+                                                                              : card.trainer_kind == TrainerKind::Tool      ? "tool"
+                                                                                                                            : "trainer");
+                };
+                for (const std::string& part : translated_parts(card, translation.overlay)) {
+                    ++by_kind[kind_of(part)].first;
+                    ++by_kind[kind_of(part)].second;
+                }
+                for (const auto& [part, why] : translation.unread) {
+                    ++by_kind[kind_of(part)].second;
+                    ++unread_shapes[sentence_shape(why)];
                 }
             }
         }
-        std::cout << std::fixed << std::setprecision(1) << "\nStandard attacks: " << read << " of " << texts << " distinct texts read (" << percent(static_cast<std::size_t>(read), static_cast<std::size_t>(texts))
-                  << "%)\nThe sentences most often not read, by shape:\n";
+        std::cout << std::fixed << std::setprecision(1) << "\nStandard: " << cards << " distinct cards, " << complete << " with every text read (" << percent(static_cast<std::size_t>(complete), static_cast<std::size_t>(cards))
+                  << "%, counting cards with no text)\n";
+        for (const auto& [kind, counts] : by_kind) {
+            std::cout << "  " << std::setw(8) << std::left << kind << std::right << std::setw(6) << counts.first << " of " << std::setw(5) << counts.second << " texts read ("
+                      << percent(static_cast<std::size_t>(counts.first), static_cast<std::size_t>(counts.second)) << "%)\n";
+        }
+        std::cout << "The sentences most often not read, by shape:\n";
         std::vector<std::pair<int, std::string>> shapes;
         for (const auto& [shape, count] : unread_shapes) {
             shapes.emplace_back(count, shape);
         }
         std::sort(shapes.begin(), shapes.end(), [](const auto& a, const auto& b) { return a.first != b.first ? a.first > b.first : a.second < b.second; });
-        for (std::size_t i = 0; i < shapes.size() && i < 25; ++i) {
+        for (std::size_t i = 0; i < shapes.size() && i < 30; ++i) {
             std::cout << std::setw(6) << shapes[i].first << "  " << shapes[i].second << '\n';
         }
         return different == 0 ? 0 : 1;

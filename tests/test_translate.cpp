@@ -16,6 +16,8 @@ using pokebot::import::AttackContext;
 using pokebot::import::normalize_text;
 using pokebot::import::split_sentences;
 using pokebot::import::translate_attack;
+using pokebot::import::translate_card;
+using pokebot::import::translation_differences;
 
 namespace {
 
@@ -26,6 +28,33 @@ namespace {
         REQUIRE(translation.ok);
         INFO("translated: " << translation.effects.dump());
         CHECK(compile_attack(translation.effects) == compile_attack(json::parse(written)));
+    }
+
+    void card_reads_as(const std::string& generated, const char* written) {
+        const pokebot::CardDef card = json::parse(generated).get<pokebot::CardDef>();
+        const auto translation = translate_card(card);
+        std::string unread;
+        for (const auto& [part, why] : translation.unread) {
+            unread += "\n  " + part + ": " + why;
+        }
+        INFO("unread:" << unread);
+        REQUIRE(translation.unread.empty());
+        INFO("translated: " << translation.overlay.dump());
+        pokebot::CardDB expected;
+        expected.add(pokebot::merge_effects(json(card), json::parse(written)).get<pokebot::CardDef>());
+        pokebot::CardDB translated;
+        translated.add(pokebot::merge_effects(json(card), translation.overlay).get<pokebot::CardDef>());
+        CHECK(translation_differences(expected.at(card.id), translated.at(card.id), translation.overlay).empty());
+        CHECK_FALSE(translation.overlay.empty());
+    }
+
+    std::string trainer(const char* kind, const char* text) {
+        return json{{"id", "TST-1"}, {"name", "Test Card"}, {"kind", "trainer"}, {"trainer_kind", kind}, {"text", text}}.dump();
+    }
+
+    std::string pokemon_with(const char* ability, const char* text) {
+        return json{{"id", "TST-2"}, {"name", "Testmon"}, {"kind", "pokemon"}, {"stage", "basic"}, {"hp", 100}, {"types", {"fire"}}, {"retreat", 1}, {"abilities", {{{"name", ability}, {"text", text}}}}}
+            .dump();
     }
 
     void not_read(const std::string& text, DamageMod mod = DamageMod::None) {
@@ -119,7 +148,53 @@ TEST_CASE("the translator reads all of a text or none of it", "[translate]") {
     CHECK(translation.unread == "Heal 30 damage from this Pokémon");
 }
 
-TEST_CASE("every hand-written attack the translator reads compiles to the same program", "[translate]") {
+TEST_CASE("Items and Supporters, with what they need to be played", "[translate]") {
+    card_reads_as(trainer("item", "You can use this card only if you discard 2 other cards from your hand. Search your deck for a Pokémon, reveal it, and put it into your hand. Then, shuffle your deck."),
+                  R"({"requires": [{"hand_besides": 2}], "effects": [{"op": "discard_from_hand", "count": 2}, {"op": "search_deck", "reveal": true, "filter": {"kind": "pokemon"}}]})");
+    card_reads_as(trainer("supporter", "Shuffle your hand into your deck. Then, draw 5 cards. If you have exactly 6 Prize cards remaining, draw 7 cards instead."),
+                  R"({"effects": [{"op": "shuffle_hand_into_deck"}, {"op": "if", "condition": {"prizes_exactly": 6}, "then": [{"op": "draw", "count": 7}], "else": [{"op": "draw", "count": 5}]}]})");
+    card_reads_as(trainer("item", "Put up to 3 in any combination of {G} Pokémon and Basic {G} Energy cards from your discard pile into your hand."),
+                  R"({"requires": [{"discard_has": {"any_of": [{"kind": "pokemon", "type": "grass"}, {"kind": "energy", "basic": true, "type": "grass"}]}}],
+                      "effects": [{"op": "from_discard", "count": 3, "up_to": true, "filter": {"any_of": [{"kind": "pokemon", "type": "grass"}, {"kind": "energy", "basic": true, "type": "grass"}]}}]})");
+    card_reads_as(trainer("item", "Search your deck for a Basic Pokémon and a Stage 1 Pokémon, reveal them, and put them into your hand. Then, shuffle your deck."),
+                  R"({"effects": [{"op": "search_deck", "reveal": true, "filter": {"kind": "pokemon", "stage": "basic"}, "shuffle": false},
+                                  {"op": "search_deck", "reveal": true, "filter": {"kind": "pokemon", "stage": "stage1"}}]})");
+    card_reads_as(trainer("supporter", "Each player shuffles their hand into their deck. Then, you draw 4 cards, and your opponent draws 3 cards."),
+                  R"({"effects": [{"op": "shuffle_hand_into_deck", "player": "each"}, {"op": "draw", "count": 4}, {"op": "draw", "count": 3, "player": "opponent"}]})");
+    card_reads_as(trainer("supporter", "Switch in 1 of your opponent's Benched Pokémon to the Active Spot."),
+                  R"({"requires": [{"opponent_has_benched": true}], "effects": [{"op": "switch_active", "player": "opponent"}]})");
+    card_reads_as(trainer("item", "Choose up to 2 of your Benched {F} Pokémon and attach a Basic Energy card from your discard pile to each of them."),
+                  R"({"requires": [{"discard_has": {"kind": "energy", "basic": true}}, {"bench_has": {"type": "fighting"}}],
+                      "effects": [{"op": "attach_to", "on": "bench", "targets": 2, "up_to_targets": true, "target": {"type": "fighting"}, "filter": {"kind": "energy", "basic": true}}]})");
+}
+
+TEST_CASE("Abilities: once per turn, costs, triggers and passives", "[translate]") {
+    card_reads_as(pokemon_with("Quick Draw", "Once during your turn, if this Pokémon is in the Active Spot, you may use this Ability. Draw a card. You can't use more than 1 Quick Draw Ability each turn."),
+                  R"({"abilities": {"Quick Draw": {"active_only": true, "one_per_name": true, "effects": [{"op": "draw"}]}}})");
+    card_reads_as(pokemon_with("Trade In", "You must discard a card from your hand in order to use this Ability. Once during your turn, you may draw 3 cards."),
+                  R"({"abilities": {"Trade In": {"requires": [{"hand_besides": 1}], "effects": [{"op": "discard_from_hand"}, {"op": "draw", "count": 3}]}}})");
+    card_reads_as(pokemon_with("Jump In", "When you play this Pokémon from your hand onto your Bench during your turn, you may switch it with your Active Pokémon."),
+                  R"({"abilities": {"Jump In": {"trigger": "played_to_bench", "effects": [{"op": "may", "effects": [{"op": "switch_to_active"}]}]}}})");
+    card_reads_as(pokemon_with("Light Feet", "Your Basic Pokémon in play have no Retreat Cost."),
+                  R"({"abilities": {"Light Feet": {"passive": [{"modify": "retreat_cost", "set": 0, "applies_to": "yours", "filter": {"stage": "basic"}}]}}})");
+}
+
+TEST_CASE("Tools, Stadiums and Special Energy", "[translate]") {
+    card_reads_as(trainer("tool", "The Pokémon this card is attached to gets +50 HP."), R"({"passive": [{"modify": "max_hp", "add": 50}]})");
+    card_reads_as(trainer("tool", "The Retreat Cost of the Pokémon this card is attached to is {C} less."), R"({"passive": [{"modify": "retreat_cost", "add": -1}]})");
+    card_reads_as(trainer("stadium", "Once during each player's turn, that player may switch their Active {L} Pokémon with 1 of their Benched {L} Pokémon."),
+                  R"({"requires": [{"active_is": {"kind": "pokemon", "type": "lightning"}}, {"bench_has": {"kind": "pokemon", "type": "lightning"}}],
+                      "effects": [{"op": "switch_active", "filter": {"kind": "pokemon", "type": "lightning"}}]})");
+    card_reads_as(trainer("stadium", "Whenever any player puts a Basic non-{M} Pokémon onto their Bench during their turn, place 3 damage counters on that Pokémon."),
+                  R"({"trigger": "put_on_bench", "effects": [{"op": "if", "condition": {"self_is": {"kind": "pokemon", "stage": "basic", "not_type": "metal"}}, "then": [{"op": "counters_on_self", "count": 3}]}]})");
+    card_reads_as(json{{"id", "TST-3"}, {"name", "Test Energy"}, {"kind", "energy"}, {"energy_kind", "special"}, {"text", "As long as this card is attached to a Pokémon, it provides {C} Energy. If this card is attached to an Evolution Pokémon, it provides {C}{C} Energy instead."}}
+                      .dump(),
+                  R"({"provides": ["colorless"], "provides_when": [{"holder": {"stage": "evolution"}, "provides": ["colorless", "colorless"]}]})");
+    CHECK_FALSE(translate_card(json::parse(trainer("tool", "Draw a card.")).get<pokebot::CardDef>()).unread.empty());
+    CHECK_FALSE(translate_card(json::parse(trainer("item", "Draw a card and win the game.")).get<pokebot::CardDef>()).unread.empty());
+}
+
+TEST_CASE("every hand-written card text the translator reads compiles to the same effects", "[translate]") {
     const std::filesystem::path root = POKEBOT_SOURCE_DIR;
     if (!std::filesystem::exists(root / "data/cards/generated")) {
         SKIP("no generated card data; run pokebot-import first");
@@ -130,19 +205,12 @@ TEST_CASE("every hand-written attack the translator reads compiles to the same p
     for (const auto& file : std::filesystem::directory_iterator(root / "data/cards/effects")) {
         std::ifstream in(root / "data/cards/generated" / file.path().filename(), std::ios::binary);
         const pokebot::CardDef card = json::parse(in).get<pokebot::CardDef>();
-        const pokebot::CardDef& written = db.at(card.id);
-        for (std::size_t i = 0; i < card.attacks.size(); ++i) {
-            if (card.attacks[i].text.empty()) {
-                continue;
-            }
-            const auto translation = translate_attack(card.attacks[i].text, AttackContext{card.attacks[i].name, card.attacks[i].damage_mod});
-            if (!translation.ok) {
-                continue;
-            }
-            ++read;
-            if (compile_attack(translation.effects) != written.attacks[i].program) {
-                different += "\n  " + card.id + " " + card.attacks[i].name + ": " + translation.effects.dump();
-            }
+        const auto translation = translate_card(card);
+        read += translation.parts - static_cast<int>(translation.unread.size());
+        pokebot::CardDB translated;
+        translated.add(pokebot::merge_effects(json(card), translation.overlay).get<pokebot::CardDef>());
+        for (const std::string& part : translation_differences(db.at(card.id), translated.at(card.id), translation.overlay)) {
+            different += "\n  " + part + ": " + translation.overlay.dump();
         }
     }
     INFO("different:" << different);

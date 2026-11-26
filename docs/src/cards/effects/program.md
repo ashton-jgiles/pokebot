@@ -256,7 +256,7 @@ steps.
 | `bool matches(const CardFilter&, const CardDef&)` | Whether a card passes a filter |
 | `const char* to_string(Op)` | A step's name, for printing |
 
-`Step`, `CardFilter`, `Condition`, `Count` and `LastingSpec` compare with `==`, field by field, so two programs are equal
+`Step`, `CardFilter`, `Condition`, `Count`, `LastingSpec`, `Modifier` and `ConditionalProvides` compare with `==`, field by field, so two programs are equal
 exactly when they run the same steps. The [translator's check](../../../tools/import/translate.md#checking-it) uses it.
 
 The enums cards use (`CardKind`, `EnergyType`, …) live in

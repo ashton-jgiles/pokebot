@@ -1,6 +1,8 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <nlohmann/json.hpp>
@@ -25,5 +27,25 @@ namespace pokebot::import {
     std::vector<std::string> split_sentences(const std::string& text);
 
     Translation translate_attack(const std::string& text, const AttackContext& context);
+
+    enum class TextPart : std::uint8_t {
+        Trainer,
+        Stadium,
+        Tool,
+        Ability,
+        SpecialEnergy,
+    };
+
+    Translation translate_text(const std::string& text, TextPart part, const std::string& name);
+
+    struct CardTranslation {
+        nlohmann::json overlay = nlohmann::json::object();
+        std::vector<std::pair<std::string, std::string>> unread;
+        int parts = 0;
+    };
+
+    CardTranslation translate_card(const CardDef& card);
+
+    std::vector<std::string> translation_differences(const CardDef& written, const CardDef& translated, const nlohmann::json& overlay);
 
 } // namespace pokebot::import

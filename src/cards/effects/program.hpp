@@ -247,6 +247,8 @@ namespace pokebot {
         CardFilter filter;
         bool only_if_poisoned = false;
         bool only_with_tera = false; // only for a player with a Tera Pokemon in play
+
+        bool operator==(const Modifier&) const = default;
     };
 
     bool matches(const CardFilter& filter, const CardDef& card);
@@ -259,6 +261,8 @@ namespace pokebot {
     struct ConditionalProvides {
         CardFilter holder;
         std::vector<EnergyMask> provides;
+
+        bool operator==(const ConditionalProvides&) const = default;
     };
 
     std::vector<ConditionalProvides> compile_provides_when(const nlohmann::json& provides_when);
