@@ -46,11 +46,8 @@ namespace pokebot {
                 const PlayerState& p = game.player(player);
                 for (const Slot slot : in_play_slots(p)) {
                     const PokemonInPlay& pokemon = pokemon_at(p, slot);
-                    if (!rules::can_evolve(game, pokemon)) {
-                        continue;
-                    }
                     for (const CardIndex card : p.hand) {
-                        if (rules::evolves_into(game, pokemon, card) && first_time(game, out, ActionKind::Evolve, card, slot)) {
+                        if (rules::can_evolve_into(game, pokemon, card) && first_time(game, out, ActionKind::Evolve, card, slot)) {
                             out.push_back(Action{ActionKind::Evolve, card, slot, 0});
                         }
                     }
@@ -138,6 +135,9 @@ namespace pokebot {
 
             bool can_play_trainer(const GameState& game, int player, CardIndex card) {
                 const CardDef& def = game.def(card);
+                if (def.rules.ace_spec && !rules::can_play_ace_spec(game, player)) {
+                    return false;
+                }
                 switch (def.trainer_kind) {
                     case TrainerKind::Item:
                         return effects_written(def) && rules::can_play_item(game, player) && requirements_met(game, player, card);
@@ -160,6 +160,9 @@ namespace pokebot {
                     }
                     checked.push_back(&def);
                     if (def.trainer_kind == TrainerKind::Tool) {
+                        if (def.rules.ace_spec && !rules::can_play_ace_spec(game, player)) {
+                            continue;
+                        }
                         for (const Slot slot : in_play_slots(p)) {
                             if (rules::can_attach_tool(game, pokemon_at(p, slot))) {
                                 out.push_back(Action{ActionKind::AttachTool, card, slot, 0});
@@ -275,6 +278,9 @@ namespace pokebot {
                     PokemonInPlay& pokemon = pokemon_at(p, action.target);
                     pokemon.energy.push_back(action.card);
                     game.flags.energy_attached = true;
+                    if (pokemon.special.any() && rules::special_conditions_immune(game, pokemon)) {
+                        clear_special_conditions(pokemon);
+                    }
                     raise(game, Event{EventKind::EnergyAttached, player, pokemon.id(), action.card});
                     break;
                 }

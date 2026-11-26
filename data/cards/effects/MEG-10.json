@@ -1,0 +1,1 @@
+{"abilities": {"Wild Growth": {"passive": [{"modify": "energy_provides", "applies_to": "yours", "energy": {"kind": "energy", "basic": true, "type": "grass"}, "type": "grass", "set": 2}]}}}

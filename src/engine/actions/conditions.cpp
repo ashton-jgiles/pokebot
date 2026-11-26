@@ -15,6 +15,10 @@ namespace pokebot {
             // Rulebook order: Poisoned, Burned, Asleep, Paralyzed.
             void checkup_one(GameState& game, int owner, PokemonInPlay& pokemon) {
                 SpecialConditions& special = pokemon.special;
+                if (special.any() && rules::special_conditions_immune(game, pokemon)) {
+                    special = SpecialConditions{};
+                    return;
+                }
                 if (special.poison > 0) {
                     add_damage_counters(pokemon, rules::poison_counters(game, pokemon));
                 }

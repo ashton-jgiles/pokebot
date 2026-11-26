@@ -1,0 +1,1 @@
+{"attacks": {"Demolish": {"effects": [{"op": "ignore_weakness"}, {"op": "ignore_resistance"}, {"op": "ignore_defender_effects"}, {"op": "damage"}]}}, "rules": ["ex", "tera"], "abilities": {"Cornerstone Stance": {"passive": [{"modify": "prevent_damage", "from": {"has_any_ability": true}}]}}}

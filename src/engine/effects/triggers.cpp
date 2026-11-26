@@ -67,6 +67,25 @@ namespace pokebot {
                 }
             }
 
+            void attached_from_hand(GameState& game, const Event& event) {
+                const PokemonInPlay* pokemon = find_pokemon(game, event.pokemon);
+                if (pokemon == nullptr || event.card == kNoCard) {
+                    return;
+                }
+                const CardDef& energy = game.def(event.card);
+                if (energy.trigger != Trigger::AttachedFromHand || energy.program.empty()) {
+                    return;
+                }
+                EffectRun context;
+                context.who = EffectContext{event.player, pokemon->id(), event.card};
+                for (const Condition& condition : energy.conditions) {
+                    if (!condition_holds(game, event.player, condition, kNoCard, &context)) {
+                        return;
+                    }
+                }
+                queue_effect(game, EffectContext{event.player, pokemon->id(), event.card}, ProgramRef{event.card, ProgramKind::Trainer, 0}, AfterEffect::FinishAbility);
+            }
+
             // "Whenever any player puts a Pokemon onto their Bench during their turn": the Stadium in play.
             void put_on_bench(GameState& game, const Event& event) {
                 const CardIndex stadium = rules::stadium_in_play(game);
@@ -92,6 +111,9 @@ namespace pokebot {
                     break;
                 case EventKind::DamagedByAttack:
                     damaged_by_attack(game, event);
+                    break;
+                case EventKind::EnergyAttached:
+                    attached_from_hand(game, event);
                     break;
                 default:
                     break;

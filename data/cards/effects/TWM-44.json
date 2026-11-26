@@ -1,0 +1,1 @@
+{"attacks": {"Whirlpool": {"effects": [{"op": "flip_coins"}, {"condition": {"heads_at_least": 1}, "op": "if", "then": [{"on": "active", "op": "discard_target_energy"}]}]}}, "abilities": {"Festival Lead": {"passive": [{"modify": "attacks_per_turn", "set": 2, "if_stadium": "Festival Grounds"}]}}}

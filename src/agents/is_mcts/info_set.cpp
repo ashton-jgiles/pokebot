@@ -190,7 +190,8 @@ namespace pokebot {
             h.attack(effect.attack);
             h.add(static_cast<std::uint64_t>(static_cast<std::uint16_t>(effect.amount)));
             h.add(static_cast<std::uint64_t>(effect.only_ex) | (static_cast<std::uint64_t>(effect.prevent_effects) << 1U) |
-                  (static_cast<std::uint64_t>(effect.from_basic) << 2U));
+                  (static_cast<std::uint64_t>(effect.from_basic) << 2U) | (static_cast<std::uint64_t>(effect.attacker_no_rule_box) << 3U) |
+                  (effect.attacker_type ? (static_cast<std::uint64_t>(*effect.attacker_type) + 1U) << 4U : 0U));
             h.add(effect.turn);
         }
         h.decision(o.decision);

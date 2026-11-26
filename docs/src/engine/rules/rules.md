@@ -25,24 +25,27 @@ bend; this file is where they live.
 | `energy_provided(game, pokemon, energy)` | The card's `provides`, as units (`EnergyUnits`); a Special Energy's [`provides_when`](../../cards/effects/program.md#special-energy) for a matching holder | Neo Upper, Ignition, Prism Energy, Meganium's Wild Growth |
 | `energy_units(game, pokemon)` | Total units attached: what pays attack costs and Retreat Cost | |
 | `is_active(game, pokemon)` | Whether it's in its owner's Active Spot | |
-| `can_get_special_condition(game, pokemon, condition)` | Only the Active Pokémon | Festival Grounds, Hoothoot, Slowpoke |
+| `can_get_special_condition(game, pokemon, condition)` | Only the Active Pokémon, and not one a `special_condition_immune` passive covers (`special_conditions_immune`); such a Pokémon also loses its Special Conditions at Pokémon Checkup and when an Energy is attached to it from the hand | Festival Grounds, Hoothoot, Slowpoke |
 | `poison_counters(game, pokemon)` | What Poisoned it said (usually 1) | Perilous Jungle |
 | `burn_counters(game, pokemon)` | 2 | |
-| `prize_value(game, pokemon)` | 1, 2 for ex, 3 for Mega ex | Lillie's Pearl, Legacy Energy |
+| `prize_value(game, pokemon, by_attack)` | 1, 2 for ex, 3 for Mega ex, plus `prizes_given` passives when Knocked Out by an attack, never below 0 | Lillie's Pearl, Legacy Energy |
 | `bench_size(game, player)` | 5; a `bench_size` passive's `set` instead (Area Zero Underdepths: 8 with a Tera Pokémon in play), at most `kMaxBenchSize` | Area Zero Underdepths |
 | `is_first_turn(game)` | Turns 1 and 2 | (used by other questions) |
 | `can_attach_energy(game, player)` | Not yet this turn | Emboar, Iono's Bellibolt ex |
 | `can_retreat(game, player)` | Not yet this turn, with a Benched Pokémon to switch in, the Active isn't Asleep or Paralyzed, and no [lasting](../actions/lasting.md) "can't retreat" | Clutch, Sob |
 | `can_attack(game, player)` | Not on turn 1, only with an Active, not while it's Asleep or Paralyzed, and no lasting "can't attack" | Eon Blade, Prism Edge |
-| `has_abilities(game, pokemon)` | Yes | Team Rocket's Watchtower, Flutter Mane (Ability locks) |
+| `has_abilities(game, pokemon)` | Yes, unless a `no_abilities` passive applies to it. A Pokémon without Abilities offers none, triggers none, and its Abilities' passives stop | Team Rocket's Watchtower, Flutter Mane (Ability locks) |
+| `can_play_ace_spec(game, player)` | Yes, unless the opponent has a `no_ace_spec` passive in play (with its Tool, if it says so) | Genesect's ACE Nullifier |
 | `can_use_attack(game, pokemon, attack)` | Yes, unless a lasting "can't use this attack" is on it | Impact Blow |
 | `can_play_item(game, player)` | Yes, unless a lasting Item lock is on the player | Budew, Tyranitar (Item locks) |
 | `can_play_supporter(game, player)` | Not yet this turn, and not on turn 1 | |
 | `can_play_stadium(game, player, card)` | Not yet this turn, and not the same name as the one in play | Copperajah |
 | `can_attach_tool(game, pokemon)` | It has no Tool | Rotom ex's Multi Adapter |
 | `stadium_in_play(game)` | Whichever player's Stadium is in play, or `kNoCard` | |
-| `attacks_per_turn(game, pokemon)` | 1 | Dipplin, Goldeen, Seaking (Festival Lead with Festival Grounds) |
-| `can_evolve(game, pokemon)` | Not on either player's first turn, not on the turn it was played, stack not full | Forest of Vitality |
+| `attacks_per_turn(game, pokemon)` | 1, or an `attacks_per_turn` passive's `set` | Dipplin, Goldeen, Seaking (Festival Lead with Festival Grounds) |
+| `can_evolve(game, pokemon)` | Not on either player's first turn, not on the turn it was played, stack not full | |
+| `can_evolve_into(game, pokemon, card)` | `can_evolve` and `evolves_into`, or on the turn it was played with an `evolve_same_turn` passive that matches both | Forest of Vitality |
+| `bench_counters_prevented(game)` | A `prevent_bench_counters` passive is in play: the opponent's attacks and Abilities can't choose a Benched Pokémon for damage counters | Battle Cage |
 | `evolves_into(game, pokemon, card)` | The card's "evolves from" names the top card | Rare Candy, Eevee ex |
 | `damage_prevented(game, attacker, defender)` | A Benched Tera Pokémon takes no damage from attacks | Mist Energy, Battle Cage |
 | `can_attack(game, player, first_turn_allowed)`, `can_play_supporter(game, player, first_turn_allowed)` | Not on the first player's first turn, unless the attack or Supporter has `first_turn` | |
@@ -99,7 +102,9 @@ about 15% of simulator speed, so the release preset turns on link-time optimizat
 (`CMAKE_INTERPROCEDURAL_OPTIMIZATION`), which brings it back to the old speed.
 
 `attack_damage` looks through the passives in play once per call, for `damage_dealt`, `damage_taken` and
-`prevent_damage` together, and only when they can matter: `damage_dealt` when the defender is Active, the other two when
+`prevent_damage` together, and only when they can matter. The [`CardTable`](../game/game_state.md#cardtable) knows which
+kinds of passive its cards have (`has_modifier`) and whether any Special Energy has one, so the Ability lock, Energy that
+provides more, Prize changes, attacking twice and Energy passives cost nothing in a game without them. For the damage passives: `damage_dealt` when the defender is Active, the other two when
 the game's [`CardTable`](../game/game_state.md#cardtable) has a damage passive at all. Effects prevention checks the
 same flag before looking.
 

@@ -37,16 +37,24 @@ namespace pokebot {
     }
 
     void CardTable::find_damage_passives() {
-        const auto damage_passive = [](const std::vector<Modifier>& modifiers) {
-            return std::any_of(modifiers.begin(), modifiers.end(), [](const Modifier& m) {
-                return m.what == Modifies::DamageTaken || m.what == Modifies::PreventDamage || m.what == Modifies::PreventEffects;
-            });
+        modifier_kinds_ = 0;
+        energy_modifiers_ = false;
+        const auto note = [&](const std::vector<Modifier>& modifiers) {
+            for (const Modifier& m : modifiers) {
+                modifier_kinds_ |= 1U << static_cast<unsigned>(m.what);
+            }
         };
-        damage_passives_ = std::any_of(defs_.begin(), defs_.end(), [&](const CardDef* def) {
-            return def != nullptr && (damage_passive(def->modifiers) || std::any_of(def->abilities.begin(), def->abilities.end(), [&](const Ability& ability) {
-                                          return damage_passive(ability.modifiers);
-                                      }));
-        });
+        for (const CardDef* def : defs_) {
+            if (def == nullptr) {
+                continue;
+            }
+            note(def->modifiers);
+            energy_modifiers_ = energy_modifiers_ || (def->kind == CardKind::Energy && !def->modifiers.empty());
+            for (const Ability& ability : def->abilities) {
+                note(ability.modifiers);
+            }
+        }
+        damage_passives_ = has_modifier(Modifies::DamageTaken) || has_modifier(Modifies::PreventDamage) || has_modifier(Modifies::PreventEffects);
     }
 
     CardTable CardTable::shuffled(std::uint64_t seed) const {

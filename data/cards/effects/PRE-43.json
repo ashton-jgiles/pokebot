@@ -1,0 +1,1 @@
+{"attacks": {"Hex Hurl": {"effects": [{"count": 2, "on": "bench", "op": "place_counters"}]}}, "abilities": {"Midnight Fluttering": {"passive": [{"modify": "no_abilities", "applies_to": "opponents", "if_active": true, "target_active": true, "except": "Midnight Fluttering"}]}}}

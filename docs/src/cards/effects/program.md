@@ -44,9 +44,11 @@ Each block is a JSON object with an `"op"`:
 | `special_condition` | `condition`, `player` (`"opponent"`), `count` (1) | Give that player's Active Pokémon a [Special Condition](../../engine/actions/conditions.md): `"asleep"`, `"burned"`, `"confused"`, `"paralyzed"` or `"poisoned"`. **Defaults to the opponent**, since cards almost always say "your opponent's Active Pokémon is now …". `count` is the Poison damage counters per Checkup | `ApplySpecialCondition` |
 | `switch_self` | — | Switch this Pokémon with 1 of your Benched Pokémon | `ChooseBenched`, `SwitchWithChosen` |
 | `switch_active` | `player` (`"you"` or `"opponent"`), `filter`, `chooser` (`"you"`) | Switch that player's Active with 1 of their Benched Pokémon that matches `filter`, chosen by you (Switch, Boss's Orders, Subjugating Chains), or by the opponent with `"chooser": "opponent"` ("switch out your opponent's Active Pokémon") | `ChooseBenched`, `SwitchWithChosen` |
-| `counters_to` | `count` (1), `targets` (1), `on`, `player` (`"opponent"`), `each` | Put `count` damage counters on each chosen Pokémon (Mortal Shuriken), or on every one with `"each": true` | `ChooseTargets`, `CountersOnTargets` |
+| `counters_to` | `count` (1), or `per` and `for_each`; `targets` (1), `on`, `player` (`"opponent"`), `each` | Put `count` (or `per` × the count) damage counters on each chosen Pokémon (Mortal Shuriken, Powerful Hand), or on every one with `"each": true` | `ChooseTargets`, `CountersOnTargets` |
+| `target_energy_to_hand` | — | Put all Energy attached to the first target into its owner's hand (Wally's Compassion) | `TargetEnergyToHand` |
+| `choose_one` | `options` (2 lists) | "Choose 1": the player picks the first list (yes) or the second (no) | `AskYesNo`, the first list, `Jump`, the second |
 | `move_counters` | `count` (1), `on`, `player` (`"opponent"`) | Choose one of your damaged Pokémon, then one of that player's, and move up to `count` damage counters (as many as it has, up to `count`) | `ChooseCounterSource`, `ChooseTargets`, `MoveCounters` |
-| `look_at_top` | `count` (1), `take` (1), `to` (`"hand"`), `filter` | Look at the top `count` cards, take `take` of them, and put the rest on the bottom in the same order (Recon Directive) | `ChooseCards`, `MoveChosen`, `RestToBottom` |
+| `look_at_top` | `count` (1), `take` (1), `up_to`, `to` (`"hand"`), `filter`, `reveal`, `rest` (`"bottom"`) | Look at the top `count` cards, take `take` of them (or up to `take`), and put the rest on the bottom in the same order (Recon Directive), or with `"rest": "shuffle"` shuffle the deck (Bug Catching Set) | `ChooseCards`, `MoveChosen`, `RestToBottom` or `ShuffleDeck` |
 | `attach_from_hand` | `count` (1), `filter` | Attach that many matching cards from your hand to this Pokémon (Teal Dance) | `ChooseCards`, `MoveChosen` |
 | `shuffle_self_into_deck` | — | Shuffle this Pokémon and everything attached into your deck (Run Away Draw) | `ShuffleSelfIntoDeck` |
 | `counters_on_self` | `count` (1) | Put damage counters on "this Pokémon" (Risky Ruins, where "this Pokémon" is the one put on the Bench) | `CountersOnSelf` |
@@ -58,7 +60,7 @@ Each block is a JSON object with an `"op"`:
 | `heal_self` | `amount` or `all` | Heal `amount` damage (a multiple of 10, at most 990), or all of it, from this Pokémon | `HealSelf` |
 | `heal_to` | `amount` or `all`, `targets` (1), `up_to`, `each`, `on`, `player` (`"you"`) | Choose that many of your **damaged** Pokémon, or every one with `"each": true`, and heal each. With no damaged Pokémon, nothing happens | `ChooseTargets`, `HealTargets` |
 | `ignore_defender_effects` | — | "This attack's damage isn't affected by any effects on your opponent's Active Pokémon" (Shred): the printed Weakness and Resistance are used and defender-side effects skipped. Must come before a placed `damage` step. Attacks only | `IgnoreDefenderEffects` |
-| `lasting` | `effect`, `until`, `on` (`"self"`), `player`, `amount`, `only_ex`, `prevent_effects`, `from_basic` | A [lasting effect](../../engine/actions/lasting.md). `effect`: `"cant_attack"`, `"cant_use_attack"` (this attack), `"cant_retreat"`, `"no_items"`, `"damage_bonus"`, `"takes_less"`, `"prevent_damage"`, `"deals_less"`, `"takes_more"`, `"attack_flip"`. `until`: `"this_turn"`, `"opponents_next_turn"`, `"your_next_turn"`. `on`: `"self"` or `"defending"` for the first three (attacks only); `"player"` (with `player`) for `no_items`; `"player"` or `"self"` for `damage_bonus`; `"self"` for `takes_less` and `prevent_damage`; `"defending"` for `deals_less`, `takes_more` and `attack_flip`. `takes_less`, `deals_less`, `takes_more` and `damage_bonus` need a positive `amount`; for `prevent_damage`, an `amount` prevents only damage up to it, `from_basic` only damage from Basic Pokémon, and `prevent_effects` the attacks' effects too | `AddLasting` |
+| `lasting` | `effect`, `until`, `on` (`"self"`), `player`, `amount`, `only_ex`, `prevent_effects`, `from_basic`, `attacker` | A [lasting effect](../../engine/actions/lasting.md). `effect`: `"cant_attack"`, `"cant_use_attack"` (this attack), `"cant_retreat"`, `"no_items"`, `"damage_bonus"`, `"takes_less"`, `"prevent_damage"`, `"deals_less"`, `"takes_more"`, `"attack_flip"`. `until`: `"this_turn"`, `"opponents_next_turn"`, `"your_next_turn"`. `on`: `"self"` or `"defending"` for the first three (attacks only); `"player"` (with `player`) for `no_items`; `"player"` or `"self"` for `damage_bonus`; `"self"` for `takes_less` and `prevent_damage`; `"defending"` for `deals_less`, `takes_more` and `attack_flip`. `takes_less`, `deals_less`, `takes_more` and `damage_bonus` need a positive `amount`; for `prevent_damage`, an `amount` prevents only damage up to it, `from_basic` only damage from Basic Pokémon, and `prevent_effects` the attacks' effects too; for `damage_bonus`, `attacker` limits it to attackers without a Rule Box (`{"rule_box": false}`) or of a type (`{"type": "fighting"}`) | `AddLasting` |
 | `if` | `condition`, `then`, `else` (optional) | Do `then` if the [condition](#conditions) holds when the step runs, otherwise `else` | `JumpUnless`, `then`, `Jump`, `else` |
 
 - Cards moved to a hand, deck or discard pile always go to **their owner's**, even when the effect is
@@ -123,6 +125,8 @@ applied afterwards, in the [damage pipeline](../../engine/rules/rules.md#the-dam
 | `tera` | `true` / `false`: a Tera Pokémon or not |
 | `special` | `true` / `false`: a Special Energy or not |
 | `has_attack` | A Pokémon with an attack of that name ("that has the Round attack") |
+| `has_ability`, `has_any_ability` | A Pokémon with an Ability of that name, or with any Ability (on its card) |
+| `mega` | `true` / `false`: a Mega Evolution Pokémon ex or not |
 | `any_of` | A list of filters; at least one must match ("a Pokémon or a Basic Energy card") |
 
 Every field given must match; `{}` (or no filter) matches any card.
@@ -163,6 +167,7 @@ Each is an object with one key, from the point of view of the player the card be
 | `{"self_damaged": true}` | This Pokémon has damage counters, or with `false` has none (only inside an effect) |
 | `{"self_has_tool": true}` | This Pokémon has a Pokémon Tool attached (only inside an effect) |
 | `{"bench_damaged": true}` | One of your Benched Pokémon has damage counters |
+| `{"hand_besides_at_most": N}` | At most N cards in hand besides the card being played (`0`: "only when it is the last card in your hand") |
 | `{"extra_energy_at_least": N}` | This Pokémon has at least N Energy beyond this attack's cost (only inside an attack) |
 | `{"custom": name}` | A [one-of-a-kind card](../../engine/effects/custom.md)'s own check (`rare_candy`, `transformation_tome`) |
 
@@ -181,7 +186,7 @@ for as long as the card is in play:
 
 | Field | Meaning |
 |---|---|
-| `modify` | `"max_hp"`, `"retreat_cost"`, `"weakness_type"` (needs `type`) `"damage_dealt"` (attacks by the Pokémon do `add` more to the opponent's Active, before Weakness), `"bench_size"` (needs `set`: the owner of each Pokémon it applies to gets that many Bench spaces), `"damage_taken"` (the Pokémon takes `add` more from attacks, after Weakness and Resistance; negative for less), `"prevent_damage"` (no damage from the opponent's attacks, from attackers matching `from`) or `"prevent_effects"` (no effects of the opponent's attacks) |
+| `modify` | `"max_hp"`, `"retreat_cost"`, `"weakness_type"` (needs `type`) `"damage_dealt"` (attacks by the Pokémon do `add` more to the opponent's Active, before Weakness), `"bench_size"` (needs `set`: the owner of each Pokémon it applies to gets that many Bench spaces), `"damage_taken"` (the Pokémon takes `add` more from attacks, after Weakness and Resistance; negative for less), `"prevent_damage"` (no damage from the opponent's attacks, from attackers matching `from`) `"prevent_effects"` (no effects of the opponent's attacks), `"prevent_bench_counters"` (no damage counters on Benched Pokémon from the opponent's attacks and Abilities), `"no_abilities"`, `"no_ace_spec"` (the opponent can't play ACE SPEC cards), `"prizes_given"` (`add` to the Prize cards a Knock Out by an attack gives), `"attacks_per_turn"` (needs `set`), `"special_condition_immune"`, `"evolve_same_turn"` (Pokémon matching `filter` can evolve into ones matching `evolution` the turn they're played, except on the first turns) or `"energy_provides"` (each Energy matching `energy` attached to a Pokémon it applies to provides `set` of `type`; the first one in play wins, so it doesn't stack) |
 | `add` / `set` | A change, or a new value. A `set` wins over `add`s ("has no Retreat Cost") |
 | `type` | For `weakness_type`: the new Weakness type. A Pokémon with no printed Weakness gets one, ×2 |
 | `applies_to` | `"holder"` (the default: the Pokémon the Tool is attached to, or the Pokémon with the Ability), `"yours"`, `"opponents"` or `"all"` (everyone's Pokémon in play) |
@@ -190,6 +195,15 @@ for as long as the card is in play:
 | `if_tera_in_play` | For `bench_size`: only for a player with a Tera Pokémon in play (Area Zero Underdepths) |
 | `from` | For `prevent_damage`: only attacks by Pokémon matching this filter (`{"rule_box": true}`: Pokémon ex) |
 | `if_active`, `if_benched` | Only while the Pokémon with the Ability or Tool is Active, or on the Bench |
+| `target_active`, `target_benched` | Only for an Active, or a Benched, Pokémon it applies to |
+| `if_energy_attached` | Only for a Pokémon with Energy attached (Festival Grounds) |
+| `if_holder_tool` | Only while the Pokémon with the Ability has a Tool (ACE Nullifier) |
+| `only_vs_ex` | For `damage_dealt`: only against a Pokémon ex (Brave Bangle) |
+| `if_stadium` | Only while a Stadium of that name is in play (Festival Lead) |
+| `except` | Not for a Pokémon with an Ability of that name (Midnight Fluttering) |
+| `energy`, `evolution` | The Energy (`energy_provides`) or the evolution card (`evolve_same_turn`) it's about |
+
+A Special Energy's `passive` applies to the Pokémon it's attached to, as a Tool's does (Mist Energy, Growing Grass Energy).
 
 `compile_passive(json)` compiles a list; mistakes throw `CardDataError`.
 
@@ -266,6 +280,7 @@ An Ability or a Stadium can say `"trigger"` to run its `effects` on its own inst
 | `"put_on_bench"` | A Stadium: whenever a player puts a Pokémon onto their Bench during their turn, by any means |
 | `"evolved"` | An Ability: when you play this Pokémon from your hand to evolve one of your Pokémon (Rare Candy too) |
 | `"damaged_by_attack"` | An Ability: when this Pokémon, in the Active Spot, is damaged by the opponent's attack, even if it's then Knocked Out. "The Attacking Pokémon" is the opponent's Active |
+| `"attached_from_hand"` | A Special Energy: when it's attached from the hand. Its `requires` are checked with "this Pokémon" as the Pokémon it went on (Telepathic Psychic Energy, Enriching Energy) |
 
 See [triggered effects](../../engine/actions/abilities.md#triggered-effects). `trigger_from_string`
 reads the name; an unknown one is a `CardDataError`.

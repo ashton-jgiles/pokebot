@@ -176,7 +176,7 @@ translates one. After the Greninja fix, the old decks mustn't change: each step 
 | 3b.4 | Lasting effects and damage passives, built in one step: the engine's lasting kinds, damage passives and prevention, the translator's sentences, and the runs. *Built: all 502 tests pass, 81 hand-written texts the same with the same 7 not read, 1,132 of the 2,097 cards complete (54.0%), and the reference run repeats in what's played. The audit with the right words found none of 50 wrong. Timed back to back against 3b.3, the same games took about 6 to 8% longer, and after a speed fix they're level. Results below* | ✅ |
 | 3b.5 | **Ranked vocabulary**, 3b.5 and 3b.6 merged (2026-11-26): the sentences worth the most complete cards first, whatever their kind, until 60% or the list flattens. *Done: 1,276 of 2,097 cards complete (60.8%) after three batches. The plan and results are below* | ✅ |
 | 3b.6 | Merged into 3b.5 | — |
-| 3b.7 | The four decks: hand-written and custom cards | ⬜ |
+| 3b.7 | The four decks: hand-written and custom cards, built in one step (2026-11-26): 31 effects files' texts on 28 cards, with the engine they need. *Built, not yet tested or run. The decks stay in `incoming/` until a new reference run is decided* | 🔄 |
 | 3b.8 | Audit, stress runs, sign-off | ⬜ |
 
 **Rules for the re-measurement (2026-11-25, before any run):** after the fix, IS-MCTS with the final θ plays hand θ, 6,400 games on seeds from
@@ -244,6 +244,27 @@ grammar, against the downloaded sets (distinct cards in each list):
   Their sets aren't in `sets.json`, so the importer can't find them yet.
 - **Variants for later:** other `basic-box` and `dragapult` lists, and `basic-box` lists with Mew ex or Mega Rayquaza ex,
   as [archetype lists](data/archetypes/README.md). Mega Rayquaza ex is a Delta Reign card, whose data isn't trusted yet.
+
+**3b.7's design (2026-11-26, before any of it was built):** the four incoming decks need 31 texts on 28 cards, most of them engine
+work: passives on Special Energy; Ability locks (a Stadium's, and the Active facing Flutter Mane); Energy that provides two (Wild
+Growth); evolving the turn played (Forest of Vitality); immunity to Special Conditions (Festival Grounds); no counters on the Bench
+(Battle Cage); an ACE SPEC lock (ACE Nullifier); one fewer Prize (Lillie's Pearl); attacking twice (Festival Lead); a trigger on
+attaching Energy from the hand (Telepathic Psychic Energy, Enriching Energy); counters for each card in hand (Powerful Hand);
+"choose 1" (Kieran); the last card in hand and a damage bonus by attacker (Gladion's Final Battle, Premium Power Pro); healing a
+Mega and taking its Energy (Wally's Compassion); looking at the top with "up to" and a shuffle (Bug Catching Set); protection of
+Benched Pokémon (Spherical Shield, Flower Curtain); `has_ability` filters (Cornerstone Stance, Boom Boom Groove); and Brave
+Bangle's bonus against Pokémon ex. Each card's effects file keeps what the translator already read of it, so the hand-written
+check compares those parts too. Cornerstone Mask Ogerpon ex is recorded as Tera, as the other masks are.
+
+**Its rules (2026-11-26, before any of it was built):** every card of the four decks has its effects; every new engine piece has a
+test; the hand-written check passes, with the new texts it can't read added to the pinned list; random games with the four decks
+keep every card accounted for and every invariant; the reference run repeats 158 to 162 while the decks stay in `incoming/`.
+Moving them into `data/decks` changes the reference run, so it's a step of its own, with a new baseline decided first.
+
+**Known approximations:** an Ability lock is all or nothing (a Pokémon with the excepted Ability keeps all of its Abilities); a
+locked Pokémon still counts as "has an Ability" for `has_ability` filters; Festival Grounds clears a Special Condition at Pokémon
+Checkup or when Energy is attached from the hand, not the moment it's played; Wally's Compassion needs any damaged Pokémon to be
+played; Kieran's two choices are asked as yes or no.
 
 **Why 3b.5 and 3b.6 were merged (2026-11-26):** 3b.5's own vocabulary (triggers, Abilities with costs, locks, HP and
 Retreat Cost) is a long tail. Of Standard's 300 Ability texts, the commonest unread shapes are evolving from the hand (10),

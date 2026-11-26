@@ -28,6 +28,8 @@ namespace pokebot {
             effect.only_ex = step.lasting.only_ex;
             effect.prevent_effects = step.lasting.prevent_effects;
             effect.from_basic = step.lasting.from_basic;
+            effect.attacker_no_rule_box = step.lasting.attacker_no_rule_box;
+            effect.attacker_type = step.lasting.attacker_type;
             switch (step.lasting.on) {
                 case LastingOn::Self:
                     effect.player = run.who.player;

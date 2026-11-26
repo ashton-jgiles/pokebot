@@ -75,7 +75,7 @@ namespace pokebot {
                     ++game.history.this_turn().knocked_out_by_attack[static_cast<std::size_t>(owner)];
                 }
                 end_effects_on(game, pokemon.id());
-                const int prizes = rules::prize_value(game, pokemon);
+                const int prizes = rules::prize_value(game, pokemon, by_attack);
                 discard_pokemon(game, pokemon);
                 take_prizes(game, opponent_of(owner), prizes);
             }

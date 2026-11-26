@@ -44,7 +44,12 @@ explicit CardTable(const std::array<const CardDef*, kMaxCards>& defs);
 const CardDef& def(CardIndex card) const;
 CardTable shuffled(std::uint64_t seed) const;
 bool has_damage_passives() const;
+bool has_modifier(Modifies what) const;
+bool has_energy_modifiers() const;
 ```
+
+`has_modifier(what)` says whether any card in the game has a passive of that kind, and `has_energy_modifiers()` whether
+any Energy has one.
 
 `has_damage_passives()` says whether any card in the game has a `damage_taken`, `prevent_damage` or `prevent_effects`
 passive, worked out once when the table is built. The damage pipeline and effects prevention skip looking through the

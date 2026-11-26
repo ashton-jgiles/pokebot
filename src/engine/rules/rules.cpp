@@ -29,16 +29,19 @@ namespace pokebot::rules {
             return false;
         }
 
+        bool abilities_locked(const GameState& game, const PokemonInPlay& pokemon);
+
         // Calls visit(modifier, owner, holder) for every passive modifier in play: the Stadium's, each Tool's and each
         // Ability's. holder is the Pokemon a Tool is attached to or the Pokemon with the Ability, or nullptr for a Stadium.
         template <class Visit>
-        void each_modifier(const GameState& game, Visit visit) {
+        void visit_modifiers(const GameState& game, Visit visit, bool check_locks) {
             const CardIndex stadium = stadium_in_play(game);
             if (stadium != kNoCard) {
                 for (const Modifier& m : game.def(stadium).modifiers) {
                     visit(m, owner_of(stadium), nullptr);
                 }
             }
+            const bool energy = game.cards->has_energy_modifiers();
             for (int p = 0; p < kPlayers; ++p) {
                 const PlayerState& player = game.player(p);
                 const auto each_pokemon = [&](const PokemonInPlay& pokemon) {
@@ -46,6 +49,16 @@ namespace pokebot::rules {
                         for (const Modifier& m : game.def(pokemon.tool).modifiers) {
                             visit(m, p, &pokemon);
                         }
+                    }
+                    if (energy) {
+                        for (const CardIndex card : pokemon.energy) {
+                            for (const Modifier& m : game.def(card).modifiers) {
+                                visit(m, p, &pokemon);
+                            }
+                        }
+                    }
+                    if (check_locks && abilities_locked(game, pokemon)) {
+                        return;
                     }
                     for (const Ability& ability : game.def(pokemon.top()).abilities) {
                         for (const Modifier& m : ability.modifiers) {
@@ -60,6 +73,11 @@ namespace pokebot::rules {
                     each_pokemon(pokemon);
                 }
             }
+        }
+
+        template <class Visit>
+        void each_modifier(const GameState& game, Visit visit) {
+            visit_modifiers(game, visit, game.cards->has_modifier(Modifies::NoAbilities));
         }
 
         bool applies(const GameState& game, const Modifier& m, int owner, const PokemonInPlay* holder, const PokemonInPlay& target) {
@@ -81,7 +99,48 @@ namespace pokebot::rules {
             if ((m.only_if_active || m.only_if_benched) && (holder == nullptr || is_active(game, *holder) != m.only_if_active)) {
                 return false;
             }
+            if ((m.only_target_active || m.only_target_benched) && is_active(game, target) != m.only_target_active) {
+                return false;
+            }
+            if ((m.only_if_target_energy && target.energy.empty()) || (m.only_if_holder_tool && (holder == nullptr || holder->tool == kNoCard))) {
+                return false;
+            }
+            if (!m.only_with_stadium.empty()) {
+                const CardIndex stadium = stadium_in_play(game);
+                if (stadium == kNoCard || game.def(stadium).name != m.only_with_stadium) {
+                    return false;
+                }
+            }
+            if (!m.except_ability.empty()) {
+                const auto& abilities = game.def(target.top()).abilities;
+                if (std::any_of(abilities.begin(), abilities.end(), [&](const Ability& ability) { return ability.name == m.except_ability; })) {
+                    return false;
+                }
+            }
             return in_reach && matches(m.filter, game.def(target.top())) && (!m.only_if_poisoned || target.special.poison > 0);
+        }
+
+        bool abilities_locked(const GameState& game, const PokemonInPlay& pokemon) {
+            bool locked = false;
+            visit_modifiers(
+                game,
+                [&](const Modifier& m, int owner, const PokemonInPlay* holder) {
+                    locked = locked || (m.what == Modifies::NoAbilities && applies(game, m, owner, holder, pokemon));
+                },
+                false);
+            return locked;
+        }
+
+        template <class Test>
+        bool any_modifier(const GameState& game, Modifies what, Test test) {
+            if (!game.cards->has_modifier(what)) {
+                return false;
+            }
+            bool found = false;
+            each_modifier(game, [&](const Modifier& m, int owner, const PokemonInPlay* holder) {
+                found = found || (m.what == what && test(m, owner, holder));
+            });
+            return found;
         }
 
         bool lasting_on(const GameState& game, const LastingEffect& effect, LastingKind kind, const PokemonInPlay& pokemon) {
@@ -100,7 +159,7 @@ namespace pokebot::rules {
             const CardDef& attacking = game.def(attacker.top());
             each_modifier(game, [&](const Modifier& m, int owner, const PokemonInPlay* holder) {
                 if (m.what == Modifies::DamageDealt) {
-                    if (defender_active && applies(game, m, owner, holder, attacker)) {
+                    if (defender_active && applies(game, m, owner, holder, attacker) && (!m.only_vs_ex || game.def(defender.top()).rules.ex)) {
                         totals.dealt += m.add;
                     }
                 } else if (m.what == Modifies::DamageTaken) {
@@ -119,9 +178,12 @@ namespace pokebot::rules {
         int attacker_side(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender, int damage) {
             const int player = owner_of(attacker.id());
             const bool defender_ex = game.def(defender.top()).rules.ex;
+            const CardDef& attacking = game.def(attacker.top());
             for (const LastingEffect& effect : game.lasting) {
                 if (effect.kind == LastingKind::DamageBonus && effect.turn == game.turn && effect.player == player &&
-                    (effect.pokemon == kNoCard || effect.pokemon == attacker.id()) && is_active(game, defender) && (!effect.only_ex || defender_ex)) {
+                    (effect.pokemon == kNoCard || effect.pokemon == attacker.id()) && is_active(game, defender) && (!effect.only_ex || defender_ex) &&
+                    (!effect.attacker_no_rule_box || !attacking.rules.ex) &&
+                    (!effect.attacker_type || std::find(attacking.types.begin(), attacking.types.end(), *effect.attacker_type) != attacking.types.end())) {
                     damage += effect.amount;
                 }
                 if (lasting_on(game, effect, LastingKind::DealsLess, attacker)) {
@@ -229,6 +291,20 @@ namespace pokebot::rules {
     EnergyUnits energy_provided(const GameState& game, const PokemonInPlay& pokemon, CardIndex energy) {
         const CardDef& def = game.def(energy);
         EnergyUnits units;
+        if (game.cards->has_modifier(Modifies::EnergyProvides)) {
+            std::optional<Modifier> changed;
+            each_modifier(game, [&](const Modifier& m, int owner, const PokemonInPlay* holder) {
+                if (!changed && m.what == Modifies::EnergyProvides && applies(game, m, owner, holder, pokemon) && matches(m.energy, def)) {
+                    changed = m;
+                }
+            });
+            if (changed) {
+                for (int i = 0; i < *changed->set; ++i) {
+                    units.push_back(energy_mask(*changed->type));
+                }
+                return units;
+            }
+        }
         for (const ConditionalProvides& when : def.conditional_provides) {
             if (matches(when.holder, game.def(pokemon.top()))) {
                 for (const EnergyMask unit : when.provides) {
@@ -251,8 +327,16 @@ namespace pokebot::rules {
         return total;
     }
 
-    int prize_value(const GameState& game, const PokemonInPlay& pokemon) {
-        return game.def(pokemon.top()).prize_value();
+    int prize_value(const GameState& game, const PokemonInPlay& pokemon, bool by_attack) {
+        int prizes = game.def(pokemon.top()).prize_value();
+        if (by_attack && game.cards->has_modifier(Modifies::PrizesGiven)) {
+            each_modifier(game, [&](const Modifier& m, int owner, const PokemonInPlay* holder) {
+                if (m.what == Modifies::PrizesGiven && applies(game, m, owner, holder, pokemon)) {
+                    prizes += m.add;
+                }
+            });
+        }
+        return std::max(prizes, 0);
     }
 
     bool is_active(const GameState& game, const PokemonInPlay& pokemon) {
@@ -260,8 +344,13 @@ namespace pokebot::rules {
         return p.active && p.active->id() == pokemon.id();
     }
 
+    bool special_conditions_immune(const GameState& game, const PokemonInPlay& pokemon) {
+        return any_modifier(game, Modifies::SpecialConditionImmune,
+                            [&](const Modifier& m, int owner, const PokemonInPlay* holder) { return applies(game, m, owner, holder, pokemon); });
+    }
+
     bool can_get_special_condition(const GameState& game, const PokemonInPlay& pokemon, SpecialCondition) {
-        return is_active(game, pokemon);
+        return is_active(game, pokemon) && !special_conditions_immune(game, pokemon);
     }
 
     int poison_counters(const GameState&, const PokemonInPlay& pokemon) {
@@ -310,8 +399,8 @@ namespace pokebot::rules {
                !lasting_applies(game, LastingKind::CantAttack, player, p.active->id());
     }
 
-    bool has_abilities(const GameState&, const PokemonInPlay&) {
-        return true;
+    bool has_abilities(const GameState& game, const PokemonInPlay& pokemon) {
+        return !game.cards->has_modifier(Modifies::NoAbilities) || !abilities_locked(game, pokemon);
     }
 
     bool can_use_attack(const GameState& game, const PokemonInPlay& pokemon, std::size_t attack) {
@@ -350,12 +439,46 @@ namespace pokebot::rules {
         return kNoCard;
     }
 
-    int attacks_per_turn(const GameState&, const PokemonInPlay&) {
-        return 1;
+    int attacks_per_turn(const GameState& game, const PokemonInPlay& pokemon) {
+        int attacks = 1;
+        if (game.cards->has_modifier(Modifies::AttacksPerTurn)) {
+            each_modifier(game, [&](const Modifier& m, int owner, const PokemonInPlay* holder) {
+                if (m.what == Modifies::AttacksPerTurn && applies(game, m, owner, holder, pokemon)) {
+                    attacks = std::max(attacks, *m.set);
+                }
+            });
+        }
+        return attacks;
     }
 
     bool can_evolve(const GameState& game, const PokemonInPlay& pokemon) {
         return !is_first_turn(game) && pokemon.turn_played != game.turn && !pokemon.stack.full();
+    }
+
+    bool can_evolve_into(const GameState& game, const PokemonInPlay& pokemon, CardIndex evolution) {
+        if (!evolves_into(game, pokemon, evolution)) {
+            return false;
+        }
+        if (can_evolve(game, pokemon)) {
+            return true;
+        }
+        if (is_first_turn(game) || pokemon.turn_played != game.turn || pokemon.stack.full()) {
+            return false;
+        }
+        const CardDef& into = game.def(evolution);
+        return any_modifier(game, Modifies::EvolveSameTurn, [&](const Modifier& m, int owner, const PokemonInPlay* holder) {
+            return applies(game, m, owner, holder, pokemon) && matches(m.evolution, into);
+        });
+    }
+
+    bool bench_counters_prevented(const GameState& game) {
+        return any_modifier(game, Modifies::PreventBenchCounters, [](const Modifier&, int, const PokemonInPlay*) { return true; });
+    }
+
+    bool can_play_ace_spec(const GameState& game, int player) {
+        return !any_modifier(game, Modifies::NoAceSpec, [&](const Modifier& m, int owner, const PokemonInPlay* holder) {
+            return owner != player && (!m.only_if_holder_tool || (holder != nullptr && holder->tool != kNoCard));
+        });
     }
 
     bool evolves_into(const GameState& game, const PokemonInPlay& pokemon, CardIndex evolution) {

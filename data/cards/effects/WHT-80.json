@@ -1,0 +1,1 @@
+{"passive": [{"modify": "damage_dealt", "add": 30, "filter": {"rule_box": false}, "only_vs_ex": true}]}

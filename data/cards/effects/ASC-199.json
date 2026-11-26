@@ -1,0 +1,1 @@
+{"effects": [{"op": "lasting", "effect": "damage_bonus", "on": "player", "amount": 30, "until": "this_turn", "attacker": {"type": "fighting"}}]}

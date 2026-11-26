@@ -1,0 +1,1 @@
+{"effects": [{"op": "look_at_top", "count": 7, "take": 2, "up_to": true, "reveal": true, "rest": "shuffle", "filter": {"any_of": [{"kind": "pokemon", "type": "grass"}, {"kind": "energy", "basic": true, "type": "grass"}]}}]}

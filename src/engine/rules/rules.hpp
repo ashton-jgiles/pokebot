@@ -26,7 +26,7 @@ namespace pokebot::rules {
     EnergyUnits energy_provided(const GameState& game, const PokemonInPlay& pokemon, CardIndex energy);
     // The total Energy units attached to the Pokemon: what pays its attack costs and Retreat Cost.
     std::size_t energy_units(const GameState& game, const PokemonInPlay& pokemon);
-    int prize_value(const GameState& game, const PokemonInPlay& pokemon);
+    int prize_value(const GameState& game, const PokemonInPlay& pokemon, bool by_attack = true);
     bool is_active(const GameState& game, const PokemonInPlay& pokemon);
     bool can_get_special_condition(const GameState& game, const PokemonInPlay& pokemon, SpecialCondition condition);
     int poison_counters(const GameState& game, const PokemonInPlay& pokemon);
@@ -53,6 +53,10 @@ namespace pokebot::rules {
     bool damage_prevented(const GameState& game, const PokemonInPlay& attacker, const PokemonInPlay& defender);
     bool effects_prevented(const GameState& game, const PokemonInPlay& pokemon);
     bool effects_prevention_in_play(const GameState& game);
+    bool bench_counters_prevented(const GameState& game);
+    bool special_conditions_immune(const GameState& game, const PokemonInPlay& pokemon);
+    bool can_play_ace_spec(const GameState& game, int player);
+    bool can_evolve_into(const GameState& game, const PokemonInPlay& pokemon, CardIndex evolution);
     bool attack_needs_flip(const GameState& game, const PokemonInPlay& attacker);
     // ignore_defender_effects: "this attack's damage isn't affected by any effects on your opponent's Active Pokemon"
     struct DamageOptions {

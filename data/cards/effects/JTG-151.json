@@ -1,0 +1,1 @@
+{"passive": [{"modify": "prizes_given", "add": -1, "filter": {"name_prefix": "Lillie's"}}]}

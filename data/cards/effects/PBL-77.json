@@ -1,0 +1,1 @@
+{"requires": [{"hand_besides_at_most": 0}], "effects": [{"op": "lasting", "effect": "damage_bonus", "on": "player", "amount": 80, "until": "this_turn", "attacker": {"rule_box": false}}]}

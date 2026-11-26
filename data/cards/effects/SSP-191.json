@@ -1,0 +1,1 @@
+{"provides": ["colorless"], "trigger": "attached_from_hand", "effects": [{"op": "draw", "count": 4}]}

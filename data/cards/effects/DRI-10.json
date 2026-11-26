@@ -1,0 +1,1 @@
+{"abilities": {"Flower Curtain": {"passive": [{"modify": "prevent_damage", "applies_to": "yours", "target_benched": true, "filter": {"rule_box": false}}]}}}

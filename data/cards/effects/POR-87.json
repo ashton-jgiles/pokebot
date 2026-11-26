@@ -1,0 +1,1 @@
+{"provides": ["fighting"], "passive": [{"modify": "prevent_effects", "filter": {"type": "fighting"}}]}

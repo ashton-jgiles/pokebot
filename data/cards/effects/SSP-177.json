@@ -1,0 +1,1 @@
+{"passive": [{"modify": "max_hp", "add": -30, "applies_to": "all", "filter": {"stage": "stage2"}}]}

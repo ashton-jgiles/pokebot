@@ -1,0 +1,1 @@
+{"requires": [{"discard_has": {"kind": "pokemon"}}], "effects": [{"op": "from_discard", "count": 5, "up_to": true, "to": "deck", "filter": {"kind": "pokemon"}}, {"op": "shuffle_deck"}]}

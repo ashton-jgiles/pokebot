@@ -1,0 +1,1 @@
+{"attacks": {"Cosmic Beam": {"effects": [{"op": "ignore_weakness"}, {"op": "ignore_resistance"}, {"op": "if", "condition": {"bench_has": {"name": "Lunatone"}}, "then": [{"op": "damage"}]}]}}}

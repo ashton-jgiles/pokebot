@@ -1,0 +1,1 @@
+{"effects": [{"op": "choose_one", "options": [[{"op": "switch_active"}], [{"op": "lasting", "effect": "damage_bonus", "on": "player", "amount": 30, "only_ex": true, "until": "this_turn"}]]}]}

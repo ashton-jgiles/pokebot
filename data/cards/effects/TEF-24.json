@@ -1,0 +1,1 @@
+{"attacks": {"Psychic": {"effects": [{"for_each": {"of": "active_energy", "player": "opponent"}, "op": "add_damage", "per": 30}, {"op": "damage"}]}}, "abilities": {"Spherical Shield": {"passive": [{"modify": "prevent_damage", "applies_to": "yours", "target_benched": true}, {"modify": "prevent_effects", "applies_to": "yours", "target_benched": true}]}}}

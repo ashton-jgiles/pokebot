@@ -1,0 +1,1 @@
+{"passive": [{"modify": "special_condition_immune", "applies_to": "all", "if_energy_attached": true}]}

@@ -1,0 +1,1 @@
+{"abilities": {"Psychic Draw": {"effects": [{"effects": [{"count": 3, "op": "draw"}], "op": "may"}], "trigger": "evolved"}}, "attacks": {"Powerful Hand": {"effects": [{"op": "counters_to", "on": "active", "per": 2, "for_each": {"of": "hand"}}]}}}

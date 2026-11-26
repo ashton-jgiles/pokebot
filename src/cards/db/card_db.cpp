@@ -99,7 +99,8 @@ namespace pokebot {
             }
         }
         try {
-            if (card.trainer_kind == TrainerKind::Item || card.trainer_kind == TrainerKind::Supporter || card.trainer_kind == TrainerKind::Stadium) {
+            if (card.trainer_kind == TrainerKind::Item || card.trainer_kind == TrainerKind::Supporter || card.trainer_kind == TrainerKind::Stadium ||
+                (card.kind == CardKind::Energy && card.trigger != Trigger::None)) {
                 card.program = compile_trainer(card.effects);
             }
             card.conditions = compile_conditions(card.requirements);

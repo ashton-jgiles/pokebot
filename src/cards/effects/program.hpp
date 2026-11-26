@@ -81,6 +81,7 @@ namespace pokebot {
         DiscardTools,
         DiscardRandom,
         DiscardDeckTop,
+        TargetEnergyToHand,
     };
 
     enum class StageFilter : std::uint8_t {
@@ -106,6 +107,9 @@ namespace pokebot {
         std::optional<bool> tera;
         std::optional<bool> special;
         std::string has_attack;
+        std::optional<bool> mega;
+        std::string has_ability;
+        std::optional<bool> has_any_ability;
         std::vector<CardFilter> any_of;
 
         bool operator==(const CardFilter&) const = default;
@@ -143,6 +147,7 @@ namespace pokebot {
         SelfHasTool,
         BenchDamaged,
         ExtraEnergyAtLeast,
+        HandBesidesAtMost,
     };
 
     // The one-of-a-kind cards with their own C++.
@@ -158,6 +163,7 @@ namespace pokebot {
         PutOnBench,    // a Stadium: "whenever any player puts a Pokemon onto their Bench during their turn"
         Evolved,
         DamagedByAttack,
+        AttachedFromHand,
     };
 
     struct Condition {
@@ -227,6 +233,8 @@ namespace pokebot {
         bool only_ex = false;
         bool prevent_effects = false;
         bool from_basic = false;
+        bool attacker_no_rule_box = false;
+        std::optional<EnergyType> attacker_type;
 
         bool operator==(const LastingSpec&) const = default;
     };
@@ -268,6 +276,14 @@ namespace pokebot {
         DamageTaken,
         PreventDamage,
         PreventEffects,
+        PreventBenchCounters,
+        NoAbilities,
+        NoAceSpec,
+        PrizesGiven,
+        AttacksPerTurn,
+        SpecialConditionImmune,
+        EvolveSameTurn,
+        EnergyProvides,
     };
 
     enum class AppliesTo : std::uint8_t {
@@ -289,6 +305,15 @@ namespace pokebot {
         CardFilter from;
         bool only_if_active = false;
         bool only_if_benched = false;
+        bool only_target_active = false;
+        bool only_target_benched = false;
+        bool only_if_target_energy = false;
+        bool only_if_holder_tool = false;
+        bool only_vs_ex = false;
+        std::string only_with_stadium;
+        std::string except_ability;
+        CardFilter energy;
+        CardFilter evolution;
 
         bool operator==(const Modifier&) const = default;
     };

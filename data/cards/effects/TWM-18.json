@@ -1,0 +1,1 @@
+{"attacks": {"Do the Wave": {"effects": [{"for_each": {"of": "benched"}, "op": "set_damage", "per": 20}, {"op": "damage"}]}}, "abilities": {"Festival Lead": {"passive": [{"modify": "attacks_per_turn", "set": 2, "if_stadium": "Festival Grounds"}]}}}

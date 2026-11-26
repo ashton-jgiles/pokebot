@@ -1,0 +1,1 @@
+{"provides": ["psychic"], "trigger": "attached_from_hand", "requires": [{"self_is": {"type": "psychic"}}], "effects": [{"op": "search_deck", "count": 2, "to": "bench", "filter": {"kind": "pokemon", "stage": "basic", "type": "psychic"}}]}

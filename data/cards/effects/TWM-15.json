@@ -1,0 +1,1 @@
+{"abilities": {"Boom Boom Groove": {"requires": [{"active_is": {"has_ability": "Festival Lead"}}], "effects": [{"op": "search_deck"}]}}}

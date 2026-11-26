@@ -1,0 +1,1 @@
+{"provides": ["grass"], "passive": [{"modify": "max_hp", "add": 20, "filter": {"type": "grass"}}]}

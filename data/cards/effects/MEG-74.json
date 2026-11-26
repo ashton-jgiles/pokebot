@@ -1,0 +1,1 @@
+{"abilities": {"Lunar Cycle": {"one_per_name": true, "requires": [{"in_play_has": {"name": "Solrock"}}, {"hand_has": {"kind": "energy", "basic": true, "type": "fighting"}}], "effects": [{"op": "discard_from_hand", "filter": {"kind": "energy", "basic": true, "type": "fighting"}}, {"op": "draw", "count": 3}]}}}

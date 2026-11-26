@@ -141,6 +141,20 @@ namespace pokebot {
             spec.only_ex = block.value("only_ex", false);
             spec.prevent_effects = block.value("prevent_effects", false);
             spec.from_basic = block.value("from_basic", false);
+            if (block.contains("attacker")) {
+                if (spec.kind != LastingKind::DamageBonus) {
+                    throw CardDataError("\"attacker\" is for 'damage_bonus'");
+                }
+                for (const auto& [key, value] : block.at("attacker").items()) {
+                    if (key == "rule_box" && !value.get<bool>()) {
+                        spec.attacker_no_rule_box = true;
+                    } else if (key == "type") {
+                        spec.attacker_type = energy_type_from_string(value.get<std::string>());
+                    } else {
+                        throw CardDataError("damage_bonus's \"attacker\" is {\"rule_box\": false} or {\"type\": ...}");
+                    }
+                }
+            }
             if ((spec.prevent_effects || spec.from_basic) && spec.kind != LastingKind::PreventDamage) {
                 throw CardDataError("\"prevent_effects\" and \"from_basic\" are for 'prevent_damage'");
             }
@@ -239,6 +253,12 @@ namespace pokebot {
                     filter.special = value.get<bool>();
                 } else if (key == "has_attack") {
                     filter.has_attack = value.get<std::string>();
+                } else if (key == "mega") {
+                    filter.mega = value.get<bool>();
+                } else if (key == "has_ability") {
+                    filter.has_ability = value.get<std::string>();
+                } else if (key == "has_any_ability") {
+                    filter.has_any_ability = value.get<bool>();
                 } else if (key == "any_of") {
                     for (const auto& option : value) {
                         filter.any_of.push_back(parse_filter_fields(option));
@@ -377,6 +397,9 @@ namespace pokebot {
             } else if (key == "extra_energy_at_least") {
                 condition.kind = ConditionKind::ExtraEnergyAtLeast;
                 condition.value = value.get<int>();
+            } else if (key == "hand_besides_at_most") {
+                condition.kind = ConditionKind::HandBesidesAtMost;
+                condition.value = value.get<int>();
             } else {
                 throw CardDataError("unknown condition '" + key + "'");
             }
@@ -486,6 +509,9 @@ namespace pokebot {
                 choose.from = where_on(block);
                 choose.needs_energy = needs_energy;
                 choose.needs_damage = needs_damage;
+                if (block.contains("target")) {
+                    choose.filter = parse_filter_fields(block.at("target"));
+                }
                 if (block.value("each", false) || choose.from == Zone::Active) {
                     if (block.contains("targets") || block.contains("up_to")) {
                         throw CardDataError("\"each\" and \"on\": \"active\" take every matching Pokemon, with no \"targets\" or \"up_to\"");
@@ -820,7 +846,29 @@ namespace pokebot {
                     Step put;
                     put.op = Op::CountersOnTargets;
                     put.max = count_of(block, 1);
+                    if (block.contains("for_each")) {
+                        if (block.contains("count")) {
+                            throw CardDataError("counters_to takes \"count\" or \"per\" and \"for_each\", not both");
+                        }
+                        put.count = parse_count(block.at("for_each"));
+                        put.per = static_cast<std::int16_t>(block.value("per", 1));
+                    }
                     add(put);
+                } else if (op == "target_energy_to_hand") {
+                    add(Op::TargetEnergyToHand);
+                } else if (op == "choose_one") {
+                    const json& options = block.at("options");
+                    if (!options.is_array() || options.size() != 2) {
+                        throw CardDataError("choose_one has 2 \"options\", each a list of effects");
+                    }
+                    const std::size_t ask = program.size();
+                    add(Op::AskYesNo);
+                    blocks(options.at(0));
+                    const std::size_t skip = program.size();
+                    add(Op::Jump);
+                    program[ask].jump = here();
+                    blocks(options.at(1));
+                    program[skip].jump = here();
                 } else if (op == "shuffle_self_into_deck") {
                     add(Op::ShuffleSelfIntoDeck);
                 } else if (op == "look_at_top") {
@@ -831,7 +879,7 @@ namespace pokebot {
                     choose.from = Zone::DeckTop;
                     choose.to = destination(block);
                     choose.amount = look;
-                    choose.min = take;
+                    choose.min = block.value("up_to", false) ? 0 : take;
                     choose.max = take;
                     choose.filter = parse_filter(block);
                     add(choose);
@@ -839,11 +887,19 @@ namespace pokebot {
                     move.op = Op::MoveChosen;
                     move.from = Zone::DeckTop;
                     move.to = choose.to;
+                    move.reveal = reveal_of(block);
                     add(move);
-                    Step rest;
-                    rest.op = Op::RestToBottom;
-                    rest.amount = look;
-                    add(rest);
+                    const std::string rest_to = block.value("rest", "bottom");
+                    if (rest_to == "shuffle") {
+                        add(Op::ShuffleDeck);
+                    } else if (rest_to == "bottom") {
+                        Step rest;
+                        rest.op = Op::RestToBottom;
+                        rest.amount = look;
+                        add(rest);
+                    } else {
+                        throw CardDataError("look_at_top's \"rest\" is \"bottom\" or \"shuffle\"");
+                    }
                 } else if (op == "attach_from_hand") {
                     const std::uint8_t count = count_of(block, 1);
                     choose_and_move(Zone::Hand, Zone::AttachedEnergy, count, count, parse_filter(block));
@@ -1006,6 +1062,16 @@ namespace pokebot {
         if (filter.special && (card.kind == CardKind::Energy && card.energy_kind == EnergyKind::Special) != *filter.special) {
             return false;
         }
+        if (filter.mega && card.rules.mega != *filter.mega) {
+            return false;
+        }
+        if (filter.has_any_ability && card.abilities.empty() == *filter.has_any_ability) {
+            return false;
+        }
+        if (!filter.has_ability.empty() &&
+            std::none_of(card.abilities.begin(), card.abilities.end(), [&](const Ability& ability) { return ability.name == filter.has_ability; })) {
+            return false;
+        }
         if (!filter.has_attack.empty() &&
             std::none_of(card.attacks.begin(), card.attacks.end(), [&](const Attack& attack) { return attack.name == filter.has_attack; })) {
             return false;
@@ -1096,6 +1162,22 @@ namespace pokebot {
                     m.what = Modifies::PreventDamage;
                 } else if (what == "prevent_effects") {
                     m.what = Modifies::PreventEffects;
+                } else if (what == "prevent_bench_counters") {
+                    m.what = Modifies::PreventBenchCounters;
+                } else if (what == "no_abilities") {
+                    m.what = Modifies::NoAbilities;
+                } else if (what == "no_ace_spec") {
+                    m.what = Modifies::NoAceSpec;
+                } else if (what == "prizes_given") {
+                    m.what = Modifies::PrizesGiven;
+                } else if (what == "attacks_per_turn") {
+                    m.what = Modifies::AttacksPerTurn;
+                } else if (what == "special_condition_immune") {
+                    m.what = Modifies::SpecialConditionImmune;
+                } else if (what == "evolve_same_turn") {
+                    m.what = Modifies::EvolveSameTurn;
+                } else if (what == "energy_provides") {
+                    m.what = Modifies::EnergyProvides;
                 } else {
                     throw CardDataError("unknown thing to modify '" + what + "'");
                 }
@@ -1126,10 +1208,27 @@ namespace pokebot {
                 m.from = item.contains("from") ? parse_filter_fields(item.at("from")) : CardFilter{};
                 m.only_if_active = item.value("if_active", false);
                 m.only_if_benched = item.value("if_benched", false);
+                m.only_target_active = item.value("target_active", false);
+                m.only_target_benched = item.value("target_benched", false);
+                m.only_if_target_energy = item.value("if_energy_attached", false);
+                m.only_if_holder_tool = item.value("if_holder_tool", false);
+                m.only_vs_ex = item.value("only_vs_ex", false);
+                m.only_with_stadium = item.value("if_stadium", "");
+                m.except_ability = item.value("except", "");
+                m.energy = item.contains("energy") ? parse_filter_fields(item.at("energy")) : CardFilter{};
+                m.evolution = item.contains("evolution") ? parse_filter_fields(item.at("evolution")) : CardFilter{};
+                if (m.what == Modifies::AttacksPerTurn && !m.set) {
+                    throw CardDataError("'attacks_per_turn' needs \"set\"");
+                }
+                if (m.what == Modifies::EnergyProvides && (!m.set || !m.type)) {
+                    throw CardDataError("'energy_provides' needs \"set\" (how many) and a \"type\"");
+                }
                 if (m.what == Modifies::BenchSize && !m.set) {
                     throw CardDataError("'bench_size' needs \"set\"");
                 }
-                const bool prevents = m.what == Modifies::PreventDamage || m.what == Modifies::PreventEffects;
+                const bool prevents = m.what == Modifies::PreventDamage || m.what == Modifies::PreventEffects || m.what == Modifies::PreventBenchCounters ||
+                                      m.what == Modifies::NoAbilities || m.what == Modifies::NoAceSpec || m.what == Modifies::SpecialConditionImmune ||
+                                      m.what == Modifies::EvolveSameTurn || m.what == Modifies::EnergyProvides;
                 if (!prevents && (m.what == Modifies::WeaknessType ? !m.type : (m.add == 0 && !m.set))) {
                     throw CardDataError("'" + what + "' needs " + (m.what == Modifies::WeaknessType ? "a \"type\"" : "\"add\" or \"set\""));
                 }
@@ -1157,6 +1256,9 @@ namespace pokebot {
         if (name == "damaged_by_attack") {
             return Trigger::DamagedByAttack;
         }
+        if (name == "attached_from_hand") {
+            return Trigger::AttachedFromHand;
+        }
         throw CardDataError("unknown trigger '" + name + "'");
     }
 
@@ -1172,6 +1274,8 @@ namespace pokebot {
                 return "evolved";
             case Trigger::DamagedByAttack:
                 return "damaged_by_attack";
+            case Trigger::AttachedFromHand:
+                return "attached_from_hand";
         }
         return "none";
     }
@@ -1272,6 +1376,8 @@ namespace pokebot {
                 return "discard random cards from the hand";
             case Op::DiscardDeckTop:
                 return "discard from the top of the deck";
+            case Op::TargetEnergyToHand:
+                return "Energy from the target to the hand";
         }
         return "unknown op";
     }

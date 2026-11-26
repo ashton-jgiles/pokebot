@@ -1,0 +1,1 @@
+{"requires": [{"has_damaged": true}], "effects": [{"op": "heal_to", "all": true, "target": {"mega": true}}, {"op": "if", "condition": {"moved_at_least": 1}, "then": [{"op": "target_energy_to_hand"}]}]}
