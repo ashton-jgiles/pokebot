@@ -367,6 +367,8 @@ namespace pokebot {
                 condition.kind = ConditionKind::SelfDamaged;
             } else if (key == "self_has_tool") {
                 condition.kind = ConditionKind::SelfHasTool;
+            } else if (key == "bench_damaged") {
+                condition.kind = ConditionKind::BenchDamaged;
             } else {
                 throw CardDataError("unknown condition '" + key + "'");
             }
@@ -555,11 +557,12 @@ namespace pokebot {
                 }
             }
 
-            void switch_active(Side side, const CardFilter& filter = CardFilter{}) {
+            void switch_active(Side side, const CardFilter& filter = CardFilter{}, bool opponent_chooses = false) {
                 Step choose;
                 choose.op = Op::ChooseBenched;
                 choose.side = side;
                 choose.filter = filter;
+                choose.opponent_chooses = opponent_chooses;
                 add(choose);
 
                 Step swap;
@@ -583,6 +586,14 @@ namespace pokebot {
                     draw.op = Op::Draw;
                     draw.max = count_of(block, 1);
                     draw.side = side_of(block);
+                    if (block.contains("until")) {
+                        const int until = block.at("until").get<int>();
+                        if (until < 1 || until > kMaxCount || block.contains("count")) {
+                            throw CardDataError("draw's \"until\" is a hand size from 1 to 60, with no \"count\"");
+                        }
+                        draw.op = Op::DrawUntil;
+                        draw.max = static_cast<std::uint8_t>(until);
+                    }
                     add(draw);
                 } else if (op == "discard_hand") {
                     add(Op::DiscardHand);
@@ -621,7 +632,28 @@ namespace pokebot {
                     if (side == Side::Each) {
                         throw CardDataError("switch_active is for \"you\" or \"opponent\"");
                     }
-                    switch_active(side, parse_filter(block));
+                    const std::string chooser = block.value("chooser", "you");
+                    if ((chooser != "you" && chooser != "opponent") || (chooser == "opponent" && side != Side::Opponent)) {
+                        throw CardDataError("switch_active's \"chooser\" is \"you\", or \"opponent\" when it's the opponent's Pokemon");
+                    }
+                    switch_active(side, parse_filter(block), chooser == "opponent");
+                } else if (op == "discard_tools") {
+                    Step discard;
+                    discard.op = Op::DiscardTools;
+                    discard.side = opponent_unless_said(block);
+                    add(discard);
+                } else if (op == "discard_random" || op == "discard_deck_top") {
+                    Step discard;
+                    discard.op = op == "discard_random" ? Op::DiscardRandom : Op::DiscardDeckTop;
+                    discard.side = op == "discard_random" ? opponent_unless_said(block) : side_of(block);
+                    discard.max = count_of(block, 1);
+                    if (block.contains("for_each")) {
+                        if (block.contains("count")) {
+                            throw CardDataError(op + " takes \"count\" or \"for_each\", not both");
+                        }
+                        discard.count = parse_count(block.at("for_each"));
+                    }
+                    add(discard);
                 } else if (op == "special_condition") {
                     Step apply;
                     apply.op = Op::ApplySpecialCondition;
@@ -1060,6 +1092,12 @@ namespace pokebot {
         if (name == "put_on_bench") {
             return Trigger::PutOnBench;
         }
+        if (name == "evolved") {
+            return Trigger::Evolved;
+        }
+        if (name == "damaged_by_attack") {
+            return Trigger::DamagedByAttack;
+        }
         throw CardDataError("unknown trigger '" + name + "'");
     }
 
@@ -1071,6 +1109,10 @@ namespace pokebot {
                 return "played_to_bench";
             case Trigger::PutOnBench:
                 return "put_on_bench";
+            case Trigger::Evolved:
+                return "evolved";
+            case Trigger::DamagedByAttack:
+                return "damaged_by_attack";
         }
         return "none";
     }
@@ -1163,6 +1205,14 @@ namespace pokebot {
                 return "ignore Weakness";
             case Op::IgnoreResistance:
                 return "ignore Resistance";
+            case Op::DrawUntil:
+                return "draw until";
+            case Op::DiscardTools:
+                return "discard Pokemon Tools";
+            case Op::DiscardRandom:
+                return "discard random cards from the hand";
+            case Op::DiscardDeckTop:
+                return "discard from the top of the deck";
         }
         return "unknown op";
     }

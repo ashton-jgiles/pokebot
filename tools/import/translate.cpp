@@ -15,8 +15,9 @@ namespace pokebot::import {
 
         using nlohmann::json;
 
-        constexpr std::array<std::string_view, 3> kReminders = {
+        constexpr std::array<std::string_view, 4> kReminders = {
             "(Don't apply Weakness and Resistance for Benched Pokémon.)",
+            "(Your opponent chooses the new Active Pokémon.)",
             "(Pokémon ex, Pokémon V, etc. have Rule Boxes.)",
             "(Apply Weakness as \xC3\x97"
             "2.)",
@@ -499,6 +500,12 @@ namespace pokebot::import {
             if (w.take("this Pokémon has any damage counters on it")) {
                 return json{{"self_damaged", true}};
             }
+            if (w.take("your Benched Pokémon have any damage counters on them")) {
+                return json{{"bench_damaged", true}};
+            }
+            if (w.take("you discarded a Pokémon Tool in this way")) {
+                return json{{"moved_at_least", 1}};
+            }
             if (w.take("this Pokémon has a Pokémon Tool attached")) {
                 return json{{"self_has_tool", true}};
             }
@@ -742,8 +749,25 @@ namespace pokebot::import {
             }
         }
 
+        void drop_marks(json& blocks) {
+            for (json& block : blocks) {
+                if (!block.is_object()) {
+                    continue;
+                }
+                block.erase("_if_you_do");
+                for (const char* list : {"effects", "then", "else"}) {
+                    if (block.contains(list)) {
+                        drop_marks(block.at(list));
+                    }
+                }
+            }
+        }
+
         void implied_requirements(const json& blocks, json& requirements) {
             for (const json& block : blocks) {
+                if (block.value("_if_you_do", false)) {
+                    continue;
+                }
                 const std::string op = block.value("op", "");
                 const json filter = block.value("filter", json::object());
                 if (op == "may") {
@@ -1034,7 +1058,7 @@ namespace pokebot::import {
                     if (!n || !w.take("damage to")) {
                         return std::nullopt;
                     }
-                    auto block = each_target(w);
+                    auto block = w.take("the new Active Pokémon") ? std::optional<json>(json{{"on", "active"}}) : each_target(w);
                     if (!block) {
                         block = opponent_targets(w);
                     }
@@ -1212,6 +1236,11 @@ namespace pokebot::import {
                         block["op"] = "heal_self";
                         return one(block);
                     }
+                    if (w.take("your Active Pokémon")) {
+                        block["op"] = "heal_to";
+                        block["on"] = "active";
+                        return one(block);
+                    }
                     block["op"] = "heal_to";
                     if (w.take("each of your")) {
                         block["each"] = true;
@@ -1337,6 +1366,75 @@ namespace pokebot::import {
                         return one(passive({{"modify", "prevent_effects"}}));
                     }
                     return std::nullopt;
+                });
+                out.emplace_back([](Words& w) -> std::optional<json> {
+                    if (w.take("switch out your opponent's Active Pokémon to the Bench")) {
+                        return one({{"op", "switch_active"}, {"player", "opponent"}, {"chooser", "opponent"}});
+                    }
+                    if (w.take("draw cards until you have")) {
+                        const auto n = w.number();
+                        if (!n || *n < 1 || *n > kAll || !w.take("cards in your hand")) {
+                            return std::nullopt;
+                        }
+                        return one({{"op", "draw"}, {"until", *n}});
+                    }
+                    if (w.take("before doing damage , discard all Pokémon Tools from your opponent's Active Pokémon")) {
+                        return json::array({{{"op", "discard_tools"}}, {{"op", "damage"}}});
+                    }
+                    if (w.take("during your next turn , this Pokémon can't retreat")) {
+                        return one({{"op", "lasting"}, {"effect", "cant_retreat"}, {"until", "your_next_turn"}});
+                    }
+                    const bool each_heads = w.take("for each heads ,");
+                    if (w.take("discard a random card from your opponent's hand")) {
+                        json block = {{"op", "discard_random"}};
+                        if (each_heads) {
+                            block["for_each"] = {{"of", "heads"}};
+                        }
+                        return one(block);
+                    }
+                    if (!w.take("discard the top")) {
+                        return std::nullopt;
+                    }
+                    json block = {{"op", "discard_deck_top"}};
+                    if (!w.take("card")) {
+                        const auto n = w.number();
+                        if (!n || *n < 2 || *n > kAll || !w.take("cards") || each_heads) {
+                            return std::nullopt;
+                        }
+                        block["count"] = *n;
+                    }
+                    if (w.take("of your opponent's deck")) {
+                        block["player"] = "opponent";
+                    } else if (!w.take("of your deck")) {
+                        return std::nullopt;
+                    }
+                    if (each_heads) {
+                        block["for_each"] = {{"of", "heads"}};
+                    }
+                    return one(block);
+                });
+                out.emplace_back([](Words& w) -> std::optional<json> {
+                    if (!w.take("if this Pokémon is in the Active Spot and is damaged by an attack from your opponent's Pokémon ( even if this Pokémon is Knocked Out ) ,")) {
+                        return std::nullopt;
+                    }
+                    json effect;
+                    if (w.take("the Attacking Pokémon is now")) {
+                        const auto condition = special_condition(w);
+                        if (!condition) {
+                            return std::nullopt;
+                        }
+                        effect = {{"op", "special_condition"}, {"condition", *condition}};
+                    } else {
+                        if (!w.take("put") && !w.take("place")) {
+                            return std::nullopt;
+                        }
+                        const auto n = w.number();
+                        if (!n || *n < 1 || *n > kAll || !(w.take("damage counters on the Attacking Pokémon") || w.take("damage counter on the Attacking Pokémon"))) {
+                            return std::nullopt;
+                        }
+                        effect = {{"op", "counters_to"}, {"count", *n}, {"on", "active"}};
+                    }
+                    return json::array({{{"op", "_ability"}, {"trigger", "damaged_by_attack"}, {"once_per_turn", false}}, effect});
                 });
                 out.emplace_back([](Words& w) -> std::optional<json> {
                     if (w.take("if tails , this attack does nothing")) {
@@ -1701,6 +1799,8 @@ namespace pokebot::import {
                     json flags = {{"op", "_ability"}};
                     if (w.take("when you play this Pokémon from your hand onto your Bench ,")) {
                         flags["trigger"] = "played_to_bench";
+                    } else if (w.take("when you play this Pokémon from your hand to evolve 1 of your Pokémon ,")) {
+                        flags["trigger"] = "evolved";
                     } else if (w.take("if this Pokémon is in the Active Spot ,")) {
                         flags["active_only"] = true;
                     } else if (w.take("if")) {
@@ -1735,14 +1835,17 @@ namespace pokebot::import {
                     return body;
                 });
                 out.emplace_back([this](Words& w) -> std::optional<json> {
-                    if (!w.take("when you play this Pokémon from your hand onto your Bench during your turn , you may")) {
+                    std::string trigger = "played_to_bench";
+                    if (w.take("when you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn , you may")) {
+                        trigger = "evolved";
+                    } else if (!w.take("when you play this Pokémon from your hand onto your Bench during your turn , you may")) {
                         return std::nullopt;
                     }
                     auto body = rest_as_sentence(w);
                     if (!body) {
                         return std::nullopt;
                     }
-                    return json::array({{{"op", "_ability"}, {"trigger", "played_to_bench"}}, {{"op", "may"}, {"effects", *body}}});
+                    return json::array({{{"op", "_ability"}, {"trigger", trigger}}, {{"op", "may"}, {"effects", *body}}});
                 });
                 out.emplace_back([this](Words& w) -> std::optional<json> {
                     if (!w.take("you can't use more than 1")) {
@@ -2011,6 +2114,9 @@ namespace pokebot::import {
                     if (!then) {
                         return sentence;
                     }
+                    for (json& block : *then) {
+                        block["_if_you_do"] = true;
+                    }
                     if (json* may = last_may(blocks)) {
                         may->at("effects").insert(may->at("effects").end(), then->begin(), then->end());
                         continue;
@@ -2126,9 +2232,13 @@ namespace pokebot::import {
                          ") doesn't match the text";
             return out;
         }
+        const bool placed = uses(blocks, "damage");
+        if (placed && changes_damage) {
+            return not_read("the damage placed twice");
+        }
         if (changes_damage) {
             blocks.insert(blocks.begin() + static_cast<std::ptrdiff_t>(last_change) + 1, json{{"op", "damage"}});
-        } else if (unless) {
+        } else if (unless && !placed) {
             blocks.insert(blocks.begin(), json{{"op", "damage"}});
         }
         if (unless) {
@@ -2136,6 +2246,7 @@ namespace pokebot::import {
             blocks = std::move(before);
         }
         out.ok = true;
+        drop_marks(blocks);
         out.effects = std::move(blocks);
         return out;
     }
@@ -2201,6 +2312,7 @@ namespace pokebot::import {
         }
         if (!effects.empty()) {
             implied_requirements(effects, requirements);
+            drop_marks(effects);
             fields["effects"] = effects;
         }
         if (!requirements.empty()) {

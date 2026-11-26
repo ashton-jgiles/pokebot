@@ -65,6 +65,17 @@ attacks (after …)"; "During your next turn, attacks used by this Pokémon do N
 Pokémon (before …)"; "… the Defending Pokémon can't use attacks"; and "… if the Defending Pokémon tries to use an attack,
 your opponent flips a coin. If tails, that attack doesn't happen", whose second sentence is read only after the first.
 
+Also: "Switch out your opponent's Active Pokémon to the Bench" (the reminder "(Your opponent chooses the new Active
+Pokémon.)" is removed as text), with "this attack does N damage to the new Active Pokémon" after it; "Draw cards until you
+have N cards in your hand"; "Before doing damage, discard all Pokémon Tools from your opponent's Active Pokémon", which places
+the damage step itself, and "If you discarded a Pokémon Tool in this way"; "(For each heads,) discard a random card from your
+opponent's hand"; "(For each heads,) discard the top (N) card(s) of your (opponent's) deck"; "If your Benched Pokémon have any
+damage counters on them"; "During your next turn, this Pokémon can't retreat"; "Heal N damage from your Active Pokémon"; the
+Ability triggers "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, you may use this
+Ability" and "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may …"; and "If this
+Pokémon is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), the
+Attacking Pokémon is now <a Special Condition>" or "… put N damage counters on the Attacking Pokémon".
+
 Passives on Abilities and Tools: "This Pokémon takes N less damage from attacks (after …)" and "The Pokémon this card is
 attached to takes N less …"; "Prevent all damage done to this Pokémon by attacks from your opponent's Pokémon ex"; "As long
 as this Pokémon is on your Bench, prevent all damage from and effects of attacks from your opponent's Pokémon done to this
@@ -102,7 +113,8 @@ Pokémon is now …". "If …, … instead" replaces the sentence before with an
 `if` whose `else` is that sentence.
 
 **What a card needs to be played** comes from its effects, as our hand-written files say it, so a card that would do nothing
-isn't offered:
+isn't offered. Effects after "If you do" add nothing, since the card can be played without them (Samurott can switch its
+own Active when the opponent has no Bench):
 
 | Effect | Requires |
 |---|---|

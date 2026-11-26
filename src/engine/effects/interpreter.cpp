@@ -629,6 +629,10 @@ namespace pokebot {
                             })) {
                             break;
                         }
+                        if (step.opponent_chooses) {
+                            game.pending.push_back(Decision{DecisionKind::ChoosePokemon, static_cast<std::uint8_t>(opponent_of(run.who.player)), 1, 1});
+                            return false;
+                        }
                         ask(game, run, DecisionKind::ChoosePokemon, 1, 1);
                         return false;
                     }
@@ -796,6 +800,54 @@ namespace pokebot {
                     case Op::IgnoreWeakness:
                         run.ignore_weakness = true;
                         break;
+                    case Op::DrawUntil: {
+                        int drawn = 0;
+                        for (const int player : players_on(step.side, run.who.player)) {
+                            const int missing = static_cast<int>(step.max) - static_cast<int>(game.player(player).hand.size());
+                            drawn += missing > 0 ? draw_cards(game, player, missing) : 0;
+                        }
+                        run.value = static_cast<std::int16_t>(drawn);
+                        break;
+                    }
+                    case Op::DiscardTools: {
+                        int discarded = 0;
+                        for (const int player : players_on(step.side, run.who.player)) {
+                            PlayerState& owner = game.player(player);
+                            if (owner.active && owner.active->tool != kNoCard && !shielded(game, run, *owner.active)) {
+                                owner.discard.push_back(owner.active->tool);
+                                owner.active->tool = kNoCard;
+                                ++discarded;
+                            }
+                        }
+                        run.value = static_cast<std::int16_t>(discarded);
+                        break;
+                    }
+                    case Op::DiscardRandom:
+                    case Op::DiscardDeckTop: {
+                        const int count = step.count.kind == CountKind::None ? step.max : count_value(game, run, step.count);
+                        int discarded = 0;
+                        for (const int player : players_on(step.side, run.who.player)) {
+                            PlayerState& owner = game.player(player);
+                            for (int i = 0; i < count; ++i) {
+                                if (step.op == Op::DiscardRandom) {
+                                    if (owner.hand.empty()) {
+                                        break;
+                                    }
+                                    const std::size_t at = game.rng.below(static_cast<std::uint32_t>(owner.hand.size()));
+                                    owner.discard.push_back(owner.hand[at]);
+                                    owner.hand.erase_at(at);
+                                } else {
+                                    if (owner.deck.empty()) {
+                                        break;
+                                    }
+                                    owner.discard.push_back(owner.deck.pop_back());
+                                }
+                                ++discarded;
+                            }
+                        }
+                        run.value = static_cast<std::int16_t>(discarded);
+                        break;
+                    }
                     case Op::IgnoreResistance:
                         run.ignore_resistance = true;
                         break;
@@ -979,6 +1031,8 @@ namespace pokebot {
                     const PokemonInPlay* self = run != nullptr ? find_pokemon(game, run->who.self) : nullptr;
                     return self != nullptr && self->tool != kNoCard;
                 }
+                case ConditionKind::BenchDamaged:
+                    return std::any_of(p.bench.begin(), p.bench.end(), [](const PokemonInPlay& pokemon) { return pokemon.damage_counters > 0; });
             }
             return false;
         }

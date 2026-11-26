@@ -184,6 +184,29 @@ TEST_CASE("lasting damage changes, prevention, the attack flip, and damage passi
                   R"({"passive": [{"modify": "damage_taken", "add": -20}]})");
 }
 
+TEST_CASE("gusting by the opponent's choice, drawing up to a hand size, discards, and Abilities that answer evolving or damage", "[translate]") {
+    reads_as("Switch out your opponent's Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémon.) If you do, this attack does 160 damage to the new Active Pokémon.",
+             DamageMod::None,
+             R"([{"op": "switch_active", "player": "opponent", "chooser": "opponent"}, {"op": "damage_to", "on": "active", "amount": 160}])");
+    reads_as("Draw cards until you have 6 cards in your hand.", DamageMod::None, R"([{"op": "draw", "until": 6}])");
+    reads_as("Before doing damage, discard all Pokémon Tools from your opponent's Active Pokémon. If you discarded a Pokémon Tool in this way, your opponent's Active Pokémon is now Paralyzed.",
+             DamageMod::None,
+             R"([{"op": "discard_tools"}, {"op": "damage"}, {"op": "if", "condition": {"moved_at_least": 1}, "then": [{"op": "special_condition", "condition": "paralyzed"}]}])");
+    reads_as("Flip 3 coins. For each heads, discard a random card from your opponent's hand.", DamageMod::None,
+             R"([{"op": "flip_coins", "count": 3}, {"op": "discard_random", "for_each": {"of": "heads"}}])");
+    reads_as("Discard the top 2 cards of your opponent's deck.", DamageMod::None, R"([{"op": "discard_deck_top", "player": "opponent", "count": 2}])");
+    reads_as("If your Benched Pokémon have any damage counters on them, this attack does 60 more damage.", DamageMod::Plus,
+             R"([{"op": "if", "condition": {"bench_damaged": true}, "then": [{"op": "add_damage", "amount": 60}]}, {"op": "damage"}])");
+    reads_as("During your next turn, this Pokémon can't retreat.", DamageMod::None, R"([{"op": "lasting", "effect": "cant_retreat", "until": "your_next_turn"}])");
+    card_reads_as(trainer("item", "Heal 30 damage from your Active Pokémon."), R"({"effects": [{"op": "heal_to", "amount": 30, "on": "active"}]})");
+    card_reads_as(pokemon_with("Psychic Draw", "Once during your turn, when you play this Pokémon from your hand to evolve 1 of your Pokémon, you may use this Ability. Draw 2 cards."),
+                  R"({"abilities": {"Psychic Draw": {"trigger": "evolved", "effects": [{"op": "may", "effects": [{"op": "draw", "count": 2}]}]}}})");
+    card_reads_as(pokemon_with("Poison Point", "If this Pokémon is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), the Attacking Pokémon is now Poisoned."),
+                  R"({"abilities": {"Poison Point": {"trigger": "damaged_by_attack", "once_per_turn": false, "effects": [{"op": "special_condition", "condition": "poisoned"}]}}})");
+    card_reads_as(pokemon_with("Whirlpool", "Once during your turn, you may switch your Active Pokémon with 1 of your Benched Pokémon. If you do, switch out your opponent's Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémon.)"),
+                  R"({"abilities": {"Whirlpool": {"requires": [{"has_benched": true}], "effects": [{"op": "switch_active"}, {"op": "switch_active", "player": "opponent", "chooser": "opponent"}]}}})");
+}
+
 TEST_CASE("the translator reads all of a text or none of it", "[translate]") {
     not_read("Draw a card quickly.");
     not_read("Heal from this Pokémon the same amount of damage you did to your opponent's Active Pokémon.");

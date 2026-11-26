@@ -69,6 +69,8 @@ through `run_triggers`:
 |---|---|
 | `PlayedToBench` (raised only when a Basic is played from hand) | That Pokémon's Abilities with `"trigger": "played_to_bench"`, when `ability_allowed` says yes (Ability lock, once per turn, one per name, `"requires"`). The use is recorded like a chosen one |
 | `PutOnBench` (any source, during that player's turn) | The Stadium in play, if it has `"trigger": "put_on_bench"`, with the new Pokémon as "this Pokémon" |
+| `Evolved` (from the hand, or by Rare Candy) | The new card's Abilities with `"trigger": "evolved"`, as for `PlayedToBench` |
+| `DamagedByAttack` | The damaged Pokémon's Abilities with `"trigger": "damaged_by_attack"`, if it's the Active Pokémon and the attack is the opponent's. They run straight after that damage, inside the attack, and leave Knock Outs to the attack's end. The use isn't recorded |
 
 "You may use this Ability" is written as a `may` block in the effects. Triggers start through
 [`queue_effect`](../effects/interpreter.md), so one firing in the middle of another effect waits for

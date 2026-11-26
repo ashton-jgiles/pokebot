@@ -15,7 +15,10 @@ Each block is a JSON object with an `"op"`:
 | `op` | Fields | Means | Compiles to |
 |---|---|---|---|
 | `damage` | — | The attack's damage, at this point in the list (attacks only) | `Damage` |
-| `draw` | `count` (1), `player` | Draw cards | `Draw` |
+| `draw` | `count` (1), `player`, or `until` | Draw cards; with `until`, draw until the hand has that many (none if it has them already) | `Draw`, or `DrawUntil` |
+| `discard_tools` | `player` (`"opponent"`) | Discard the Pokémon Tool attached to that player's Active Pokémon ("before doing damage" places it before a `damage` step). The number discarded is the working value | `DiscardTools` |
+| `discard_random` | `count` (1) or `for_each`, `player` (`"opponent"`) | Discard that many random cards from that player's hand | `DiscardRandom` |
+| `discard_deck_top` | `count` (1) or `for_each`, `player` (`"you"`) | Discard that many cards from the top of that player's deck | `DiscardDeckTop` |
 | `discard_hand` | — | Discard your hand | `DiscardHand` |
 | `shuffle_deck` | — | Shuffle your deck | `ShuffleDeck` |
 | `shuffle_hand_into_deck` | `player` | Shuffle your hand into your deck | `ShuffleHandIntoDeck` |
@@ -39,7 +42,7 @@ Each block is a JSON object with an `"op"`:
 | `search_to_top` | `count` (1), `filter`, `reveal` (`false`) | Search your deck for up to `count` cards, shuffle, then put them on top; the last one chosen is the top card (Ciphermaniac's Codebreaking) | `ChooseCards`, `ShuffleDeck`, `MoveChosen` |
 | `special_condition` | `condition`, `player` (`"opponent"`), `count` (1) | Give that player's Active Pokémon a [Special Condition](../../engine/actions/conditions.md): `"asleep"`, `"burned"`, `"confused"`, `"paralyzed"` or `"poisoned"`. **Defaults to the opponent**, since cards almost always say "your opponent's Active Pokémon is now …". `count` is the Poison damage counters per Checkup | `ApplySpecialCondition` |
 | `switch_self` | — | Switch this Pokémon with 1 of your Benched Pokémon | `ChooseBenched`, `SwitchWithChosen` |
-| `switch_active` | `player` (`"you"` or `"opponent"`), `filter` | Switch that player's Active with 1 of their Benched Pokémon that matches `filter`, chosen by you (Switch, Boss's Orders, Subjugating Chains) | `ChooseBenched`, `SwitchWithChosen` |
+| `switch_active` | `player` (`"you"` or `"opponent"`), `filter`, `chooser` (`"you"`) | Switch that player's Active with 1 of their Benched Pokémon that matches `filter`, chosen by you (Switch, Boss's Orders, Subjugating Chains), or by the opponent with `"chooser": "opponent"` ("switch out your opponent's Active Pokémon") | `ChooseBenched`, `SwitchWithChosen` |
 | `counters_to` | `count` (1), `targets` (1), `on`, `player` (`"opponent"`), `each` | Put `count` damage counters on each chosen Pokémon (Mortal Shuriken), or on every one with `"each": true` | `ChooseTargets`, `CountersOnTargets` |
 | `move_counters` | `count` (1), `on`, `player` (`"opponent"`) | Choose one of your damaged Pokémon, then one of that player's, and move up to `count` damage counters (as many as it has, up to `count`) | `ChooseCounterSource`, `ChooseTargets`, `MoveCounters` |
 | `look_at_top` | `count` (1), `take` (1), `to` (`"hand"`), `filter` | Look at the top `count` cards, take `take` of them, and put the rest on the bottom in the same order (Recon Directive) | `ChooseCards`, `MoveChosen`, `RestToBottom` |
@@ -156,6 +159,7 @@ Each is an object with one key, from the point of view of the player the card be
 | `{"opponent_active_has": condition}` | Your opponent's Active Pokémon has that Special Condition (`"poisoned"`, …) |
 | `{"self_damaged": true}` | This Pokémon has damage counters (only inside an effect) |
 | `{"self_has_tool": true}` | This Pokémon has a Pokémon Tool attached (only inside an effect) |
+| `{"bench_damaged": true}` | One of your Benched Pokémon has damage counters |
 | `{"custom": name}` | A [one-of-a-kind card](../../engine/effects/custom.md)'s own check (`rare_candy`, `transformation_tome`) |
 
 Anything the compiler doesn't recognise (an unknown op, filter field or destination, a bad count,
@@ -256,6 +260,8 @@ An Ability or a Stadium can say `"trigger"` to run its `effects` on its own inst
 |---|---|
 | `"played_to_bench"` | An Ability: when you play this Pokémon from your hand onto your Bench |
 | `"put_on_bench"` | A Stadium: whenever a player puts a Pokémon onto their Bench during their turn, by any means |
+| `"evolved"` | An Ability: when you play this Pokémon from your hand to evolve one of your Pokémon (Rare Candy too) |
+| `"damaged_by_attack"` | An Ability: when this Pokémon, in the Active Spot, is damaged by the opponent's attack, even if it's then Knocked Out. "The Attacking Pokémon" is the opponent's Active |
 
 See [triggered effects](../../engine/actions/abilities.md#triggered-effects). `trigger_from_string`
 reads the name; an unknown one is a `CardDataError`.

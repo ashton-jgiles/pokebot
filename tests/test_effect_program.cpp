@@ -269,6 +269,27 @@ TEST_CASE("lasting damage changes and prevention, and damage passives", "[effect
     CHECK_THROWS_AS(pokebot::compile_passive(json::parse(R"([{"modify": "damage_taken"}])")), CardDataError);
 }
 
+TEST_CASE("drawing up to a hand size, a gust the opponent chooses, discards, and new triggers", "[effects]") {
+    const auto draw = pokebot::compile_trainer(json::parse(R"([{"op": "draw", "until": 6}])"));
+    REQUIRE(ops(draw) == std::vector<Op>{Op::DrawUntil});
+    CHECK(draw[0].max == 6);
+    const auto gust = pokebot::compile_trainer(json::parse(R"([{"op": "switch_active", "player": "opponent", "chooser": "opponent"}])"));
+    REQUIRE(ops(gust) == std::vector<Op>{Op::ChooseBenched, Op::SwitchWithChosen});
+    CHECK(gust[0].opponent_chooses);
+    const auto discards = compile_attack(json::parse(R"([{"op": "discard_tools"}, {"op": "damage"}, {"op": "discard_random", "for_each": {"of": "heads"}},
+                                                         {"op": "discard_deck_top", "player": "opponent", "count": 2}])"));
+    REQUIRE(ops(discards) == std::vector<Op>{Op::DiscardTools, Op::Damage, Op::DiscardRandom, Op::DiscardDeckTop});
+    CHECK(discards[2].count.kind == pokebot::CountKind::Value);
+    CHECK(discards[3].max == 2);
+    CHECK(discards[3].side == pokebot::Side::Opponent);
+    CHECK(pokebot::compile_conditions(json::parse(R"([{"bench_damaged": true}])"))[0].kind == pokebot::ConditionKind::BenchDamaged);
+    CHECK(pokebot::trigger_from_string("evolved") == pokebot::Trigger::Evolved);
+    CHECK(pokebot::trigger_from_string("damaged_by_attack") == pokebot::Trigger::DamagedByAttack);
+    CHECK_THROWS_AS(pokebot::compile_trainer(json::parse(R"([{"op": "draw", "until": 6, "count": 2}])")), CardDataError);
+    CHECK_THROWS_AS(pokebot::compile_trainer(json::parse(R"([{"op": "switch_active", "chooser": "opponent"}])")), CardDataError);
+    CHECK_THROWS_AS(compile_attack(json::parse(R"([{"op": "discard_deck_top", "count": 2, "for_each": {"of": "heads"}}])")), CardDataError);
+}
+
 TEST_CASE("special_condition targets the opponent unless told otherwise", "[effects]") {
     const auto program = compile_attack(json::parse(
         R"([{"op": "special_condition", "condition": "asleep"}, {"op": "special_condition", "condition": "poisoned", "count": 4, "player": "you"}])"));

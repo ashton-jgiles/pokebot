@@ -77,6 +77,10 @@ namespace pokebot {
         HealTargets,
         IgnoreWeakness,
         IgnoreResistance,
+        DrawUntil,
+        DiscardTools,
+        DiscardRandom,
+        DiscardDeckTop,
     };
 
     enum class StageFilter : std::uint8_t {
@@ -135,6 +139,7 @@ namespace pokebot {
         OpponentActiveHas,
         SelfDamaged,
         SelfHasTool,
+        BenchDamaged,
     };
 
     // The one-of-a-kind cards with their own C++.
@@ -148,6 +153,8 @@ namespace pokebot {
         None,
         PlayedToBench, // an Ability: "when you play this Pokemon from your hand onto your Bench"
         PutOnBench,    // a Stadium: "whenever any player puts a Pokemon onto their Bench during their turn"
+        Evolved,
+        DamagedByAttack,
     };
 
     struct Condition {
@@ -237,6 +244,7 @@ namespace pokebot {
         bool needs_energy = false;
         bool needs_damage = false;
         bool each = false;
+        bool opponent_chooses = false;
         LastingSpec lasting;
         CustomEffect custom = CustomEffect::RareCandy;
         std::uint8_t jump = 0;

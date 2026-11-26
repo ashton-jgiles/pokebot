@@ -254,12 +254,35 @@ gains nothing from one.
 
 | Step | Builds | Status |
 |---|---|---|
-| 3b.5.1 | **The measurement:** `--check-translations` also counts, over cards without an effects file and with exactly one text not read, that text's first unread sentence, so shapes rank by the cards they'd complete. *Built, not yet run* | 🔄 |
-| 3b.5.2 on | Batches from the top of that list, each as 3b.3 was: engine, translator, then audit and runs. The evolving and damaged-by-attack triggers go in the first batch whatever their rank, as they're cheap (the events exist) and open a recurring Ability shape. The one-off Abilities are left to 3b.7, which writes the four decks' cards | ⬜ |
+| 3b.5.1 | **The measurement:** `--check-translations` also counts, over cards without an effects file and with exactly one text not read, that text's first unread sentence, so shapes rank by the cards they'd complete. *Done: 883 cards without an effects file have exactly one text not read, and the list is flat: the top shape stops 13 cards, the 40th 2* | ✅ |
+| 3b.5.2 | **The first batch**, built in one step: the gust the opponent chooses and damage to the new Active, drawing up to a hand size, discarding the opponent's Tool before damage, random cards from their hand and the top of a deck, a condition on damaged Benched Pokémon, "this Pokémon can't retreat" next turn, healing the Active, and the triggers on evolving and on being damaged by an attack. At most about 80 cards by the list, perhaps 50 to 70. *Built: all 511 tests pass, 81 hand-written texts the same with the same 7 not read, 1,214 of the 2,097 cards complete (57.9%, 82 more), and the reference run repeats. The audit, with the right words, found 1 of 50 wrong, and its rule is fixed. The speed check wasn't run* | ✅ |
+| 3b.5.3 on | Batches from the top of that list, each as 3b.3 was: engine, translator, then audit and runs. The evolving and damaged-by-attack triggers go in the first batch whatever their rank, as they're cheap (the events exist) and open a recurring Ability shape. The one-off Abilities are left to 3b.7, which writes the four decks' cards | ⬜ |
 
 **Its rules (2026-11-26, before any of it was built):** each batch: every hand-written text read loads the same; an audit of 50
 texts using that batch's vocabulary, at most 1 wrong; the reference run repeats, 158 to 162; and timed back to back against
 3b.3's commit (`..\pokebot-base`), within noise. M3b's 60% stays the target; no batch has its own.
+
+**What 3b.5.2 measured (2026-11-26):**
+
+- **On all of Standard:** **1,214 of 2,097 cards complete (57.9%)**, against 1,132, so **82 more**, at the top of the guess of 50 to
+  70 and near the list's 80. 841 complete by translation. Texts read: attacks 1,205 of 1,757 (from 1,128), Abilities 73 of 300
+  (from 51), Trainers 64 of 164 (from 59). **45 more are needed for 60% (1,259).**
+- **The incoming decks:** alakazam 15 of 24 cards ready (from 14), mega-lucario 18 of 27 (from 17), mega-venasaur 20 of 25 (from 19).
+- **The audit's words were wrong again:** `until` is also the key of every lasting effect, so 35 of the 50 drawn were lasting
+  effects from 3b.2 and 3b.4. All 50 were checked by hand and none was wrong, but only 15 used this batch's vocabulary (the
+  top of a deck 7, drawing until 3, the gust, a random card, the Tools, and the damage trigger twice), and none the evolve
+  trigger or the Bench condition. It's run again with `until:5` to `until:8` in place of `until`. **The lesson for `--using`:** a
+  word must be an op, or a key or `key:value` that only the new vocabulary has.
+- **The reference run repeats** 158 to 162, 18.4 turns and 140.8 actions a game, in 100.9 s.
+- **The audit again** (`until:5` to `until:8` in place of `until`): 50 of the 95 texts, every one this batch's vocabulary: the top
+  of a deck 19, the gust 9, drawing until 5, the Tools 4, the evolve trigger 5, the damage trigger 3, a random card 4, the Bench
+  condition 2 (some texts have two). **One was wrong:** Samurott's Torrential Whirlpool ("you may switch your Active Pokémon … If
+  you do, switch out your opponent's Active Pokémon") required the opponent to have a Benched Pokémon, so it couldn't be used to
+  switch your own when they had none. **The fix:** effects after "If you do" add no requirements. A test pins it.
+- **The speed check wasn't run:** the 3b.3 copy for timing back to back was removed. Speed is taken up as a goal of its own
+  ([long-term goals](#long-term-goals-back-burner)); the 10% check of M3b's sign-off stays.
+- **The ranked list now:** 823 cards have exactly one text not read; the top shape ("your opponent reveals their hand") stops
+  11, the next 7, and then 6, 4 and 3s.
 
 **3b.4's design (2026-11-25, before any of it was built):** in the cached Standard sets, lasting damage changes and prevention
 (about 80 texts: less damage next turn 28, prevention next turn about 35, the Defending Pokémon doing less 10, taking more 3, this
@@ -1393,6 +1416,10 @@ proposal. The table at the top lists them in order. Two changes since:
 
 Not scheduled yet; recorded 2026-11-19 so the milestones above keep them possible.
 
+- **Speed (added 2026-11-26).** Faster simulation and search, as a goal of its own apart from M3b's coverage work: more games
+  for training and arenas, and quicker agents for live play. Measured as 3b.4's fix was, two builds playing the same games
+  one after the other, since single timed runs on one machine vary by up to 3 times. M3b's sign-off check (the old decks at
+  most 10% slower than at M10) still applies.
 - **Many more decks and variants.** A much larger pool of decks, and variants of each, for the
   models to train and be tested on (M10's learned evaluation especially), so they get stronger in
   general rather than tuned to four lists. It also gives the archetype library (M7) more to tell
