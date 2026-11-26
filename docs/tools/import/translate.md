@@ -76,6 +76,16 @@ Ability" and "When you play this Pokémon from your hand to evolve 1 of your Pok
 Pokémon is in the Active Spot and is damaged by an attack from your opponent's Pokémon (even if this Pokémon is Knocked Out), the
 Attacking Pokémon is now <a Special Condition>" or "… put N damage counters on the Attacking Pokémon".
 
+And: "N (more) damage for each {X} / Water / Basic Energy attached to this Pokémon" (`self_energy` with a type: an Energy
+counts if it provides that type, so a Special Energy that provides two counts once); "Flip a coin for each … attached to this
+Pokémon"; "… for each of your Pokémon in play that has the <name> attack"; "N less damage for each …" on a "−" attack; "You may
+do N more damage" (then "If you do, …" goes into the same `may`); "Discard a card from your hand. If you do, …" (an `if` on the
+card moved); "If this Pokémon has no damage counters on it"; "If you have any <Pokémon> on your Bench" and "If <name> is on
+your Bench"; "If this Pokémon has at least N extra Energy attached (in addition to this attack's cost)"; "For each heads,
+discard an Energy from your opponent's Active Pokémon"; "Special Energy" and "Tera Pokémon" as nouns; "Search your deck for
+… / Attach … from your discard pile / hand … to your (Benched) <Pokémon> in any way you like"; and "If you go first, you can
+use this attack (you may use this card) during your first turn", which sets `first_turn`.
+
 Passives on Abilities and Tools: "This Pokémon takes N less damage from attacks (after …)" and "The Pokémon this card is
 attached to takes N less …"; "Prevent all damage done to this Pokémon by attacks from your opponent's Pokémon ex"; "As long
 as this Pokémon is on your Bench, prevent all damage from and effects of attacks from your opponent's Pokémon done to this

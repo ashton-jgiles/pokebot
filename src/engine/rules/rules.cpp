@@ -304,9 +304,9 @@ namespace pokebot::rules {
                !lasting_applies(game, LastingKind::CantRetreat, player, p.active->id());
     }
 
-    bool can_attack(const GameState& game, int player) {
+    bool can_attack(const GameState& game, int player, bool first_turn_allowed) {
         const PlayerState& p = game.player(player);
-        return game.turn != 1 && game.player(player).active.has_value() && !p.active->special.asleep && !p.active->special.paralyzed &&
+        return (game.turn != 1 || first_turn_allowed) && game.player(player).active.has_value() && !p.active->special.asleep && !p.active->special.paralyzed &&
                !lasting_applies(game, LastingKind::CantAttack, player, p.active->id());
     }
 
@@ -328,8 +328,8 @@ namespace pokebot::rules {
         return !lasting_applies(game, LastingKind::NoItems, player, kNoCard);
     }
 
-    bool can_play_supporter(const GameState& game, int) {
-        return !game.flags.supporter_played && game.turn != 1;
+    bool can_play_supporter(const GameState& game, int, bool first_turn_allowed) {
+        return !game.flags.supporter_played && (game.turn != 1 || first_turn_allowed);
     }
 
     bool can_play_stadium(const GameState& game, int, CardIndex stadium) {

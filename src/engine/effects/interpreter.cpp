@@ -611,11 +611,16 @@ namespace pokebot {
                                 show(game, run.who.player, card);
                             }
                         }
-                        const std::size_t max = choice_limit(game, run, step);
+                        std::size_t max = choice_limit(game, run, step);
+                        std::size_t min = std::min<std::size_t>(step.min, max);
+                        if (step.count.kind != CountKind::None) {
+                            max = std::min<std::size_t>(max, static_cast<std::size_t>(std::max(count_value(game, run, step.count), 0)));
+                            min = max;
+                        }
                         if (max == 0) {
                             break;
                         }
-                        ask(game, run, DecisionKind::ChooseCards, max, std::min<std::size_t>(step.min, max));
+                        ask(game, run, DecisionKind::ChooseCards, max, min);
                         return false;
                     }
                     case Op::MoveChosen:
@@ -659,7 +664,8 @@ namespace pokebot {
                         break;
                     case Op::FlipCoins: {
                         int heads = 0;
-                        for (int i = 0; i < step.max; ++i) {
+                        const int coins = step.count.kind == CountKind::None ? step.max : count_value(game, run, step.count);
+                        for (int i = 0; i < coins; ++i) {
                             heads += game.rng.coin_flip() ? 1 : 0;
                         }
                         run.value = static_cast<std::int16_t>(heads);
@@ -1025,7 +1031,15 @@ namespace pokebot {
                     return opponent.active && has_special_condition(opponent.active->special, condition.special);
                 case ConditionKind::SelfDamaged: {
                     const PokemonInPlay* self = run != nullptr ? find_pokemon(game, run->who.self) : nullptr;
-                    return self != nullptr && self->damage_counters > 0;
+                    return self != nullptr && (self->damage_counters > 0) == (condition.value != 0);
+                }
+                case ConditionKind::ExtraEnergyAtLeast: {
+                    const PokemonInPlay* self = run != nullptr ? find_pokemon(game, run->who.self) : nullptr;
+                    if (self == nullptr || run->program.kind != ProgramKind::Attack) {
+                        return false;
+                    }
+                    const std::size_t cost = game.def(run->program.card).attacks[run->program.index].cost.size();
+                    return rules::energy_units(game, *self) >= cost + static_cast<std::size_t>(std::max(condition.value, 0));
                 }
                 case ConditionKind::SelfHasTool: {
                     const PokemonInPlay* self = run != nullptr ? find_pokemon(game, run->who.self) : nullptr;

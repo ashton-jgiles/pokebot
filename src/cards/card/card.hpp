@@ -46,6 +46,7 @@ namespace pokebot {
         std::string text;
         nlohmann::json effects = nlohmann::json::array();
         Program program;
+        bool first_turn = false;
     };
 
     struct CardRules {
@@ -85,6 +86,7 @@ namespace pokebot {
         nlohmann::json passive = nlohmann::json::array();
         std::vector<Modifier> modifiers;
         Trigger trigger = Trigger::None; // a Stadium's effect that happens on its own
+        bool first_turn = false;
 
         // Special Energy
         nlohmann::json provides_when = nlohmann::json::array();

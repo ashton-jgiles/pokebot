@@ -47,7 +47,15 @@ namespace {
             with("Mill", 0, R"([{"op": "discard_deck_top", "player": "opponent", "count": 2}])"),
             with("Hit", 30, "[]"),
             with("Payback", 10, R"([{"op": "if", "condition": {"bench_damaged": true}, "then": [{"op": "add_damage", "amount": 50}]}, {"op": "damage"}])"),
+            with("Charge", 10, R"([{"op": "add_damage", "per": 20, "for_each": {"of": "self_energy", "filter": {"type": "psychic"}}}, {"op": "damage"}])"),
+            with("Round", 0, R"([{"op": "set_damage", "per": 10, "for_each": {"of": "in_play", "filter": {"has_attack": "Round"}}}, {"op": "damage"}])"),
+            with("Wild", 60, R"([{"op": "add_damage", "per": -10, "for_each": {"of": "damage_counters"}}, {"op": "damage"}])"),
+            with("Fresh", 10, R"([{"op": "if", "condition": {"self_damaged": false}, "then": [{"op": "add_damage", "amount": 50}]}, {"op": "damage"}])"),
+            with("Surplus", 10, R"([{"op": "if", "condition": {"extra_energy_at_least": 1}, "then": [{"op": "add_damage", "amount": 50}]}, {"op": "damage"}])"),
+            with("Spread", 0, R"([{"op": "attach_spread", "from": "hand", "count": 2, "up_to": true, "on": "bench", "filter": {"kind": "energy"}}])"),
+            with("Pluck", 0, R"([{"op": "discard_target_energy", "on": "active", "for_each": {"of": "benched"}}])"),
         };
+        disrupt.attacks[5].first_turn = true;
         CardDef grown = test::evolution("TST-5", "Grownmon", pokebot::Stage::Stage1, "Babymon", 90);
         CardDef tool;
         tool.id = "TST-7";
@@ -190,6 +198,95 @@ TEST_CASE("an Active Pokemon damaged by the opponent's attack answers: Poisoned,
         CHECK(f.theirs().active->damage_counters == 3);
         f.check_cards();
     }
+}
+
+TEST_CASE("counts of typed Energy and of Pokemon with an attack, minus damage, and conditions on this Pokemon", "[disruption]") {
+    {
+        Fixture f;
+        pokebot::apply(f.game, attack(7));
+        CHECK(f.theirs().active->damage_counters == 3);
+    }
+    {
+        Fixture f;
+        pokebot::apply(f.game, attack(8));
+        CHECK(f.theirs().active->damage_counters == 2);
+    }
+    {
+        Fixture f;
+        f.mine().active->damage_counters = 3;
+        pokebot::apply(f.game, attack(9));
+        CHECK(f.theirs().active->damage_counters == 3);
+    }
+    {
+        Fixture f;
+        pokebot::apply(f.game, attack(10));
+        CHECK(f.theirs().active->damage_counters == 6);
+    }
+    {
+        Fixture f;
+        f.mine().active->damage_counters = 1;
+        pokebot::apply(f.game, attack(10));
+        CHECK(f.theirs().active->damage_counters == 1);
+    }
+    {
+        Fixture f;
+        pokebot::apply(f.game, attack(11));
+        CHECK(f.theirs().active->damage_counters == 1);
+    }
+    {
+        Fixture f;
+        test::attach_from_deck(f.game, f.me, kActiveSlot, "TST-6");
+        pokebot::apply(f.game, attack(11));
+        CHECK(f.theirs().active->damage_counters == 6);
+        f.check_cards();
+    }
+}
+
+TEST_CASE("attaching Energy in any way you like, and discarding as many Energy as a count", "[disruption]") {
+    {
+        Fixture f;
+        test::put_in_hand(f.game, f.me, "TST-6");
+        test::put_in_hand(f.game, f.me, "TST-6");
+        pokebot::apply(f.game, attack(12));
+        for (int round = 0; round < 2; ++round) {
+            REQUIRE(f.game.decision().kind == DecisionKind::ChoosePokemon);
+            pokebot::apply(f.game, pokebot::legal_actions(f.game)[0]);
+            REQUIRE(f.game.decision().kind == DecisionKind::ChooseCards);
+            pokebot::apply(f.game, test::find_action(f.game, ActionKind::ChooseCard, "TST-6"));
+        }
+        CHECK(f.mine().bench[0].energy.size() == 2);
+        f.check_cards();
+    }
+    {
+        Fixture f;
+        test::attach_from_deck(f.game, f.them, kActiveSlot, "TST-6");
+        test::attach_from_deck(f.game, f.them, kActiveSlot, "TST-6");
+        pokebot::apply(f.game, attack(13));
+        REQUIRE(f.game.decision().kind == DecisionKind::ChooseCards);
+        pokebot::apply(f.game, test::find_action(f.game, ActionKind::ChooseCard, "TST-6"));
+        CHECK(f.theirs().active->energy.size() == 1);
+        f.check_cards();
+    }
+}
+
+TEST_CASE("an attack marked for the first turn can be used then; others can't", "[disruption]") {
+    CardDB db = sample_db();
+    CardTable table{db, kDeck, kDeck};
+    GameState game = pokebot::new_game(table, 18);
+    test::play_setup(game);
+    REQUIRE(game.turn == 1);
+    const int first = game.current_player;
+    test::set_active(game, first, "TST-1");
+    test::attach_from_deck(game, first, kActiveSlot, "TST-6");
+    bool hit = false;
+    bool other = false;
+    for (const Action& action : pokebot::legal_actions(game)) {
+        if (action.kind == ActionKind::Attack) {
+            (action.amount == 5 ? hit : other) = true;
+        }
+    }
+    CHECK(hit);
+    CHECK_FALSE(other);
 }
 
 TEST_CASE("evolving from the hand can trigger the new Pokemon's Ability", "[disruption]") {

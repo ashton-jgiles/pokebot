@@ -290,6 +290,33 @@ TEST_CASE("drawing up to a hand size, a gust the opponent chooses, discards, and
     CHECK_THROWS_AS(compile_attack(json::parse(R"([{"op": "discard_deck_top", "count": 2, "for_each": {"of": "heads"}}])")), CardDataError);
 }
 
+TEST_CASE("Energy spread in any way you like, counted flips and discards, and new filters and conditions", "[effects]") {
+    const auto spread = compile_attack(json::parse(R"([{"op": "attach_spread", "from": "deck", "count": 2, "up_to": true, "on": "bench", "filter": {"kind": "energy", "basic": true}}])"));
+    REQUIRE(ops(spread) == std::vector<Op>{Op::Damage, Op::ChooseTargets, Op::ChooseCards, Op::MoveChosen, Op::ChooseTargets, Op::ChooseCards, Op::MoveChosen, Op::ShuffleDeck});
+    CHECK(spread[1].from == Zone::Bench);
+    CHECK(spread[2].from == Zone::Deck);
+    CHECK(spread[2].to == Zone::TargetEnergy);
+    CHECK(spread[2].min == 0);
+    const auto flips = compile_attack(json::parse(R"([{"op": "flip_coins", "for_each": {"of": "self_energy"}}, {"op": "discard_target_energy", "on": "active", "for_each": {"of": "heads"}}])"));
+    CHECK(flips[1].count.kind == pokebot::CountKind::SelfEnergy);
+    CHECK(flips[3].count.kind == pokebot::CountKind::Value);
+    const auto conditions = pokebot::compile_conditions(json::parse(R"([{"self_damaged": false}, {"extra_energy_at_least": 2}])"));
+    CHECK(conditions[0].value == 0);
+    CHECK(conditions[1].kind == pokebot::ConditionKind::ExtraEnergyAtLeast);
+    CHECK(conditions[1].value == 2);
+    pokebot::CardDef round = test::basic_pokemon("TST-1", "Roundmon");
+    round.attacks = {test::attack("Round", {pokebot::EnergyType::Colorless}, 10)};
+    CHECK(pokebot::matches(pokebot::compile_conditions(json::parse(R"([{"in_play_has": {"has_attack": "Round"}}])"))[0].filter, round));
+    CHECK_FALSE(pokebot::matches(pokebot::compile_conditions(json::parse(R"([{"in_play_has": {"has_attack": "Sing"}}])"))[0].filter, round));
+    pokebot::CardDef energy = test::basic_energy("TST-2", "Fire Energy", pokebot::EnergyType::Fire);
+    const auto special = pokebot::compile_conditions(json::parse(R"([{"discard_has": {"special": true}}])"))[0].filter;
+    CHECK_FALSE(pokebot::matches(special, energy));
+    energy.energy_kind = pokebot::EnergyKind::Special;
+    CHECK(pokebot::matches(special, energy));
+    CHECK_THROWS_AS(compile_attack(json::parse(R"([{"op": "attach_spread", "count": 7}])")), CardDataError);
+    CHECK_THROWS_AS(compile_attack(json::parse(R"([{"op": "flip_coins", "count": 2, "for_each": {"of": "heads"}}])")), CardDataError);
+}
+
 TEST_CASE("special_condition targets the opponent unless told otherwise", "[effects]") {
     const auto program = compile_attack(json::parse(
         R"([{"op": "special_condition", "condition": "asleep"}, {"op": "special_condition", "condition": "poisoned", "count": 4, "player": "you"}])"));

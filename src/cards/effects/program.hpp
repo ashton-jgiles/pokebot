@@ -104,6 +104,8 @@ namespace pokebot {
         std::string not_name;
         std::optional<EnergyType> not_type;
         std::optional<bool> tera;
+        std::optional<bool> special;
+        std::string has_attack;
         std::vector<CardFilter> any_of;
 
         bool operator==(const CardFilter&) const = default;
@@ -140,6 +142,7 @@ namespace pokebot {
         SelfDamaged,
         SelfHasTool,
         BenchDamaged,
+        ExtraEnergyAtLeast,
     };
 
     // The one-of-a-kind cards with their own C++.

@@ -45,6 +45,7 @@ bend; this file is where they live.
 | `can_evolve(game, pokemon)` | Not on either player's first turn, not on the turn it was played, stack not full | Forest of Vitality |
 | `evolves_into(game, pokemon, card)` | The card's "evolves from" names the top card | Rare Candy, Eevee ex |
 | `damage_prevented(game, attacker, defender)` | A Benched Tera Pokémon takes no damage from attacks | Mist Energy, Battle Cage |
+| `can_attack(game, player, first_turn_allowed)`, `can_play_supporter(game, player, first_turn_allowed)` | Not on the first player's first turn, unless the attack or Supporter has `first_turn` | |
 | `attack_damage(game, attacker, defender, base)` | See below. `base` is the attack's damage after its own formula | Maximum Belt, Full Metal Lab |
 
 `EnergyList` is a `FixedVector<EnergyType, 8>`: answers come back by value with no heap use,

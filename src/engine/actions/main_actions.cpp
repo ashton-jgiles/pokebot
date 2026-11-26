@@ -142,7 +142,7 @@ namespace pokebot {
                     case TrainerKind::Item:
                         return effects_written(def) && rules::can_play_item(game, player) && requirements_met(game, player, card);
                     case TrainerKind::Supporter:
-                        return effects_written(def) && rules::can_play_supporter(game, player) && requirements_met(game, player, card);
+                        return effects_written(def) && rules::can_play_supporter(game, player, def.first_turn) && requirements_met(game, player, card);
                     case TrainerKind::Stadium:
                         return rules::can_play_stadium(game, player, card);
                     default:

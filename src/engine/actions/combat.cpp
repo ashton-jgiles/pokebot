@@ -127,13 +127,13 @@ namespace pokebot {
         }
 
         void add_attack_actions(const GameState& game, std::vector<Action>& out) {
-            if (!rules::can_attack(game, game.current_player)) {
+            if (!rules::can_attack(game, game.current_player, true)) {
                 return;
             }
             const PlayerState& p = game.player(game.current_player);
             const auto& attacks = game.def(p.active->top()).attacks;
             for (std::size_t i = 0; i < attacks.size(); ++i) {
-                if (rules::can_use_attack(game, *p.active, i) && can_pay_cost(game, *p.active, rules::attack_cost(game, *p.active, i))) {
+                if ((game.turn != 1 || attacks[i].first_turn) && rules::can_use_attack(game, *p.active, i) && can_pay_cost(game, *p.active, rules::attack_cost(game, *p.active, i))) {
                     out.push_back(Action{ActionKind::Attack, kNoCard, kActiveSlot, static_cast<std::uint8_t>(i)});
                 }
             }

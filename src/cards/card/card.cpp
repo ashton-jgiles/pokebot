@@ -143,6 +143,9 @@ namespace pokebot {
                                    {"damage_mod", name_of(kDamageMods, a.damage_mod)},
                                    {"text", a.text},
                                    {"effects", a.effects}});
+                if (a.first_turn) {
+                    attacks.back()["first_turn"] = true;
+                }
             }
             j["attacks"] = attacks;
 
@@ -171,6 +174,9 @@ namespace pokebot {
             }
             if (c.discard_at_end_of_turn) {
                 j["discard_at_end_of_turn"] = true;
+            }
+            if (c.first_turn) {
+                j["first_turn"] = true;
             }
         }
     }
@@ -232,6 +238,7 @@ namespace pokebot {
                     atk.damage_mod = parse_enum<DamageMod>(kDamageMods, a.value("damage_mod", "none"), "damage modifier");
                     atk.text = a.value("text", "");
                     atk.effects = effects_or_empty(a);
+                    atk.first_turn = a.value("first_turn", false);
                     c.attacks.push_back(std::move(atk));
                 }
 
@@ -249,6 +256,7 @@ namespace pokebot {
                 c.trigger = trigger_from_string(j.value("trigger", "none"));
                 c.provides_when = j.value("provides_when", json::array());
                 c.discard_at_end_of_turn = j.value("discard_at_end_of_turn", false);
+                c.first_turn = j.value("first_turn", false);
             }
         } catch (const json::exception& e) {
             throw CardDataError(std::string("bad card data: ") + e.what());

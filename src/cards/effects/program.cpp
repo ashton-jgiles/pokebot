@@ -235,6 +235,10 @@ namespace pokebot {
                     filter.not_type = energy_type_from_string(value.get<std::string>());
                 } else if (key == "tera") {
                     filter.tera = value.get<bool>();
+                } else if (key == "special") {
+                    filter.special = value.get<bool>();
+                } else if (key == "has_attack") {
+                    filter.has_attack = value.get<std::string>();
                 } else if (key == "any_of") {
                     for (const auto& option : value) {
                         filter.any_of.push_back(parse_filter_fields(option));
@@ -365,10 +369,14 @@ namespace pokebot {
                 condition.special = special_condition_of(value.get<std::string>());
             } else if (key == "self_damaged") {
                 condition.kind = ConditionKind::SelfDamaged;
+                condition.value = value.get<bool>() ? 1 : 0;
             } else if (key == "self_has_tool") {
                 condition.kind = ConditionKind::SelfHasTool;
             } else if (key == "bench_damaged") {
                 condition.kind = ConditionKind::BenchDamaged;
+            } else if (key == "extra_energy_at_least") {
+                condition.kind = ConditionKind::ExtraEnergyAtLeast;
+                condition.value = value.get<int>();
             } else {
                 throw CardDataError("unknown condition '" + key + "'");
             }
@@ -669,6 +677,12 @@ namespace pokebot {
                     Step flip;
                     flip.op = Op::FlipCoins;
                     flip.max = count_of(block, 1);
+                    if (block.contains("for_each")) {
+                        if (block.contains("count")) {
+                            throw CardDataError("flip_coins takes \"count\" or \"for_each\", not both");
+                        }
+                        flip.count = parse_count(block.at("for_each"));
+                    }
                     add(flip);
                 } else if (op == "flip_until_tails") {
                     add(Op::FlipUntilTails);
@@ -723,6 +737,44 @@ namespace pokebot {
                     choose_targets(block, true);
                     const std::uint8_t count = count_of(block, 1);
                     choose_and_move(Zone::TargetEnergy, Zone::Discard, count, count, parse_filter(block));
+                    if (block.contains("for_each")) {
+                        if (block.contains("count")) {
+                            throw CardDataError("discard_target_energy takes \"count\" or \"for_each\", not both");
+                        }
+                        Step& choose = program[program.size() - 2];
+                        choose.count = parse_count(block.at("for_each"));
+                        choose.min = 0;
+                        choose.max = static_cast<std::uint8_t>(kMaxCount);
+                    }
+                } else if (op == "attach_spread") {
+                    const std::string from = block.value("from", "discard");
+                    Zone zone = Zone::Discard;
+                    if (from == "deck") {
+                        zone = Zone::Deck;
+                    } else if (from == "hand") {
+                        zone = Zone::Hand;
+                    } else if (from != "discard") {
+                        throw CardDataError("attach_spread is from \"deck\", \"discard\" or \"hand\", not '" + from + "'");
+                    }
+                    const int rounds = block.value("count", 1);
+                    if (rounds < 1 || rounds > 6) {
+                        throw CardDataError("attach_spread's \"count\" is 1 to 6");
+                    }
+                    const CardFilter target = block.contains("target") ? parse_filter_fields(block.at("target")) : CardFilter{};
+                    for (int i = 0; i < rounds; ++i) {
+                        Step choose;
+                        choose.op = Op::ChooseTargets;
+                        choose.side = Side::You;
+                        choose.from = where_on(block);
+                        choose.min = 1;
+                        choose.max = 1;
+                        choose.filter = target;
+                        add(choose);
+                        choose_and_move(zone, Zone::TargetEnergy, block.value("up_to", false) ? 0 : 1, 1, parse_filter(block));
+                    }
+                    if (zone == Zone::Deck && block.value("shuffle", true)) {
+                        add(Op::ShuffleDeck);
+                    }
                 } else if (op == "use_attack") {
                     attack_only(op);
                     if (block.value("from", "your_bench") != "your_bench") {
@@ -949,6 +1001,13 @@ namespace pokebot {
             return false;
         }
         if (filter.tera && card.rules.tera != *filter.tera) {
+            return false;
+        }
+        if (filter.special && (card.kind == CardKind::Energy && card.energy_kind == EnergyKind::Special) != *filter.special) {
+            return false;
+        }
+        if (!filter.has_attack.empty() &&
+            std::none_of(card.attacks.begin(), card.attacks.end(), [&](const Attack& attack) { return attack.name == filter.has_attack; })) {
             return false;
         }
         if (filter.max_hp > 0 && (card.kind != CardKind::Pokemon || card.hp > filter.max_hp)) {

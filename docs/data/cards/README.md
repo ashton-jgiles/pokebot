@@ -100,6 +100,9 @@ by `to_json` in [`card.cpp`](../../src/cards/card/card.md) and read back by `fro
 A card without its own effects file may have `"same_as": "MEG-131"`: the card with the same rules whose effects it
 uses. The importer writes it; see [reprints](../../tools/import/standard.md#reprints).
 
+An attack can say `"first_turn": true`, and so can a Supporter: it can be used on the first player's first turn ("If you go
+first, you can use this attack during your first turn").
+
 A card with neither an effects file nor `same_as` may have `"translation"`: what the
 [translator](../../tools/import/translate.md) read of its text, in the effects file's format, which `CardDB::load`
 merges as if it were one. The importer writes it and takes it away; see

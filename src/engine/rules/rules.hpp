@@ -37,11 +37,11 @@ namespace pokebot::rules {
     std::size_t bench_size(const GameState& game, int player);
     bool can_attach_energy(const GameState& game, int player);
     bool can_retreat(const GameState& game, int player);
-    bool can_attack(const GameState& game, int player);
+    bool can_attack(const GameState& game, int player, bool first_turn_allowed = false);
     bool has_abilities(const GameState& game, const PokemonInPlay& pokemon);
     bool can_use_attack(const GameState& game, const PokemonInPlay& pokemon, std::size_t attack);
     bool can_play_item(const GameState& game, int player);
-    bool can_play_supporter(const GameState& game, int player);
+    bool can_play_supporter(const GameState& game, int player, bool first_turn_allowed = false);
     bool can_play_stadium(const GameState& game, int player, CardIndex stadium);
     bool can_attach_tool(const GameState& game, const PokemonInPlay& pokemon);
     CardIndex stadium_in_play(const GameState& game);

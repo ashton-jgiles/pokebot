@@ -30,14 +30,15 @@ Each block is a JSON object with an `"op"`:
 | `move_attached_energy` | `count` (1), `filter`, `to` (`"hand"`), `from` (`"self"`), `up_to` (`false`) | Move exactly `count` Energy attached to this Pokémon (fewer if it has fewer), or up to `count` with `"up_to": true`. `"from": "your_pokemon"` takes it from any of your Pokémon | `ChooseCards`, `MoveChosen` |
 | `set_damage` | `amount`, `per`, `for_each` | The attack's damage becomes `amount` + `per` × the [count](#counting). For "×" attacks | `SetDamage` |
 | `add_damage` | `amount`, `per`, `for_each` | The attack's damage goes up by `amount` + `per` × the count. For "+" attacks and "this attack does N more damage" | `AddDamage` |
-| `flip_coins` | `count` (1) | Flip coins; the number of heads can be counted (`"heads"`) or tested (`heads_at_least`) | `FlipCoins` |
+| `attach_spread` | `from` (`"discard"`), `count` (1 to 6), `up_to`, `on`, `target`, `filter`, `shuffle` (`true`) | "Attach … to your Pokémon in any way you like": `count` rounds of choosing one of your Pokémon (matching `target`), then a matching card for it (or none, with `up_to`) | `ChooseTargets`, `ChooseCards`, `MoveChosen` each round |
+| `flip_coins` | `count` (1) or `for_each` | Flip coins; the number of heads can be counted (`"heads"`) or tested (`heads_at_least`) | `FlipCoins` |
 | `flip_until_tails` | — | Flip until tails; the number of heads is kept the same way | `FlipUntilTails` |
 | `hand_to_deck_bottom` | `player` | Shuffle that player's hand and put it on the bottom of their deck (Special Red Card) | `HandToDeckBottom` |
 | `damage_to` | `targets` (1), `on` (`"any"`), `player` (`"opponent"`), `up_to`, `each`, `amount`, `per`, `for_each` | Choose that many different Pokémon (`"on": "bench"` for the Bench only), or with `"each": true` take every one with no choice, and do `amount` + `per` × the count to each. Weakness and Resistance apply only to an Active target; a Benched Tera Pokémon takes none. Attacks only | `ChooseTargets`, `DamageTargets` |
 | `place_counters` | `count` (1), `on` (`"any"`), `player` (`"opponent"`) | Put damage counters on that player's Pokémon "in any way you like", one choice per counter. Counters aren't damage, so Tera doesn't stop them | `PlaceCounters` |
 | `discard_all_attached_energy` | — | Discard every Energy attached to this Pokémon | `DiscardAllEnergy` |
 | `return_self_to_hand` | — | Put this Pokémon and everything attached to it into your hand (Tuck Tail). If it was Active, you choose a new one after the attack | `ReturnSelfToHand` |
-| `discard_target_energy` | `count` (1), `on`, `player` (`"opponent"`), `filter` | Choose 1 Pokémon that has Energy, then discard `count` of its Energy (Crushing Hammer). With `"on": "active"` the Active Pokémon is taken, with no choice | `ChooseTargets`, `ChooseCards`, `MoveChosen` |
+| `discard_target_energy` | `count` (1) or `for_each`, `on`, `player` (`"opponent"`), `filter` | Choose 1 Pokémon that has Energy, then discard `count` of its Energy (Crushing Hammer). With `"on": "active"` the Active Pokémon is taken, with no choice | `ChooseTargets`, `ChooseCards`, `MoveChosen` |
 | `use_attack` | `filter` | Choose an attack of one of your matching Benched Pokémon and use it as this attack (Night Joker). Copy attacks can't be copied. Attacks only | `ChooseAttack`, `UseChosenAttack` |
 | `search_to_top` | `count` (1), `filter`, `reveal` (`false`) | Search your deck for up to `count` cards, shuffle, then put them on top; the last one chosen is the top card (Ciphermaniac's Codebreaking) | `ChooseCards`, `ShuffleDeck`, `MoveChosen` |
 | `special_condition` | `condition`, `player` (`"opponent"`), `count` (1) | Give that player's Active Pokémon a [Special Condition](../../engine/actions/conditions.md): `"asleep"`, `"burned"`, `"confused"`, `"paralyzed"` or `"poisoned"`. **Defaults to the opponent**, since cards almost always say "your opponent's Active Pokémon is now …". `count` is the Poison damage counters per Checkup | `ApplySpecialCondition` |
@@ -120,6 +121,8 @@ applied afterwards, in the [damage pipeline](../../engine/rules/rules.md#the-dam
 | `not_name` | Any name except this one ("except any Pecharunt ex") |
 | `not_type` | Not of this type ("non-{D}") |
 | `tera` | `true` / `false`: a Tera Pokémon or not |
+| `special` | `true` / `false`: a Special Energy or not |
+| `has_attack` | A Pokémon with an attack of that name ("that has the Round attack") |
 | `any_of` | A list of filters; at least one must match ("a Pokémon or a Basic Energy card") |
 
 Every field given must match; `{}` (or no filter) matches any card.
@@ -157,9 +160,10 @@ Each is an object with one key, from the point of view of the player the card be
 | `{"opponent_active_is": filter}` | Your opponent's Active Pokémon matches (`{"rule_box": true}` for a Pokémon ex) |
 | `{"opponent_active_damaged": true}` | Your opponent's Active Pokémon has damage counters |
 | `{"opponent_active_has": condition}` | Your opponent's Active Pokémon has that Special Condition (`"poisoned"`, …) |
-| `{"self_damaged": true}` | This Pokémon has damage counters (only inside an effect) |
+| `{"self_damaged": true}` | This Pokémon has damage counters, or with `false` has none (only inside an effect) |
 | `{"self_has_tool": true}` | This Pokémon has a Pokémon Tool attached (only inside an effect) |
 | `{"bench_damaged": true}` | One of your Benched Pokémon has damage counters |
+| `{"extra_energy_at_least": N}` | This Pokémon has at least N Energy beyond this attack's cost (only inside an attack) |
 | `{"custom": name}` | A [one-of-a-kind card](../../engine/effects/custom.md)'s own check (`rare_candy`, `transformation_tome`) |
 
 Anything the compiler doesn't recognise (an unknown op, filter field or destination, a bad count,

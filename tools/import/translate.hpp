@@ -20,6 +20,7 @@ namespace pokebot::import {
         bool ok = false;
         nlohmann::json effects = nlohmann::json::array();
         std::string unread;
+        bool first_turn = false;
     };
 
     std::string normalize_text(const std::string& text);

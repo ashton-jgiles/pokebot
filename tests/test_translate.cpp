@@ -207,6 +207,44 @@ TEST_CASE("gusting by the opponent's choice, drawing up to a hand size, discards
                   R"({"abilities": {"Whirlpool": {"requires": [{"has_benched": true}], "effects": [{"op": "switch_active"}, {"op": "switch_active", "player": "opponent", "chooser": "opponent"}]}}})");
 }
 
+TEST_CASE("typed Energy counts, minus damage, optional bonuses, Bench conditions, Energy in any way you like, and the first turn", "[translate]") {
+    reads_as("This attack does 30 more damage for each {W} Energy attached to this Pokémon.", DamageMod::Plus,
+             R"([{"op": "add_damage", "per": 30, "for_each": {"of": "self_energy", "filter": {"type": "water"}}}, {"op": "damage"}])");
+    reads_as("Flip a coin for each Energy attached to this Pokémon. This attack does 70 damage for each heads.", DamageMod::Times,
+             R"([{"op": "flip_coins", "for_each": {"of": "active_energy"}}, {"op": "set_damage", "per": 70, "for_each": {"of": "heads"}}, {"op": "damage"}])");
+    reads_as("This attack does 40 damage for each of your Pokémon in play that has the Round attack.", DamageMod::Times,
+             R"([{"op": "set_damage", "per": 40, "for_each": {"of": "in_play", "filter": {"has_attack": "Round"}}}, {"op": "damage"}])");
+    reads_as("This attack does 10 less damage for each damage counter on this Pokémon.", DamageMod::Minus,
+             R"([{"op": "add_damage", "per": -10, "for_each": {"of": "damage_counters"}}, {"op": "damage"}])");
+    reads_as("You may do 30 more damage. If you do, this Pokémon also does 30 damage to itself.", DamageMod::Plus,
+             R"([{"op": "may", "effects": [{"op": "add_damage", "amount": 30}, {"op": "damage_self", "amount": 30}]}, {"op": "damage"}])");
+    reads_as("Discard a card from your hand. If you do, draw 2 cards.", DamageMod::None,
+             R"([{"op": "discard_from_hand"}, {"op": "if", "condition": {"moved_at_least": 1}, "then": [{"op": "draw", "count": 2}]}])");
+    reads_as("If this Pokémon has no damage counters on it, this attack does 150 more damage.", DamageMod::Plus,
+             R"([{"op": "if", "condition": {"self_damaged": false}, "then": [{"op": "add_damage", "amount": 150}]}, {"op": "damage"}])");
+    reads_as("If you have any {M} Pokémon on your Bench, this attack does 80 more damage.", DamageMod::Plus,
+             R"([{"op": "if", "condition": {"bench_has": {"type": "metal"}}, "then": [{"op": "add_damage", "amount": 80}]}, {"op": "damage"}])");
+    reads_as("If Durant is on your Bench, this attack does 20 more damage.", DamageMod::Plus,
+             R"([{"op": "if", "condition": {"bench_has": {"name": "Durant"}}, "then": [{"op": "add_damage", "amount": 20}]}, {"op": "damage"}])");
+    reads_as("If this Pokémon has at least 2 extra Energy attached (in addition to this attack's cost), this attack does 140 more damage.", DamageMod::Plus,
+             R"([{"op": "if", "condition": {"extra_energy_at_least": 2}, "then": [{"op": "add_damage", "amount": 140}]}, {"op": "damage"}])");
+    reads_as("Flip 3 coins. For each heads, discard an Energy from your opponent's Active Pokémon.", DamageMod::None,
+             R"([{"op": "flip_coins", "count": 3}, {"op": "discard_target_energy", "on": "active", "for_each": {"of": "heads"}}])");
+    reads_as("Discard a Special Energy from your opponent's Active Pokémon.", DamageMod::None,
+             R"([{"op": "discard_target_energy", "on": "active", "filter": {"special": true}}])");
+    reads_as("Search your deck for up to 2 Basic Energy cards and attach them to your Benched Pokémon in any way you like. Then, shuffle your deck.", DamageMod::None,
+             R"([{"op": "attach_spread", "from": "deck", "shuffle": false, "count": 2, "up_to": true, "on": "bench", "filter": {"kind": "energy", "basic": true}}, {"op": "shuffle_deck"}])");
+    const auto first = translate_attack("If you go first, you can use this attack during your first turn. Draw 2 cards.", AttackContext{"Test Attack", DamageMod::None});
+    REQUIRE(first.ok);
+    CHECK(first.first_turn);
+    const auto carmine = translate_card(json::parse(trainer("supporter", "If you go first, you may use this card during your first turn. Discard your hand and draw 5 cards.")).get<pokebot::CardDef>());
+    REQUIRE(carmine.unread.empty());
+    CHECK(carmine.overlay.value("first_turn", false));
+    card_reads_as(trainer("item", "Attach up to 2 Basic {F} Energy cards from your discard pile to your Benched Pokémon in any way you like."),
+                  R"({"requires": [{"discard_has": {"kind": "energy", "basic": true, "type": "fighting"}}, {"has_benched": true}],
+                      "effects": [{"op": "attach_spread", "from": "discard", "count": 2, "up_to": true, "on": "bench", "filter": {"kind": "energy", "basic": true, "type": "fighting"}}]})");
+}
+
 TEST_CASE("the translator reads all of a text or none of it", "[translate]") {
     not_read("Draw a card quickly.");
     not_read("Heal from this Pokémon the same amount of damage you did to your opponent's Active Pokémon.");
@@ -215,8 +253,8 @@ TEST_CASE("the translator reads all of a text or none of it", "[translate]") {
     not_read("This attack does 30 damage for each heads.", DamageMod::Plus);
     not_read("Draw a card.", DamageMod::Plus);
     not_read("If you do, draw a card.");
-    const auto translation = translate_attack("Draw a card. Discard a random card from your opponent's hand.", AttackContext{"Test Attack", DamageMod::None});
-    CHECK(translation.unread == "Discard a random card from your opponent's hand");
+    const auto translation = translate_attack("Draw a card. Your opponent reveals their hand.", AttackContext{"Test Attack", DamageMod::None});
+    CHECK(translation.unread == "Your opponent reveals their hand");
 }
 
 TEST_CASE("Items and Supporters, with what they need to be played", "[translate]") {
