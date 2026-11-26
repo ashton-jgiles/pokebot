@@ -43,7 +43,7 @@ namespace {
         std::cerr << "usage: pokebot-import [--refresh] [--offline] <decklist.txt or directory>...\n"
                      "       pokebot-import [--refresh] [--offline] --standard [--list-missing]\n"
                      "       pokebot-import [--refresh] [--offline] --check-translations\n"
-                     "       pokebot-import [--refresh] [--offline] --audit N [--seed S]\n"
+                     "       pokebot-import [--refresh] [--offline] --audit N [--seed S] [--using WORD,...]\n"
                      "  a directory means every .txt decklist in it and its subdirectories\n"
                      "  --standard      download every card of every set in sets.json and report how many of the\n"
                      "                  Standard-legal ones have all their effects\n"
@@ -51,6 +51,8 @@ namespace {
                      "  --check-translations  translate every hand-written card text and compare it, then all of Standard\n"
                      "  --audit N  print N translated texts of Standard cards without an effects file, chosen at random\n"
                      "  --seed S   with --audit: the seed of the choice (default 1)\n"
+                     "  --using WORD,...  with --audit: only texts whose effects use one of these words (an op, a key,\n"
+                     "                    key:value, or damage_inside_if)\n"
                      "  --refresh  download every card again, ignoring the cache\n"
                      "  --offline  use only cached files\n";
     }
@@ -342,7 +344,49 @@ namespace {
         return out;
     }
 
-    int run_audit(pokebot::import::TcgdexClient& tcgdex, const nlohmann::json& corrections, const std::filesystem::path& effects_dir, int count, std::uint64_t seed) {
+    void effect_words(const nlohmann::json& value, std::set<std::string>& out) {
+        if (value.is_array()) {
+            for (const nlohmann::json& item : value) {
+                effect_words(item, out);
+            }
+            return;
+        }
+        if (!value.is_object()) {
+            return;
+        }
+        if (value.value("op", "") == "if" && value.contains("then") && value.at("then").is_array() &&
+            std::any_of(value.at("then").begin(), value.at("then").end(), [](const nlohmann::json& block) { return block.is_object() && block.value("op", "") == "damage"; })) {
+            out.insert("damage_inside_if");
+        }
+        for (const auto& [key, item] : value.items()) {
+            out.insert(key);
+            if (item.is_primitive()) {
+                const std::string text = item.is_string() ? item.get<std::string>() : item.dump();
+                out.insert(key + ":" + text);
+                if (key == "op") {
+                    out.insert(text);
+                }
+            } else {
+                effect_words(item, out);
+            }
+        }
+    }
+
+    std::vector<std::string> split_list(const std::string& list) {
+        std::vector<std::string> out;
+        std::size_t from = 0;
+        while (from <= list.size()) {
+            const std::size_t comma = std::min(list.find(',', from), list.size());
+            if (comma > from) {
+                out.push_back(list.substr(from, comma - from));
+            }
+            from = comma + 1;
+        }
+        return out;
+    }
+
+    int run_audit(pokebot::import::TcgdexClient& tcgdex, const nlohmann::json& corrections, const std::filesystem::path& effects_dir, int count, std::uint64_t seed,
+                  const std::vector<std::string>& using_words) {
         using namespace pokebot;
         using namespace pokebot::import;
         const Coverage coverage = standard_coverage(read_standard_sets(tcgdex), corrections, effects_dir);
@@ -350,7 +394,11 @@ namespace {
         for (const StandardCard& entry : coverage.cards) {
             if (entry.translated && entry.problems.empty()) {
                 for (AuditItem& item : audit_items(entry.card, translate_card(entry.card).overlay)) {
-                    items.push_back(std::move(item));
+                    std::set<std::string> words;
+                    effect_words(item.effects, words);
+                    if (using_words.empty() || std::any_of(using_words.begin(), using_words.end(), [&](const std::string& word) { return words.contains(word); })) {
+                        items.push_back(std::move(item));
+                    }
                 }
             }
         }
@@ -359,7 +407,14 @@ namespace {
         for (std::size_t i = 0; i < sample; ++i) {
             std::swap(items[i], items[i + rng.below(static_cast<std::uint32_t>(items.size() - i))]);
         }
-        std::cout << "\nAudit: " << sample << " of " << items.size() << " translated texts of Standard cards without an effects file, seed " << seed << '\n';
+        std::cout << "\nAudit: " << sample << " of " << items.size() << " translated texts of Standard cards without an effects file";
+        if (!using_words.empty()) {
+            std::cout << " using";
+            for (std::size_t i = 0; i < using_words.size(); ++i) {
+                std::cout << (i == 0 ? " " : ", ") << using_words[i];
+            }
+        }
+        std::cout << ", seed " << seed << '\n';
         for (std::size_t i = 0; i < sample; ++i) {
             std::cout << '\n'
                       << i + 1 << ". " << items[i].part << "\n   text:    " << items[i].text << "\n   effects: " << items[i].effects.dump() << '\n';
@@ -390,6 +445,7 @@ int main(int argc, char** argv) {
     bool check_translations = false;
     std::optional<int> audit;
     std::optional<std::uint64_t> seed;
+    std::vector<std::string> using_words;
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         if (arg == "--refresh") {
@@ -412,6 +468,12 @@ int main(int argc, char** argv) {
                 print_usage();
                 return 2;
             }
+        } else if (arg == "--using" && i + 1 < argc) {
+            using_words = split_list(argv[++i]);
+            if (using_words.empty()) {
+                print_usage();
+                return 2;
+            }
         } else if (arg == "--offline") {
             options.offline = true;
         } else if (arg.starts_with("--")) {
@@ -422,7 +484,7 @@ int main(int argc, char** argv) {
         }
     }
     const int modes = (standard ? 1 : 0) + (check_translations ? 1 : 0) + (audit ? 1 : 0);
-    if (modes > 1 || (modes == 0) == decklists.empty() || (list_missing && !standard) || (seed && !audit)) {
+    if (modes > 1 || (modes == 0) == decklists.empty() || (list_missing && !standard) || ((seed || !using_words.empty()) && !audit)) {
         print_usage();
         return 2;
     }
@@ -442,7 +504,7 @@ int main(int argc, char** argv) {
             return run_check_translations(tcgdex, corrections, generated_dir, effects_dir);
         }
         if (audit) {
-            return run_audit(tcgdex, corrections, effects_dir, *audit, seed.value_or(1));
+            return run_audit(tcgdex, corrections, effects_dir, *audit, seed.value_or(1), using_words);
         }
 
         std::set<std::pair<std::string, int>> seen;

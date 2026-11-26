@@ -256,8 +256,8 @@ attack's cost", and "if you can't discard …, this attack does nothing". **A gu
 | Step | Builds | Status |
 |---|---|---|
 | 3b.3.1 | The engine's vocabulary: `heal_self` and `heal_to`, `damage_self`, `"each": true` targets, `"on": "active"`, `ignore_weakness` and `ignore_resistance`, five conditions and five counts. *Done: all 492 tests pass, and the reference run repeats 158 to 162, 18.4 turns and 140.8 actions a game, with the same endings (88.2 s against 84.4 s, one run each, so not a measured slowdown; speed is checked at sign-off)* | ✅ |
-| 3b.3.2 | The translator's sentences for them, and "if tails, this attack does nothing". *[Built](tools/import/translate.md#how-it-reads), not yet tested or run* | 🔄 |
-| 3b.3.3 | `--audit --using`, the runs, the audit and the record | ⬜ |
+| 3b.3.2 | The translator's sentences for them, and "if tails, this attack does nothing". *[Done](tools/import/translate.md#how-it-reads): all 493 tests pass, the 81 hand-written texts read still load the same with the same 7 not read, and 1,047 of the 2,097 cards are complete (49.9%), 674 of them by translation* | ✅ |
+| 3b.3.3 | `--audit --using`, the runs, the audit and the record. *[Built](tools/import/main.md#--audit-a-sample-of-translations), not yet run* | 🔄 |
 
 **Its rules (2026-11-25, before any of it was built):**
 
@@ -267,6 +267,17 @@ attack's cost", and "if you can't discard …, this attack does nothing". **A gu
   is fixed;
 - the reference run repeats, 158 to 162, 18.4 turns and 140.8 actions a game;
 - no coverage threshold; the gain is reported against the guess above.
+
+**What 3b.3.2 measured (2026-11-25):**
+
+- **Against the hand-written cards:** 88 texts, 81 the same, 0 different, the same 7 not read.
+- **On all of Standard:** **1,047 of 2,097 cards complete (49.9%)**, against 844 after 3b.2, so **203 more**, inside the guess of
+  100 to 250. 674 of them are complete by translation. Texts read: attacks 1,043 of 1,757 (from 774), Abilities 35 of 300 (from
+  30), Trainers 59 of 164 (from 57); Tools, Stadiums and Special Energy unchanged.
+- **The incoming decks:** festival-lead 14 of 27 cards ready (from 13), mega-venasaur 18 of 25 (from 17); alakazam and
+  mega-lucario unchanged. The old decks and archetype lists are still ready with none by translation.
+- **The sentences now most often not read** are 3b.4's and 3b.6's: damage reduction and prevention next turn (28, 22, 10, 9, 5),
+  gusting by the opponent's choice (13), the opponent's hand (12, 9) and deck (9, 7), Abilities that trigger on evolving (10).
 
 **How 3b.3.1 is built:** damage to itself is damage counters on the attacker, which is exact while nothing reduces damage; 3b.4's
 damage passives revisit it. `heal_to` offers only damaged Pokémon. `"each"` and `"on": "active"` choose every matching Pokémon with no

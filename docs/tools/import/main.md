@@ -13,7 +13,7 @@ Run from the repository root; all paths are relative to it.
 ./build/debug/tools/import/pokebot-import.exe [--refresh] [--offline] <decklist.txt or directory>...
 ./build/debug/tools/import/pokebot-import.exe [--refresh] [--offline] --standard [--list-missing]
 ./build/debug/tools/import/pokebot-import.exe [--refresh] [--offline] --check-translations
-./build/debug/tools/import/pokebot-import.exe [--refresh] [--offline] --audit N [--seed S]
+./build/debug/tools/import/pokebot-import.exe [--refresh] [--offline] --audit N [--seed S] [--using WORD,...]
 ```
 
 A directory stands for every `.txt` decklist in it and its subdirectories, in sorted order (so `data/decks` includes
@@ -29,6 +29,7 @@ A directory stands for every `.txt` decklist in it and its subdirectories, in so
 | `--check-translations` | Instead of decklists: [check the translator](#--check-translations) |
 | `--audit N` | Instead of decklists: [print N translated texts](#--audit-a-sample-of-translations), chosen at random |
 | `--seed S` | With `--audit`: the seed of the choice (default 1) |
+| `--using WORD,...` | With `--audit`: [only texts whose effects use one of the words](#--audit-a-sample-of-translations) |
 
 Examples:
 
@@ -163,7 +164,12 @@ It writes nothing, and exits with 1 if any hand-written text comes out different
 Reads the Standard sets as `--standard` does, collects every translated text of the cards complete or not that no printing
 has an effects file for (each attack, Ability and card text on its own), and prints `N` of them, chosen without repeats
 by the engine's `Rng` seeded with `S`, so the same seed on the same data gives the same sample. Each one is its card and
-part, its text as printed, and the effects it reads as:
+part, its text as printed, and the effects it reads as.
+
+`--using` keeps only the texts whose effects use one of a comma-separated list of words. The words of an effects list
+are every op (`heal_to`), every key (`opponent_active_is`, `each`), every key with its value (`each:true`, `on:active`,
+`of:in_play`), and `damage_inside_if` for an `if` whose `then` does the attack's damage ("if tails, this attack does
+nothing"). The words are matched whole, so `each` doesn't match `for_each`.
 
 ```
 Audit: 50 of ... translated texts of Standard cards without an effects file, seed 1
